@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { UploadFilled } from '@element-plus/icons-vue'
+import { UploadFilled, MagicStick } from '@element-plus/icons-vue'
 import { ElMessage, type UploadFile } from 'element-plus'
 import WizardSteps from '@/components/WizardSteps.vue'
 import apiClient from '@/api/client'
@@ -17,6 +17,22 @@ const selectedSheet = ref('')
 const headerRow = ref(1)
 const uploadedFileId = ref<string | null>(null)
 const createdJobId = ref<string | null>(null)
+
+function useSampleFile() {
+  uploadedFileId.value = 'mock-file-sample-01'
+  sheetList.value = ['2026년 상반기 실적', '참고자료']
+  selectedSheet.value = '2026년 상반기 실적'
+  headerRow.value = 1
+  fileList.value = [
+    {
+      name: 'sales_sample.csv (샘플 데이터)',
+      size: 4520,
+      uid: Date.now(),
+      status: 'success',
+    } as UploadFile,
+  ]
+  ElMessage.success('샘플 데이터(sales_sample.csv)가 로드되었습니다.')
+}
 
 async function handleFileChange(uploadFile: UploadFile) {
   const rawFile = uploadFile.raw
@@ -108,6 +124,12 @@ async function handleNext() {
         </template>
       </el-upload>
 
+      <div class="sample-btn-area">
+        <el-button type="success" plain :icon="MagicStick" size="default" @click="useSampleFile">
+          ✨ 샘플 데이터로 바로 테스트하기 (sales_sample.csv)
+        </el-button>
+      </div>
+
       <div v-if="uploadedFileId" class="upload-options">
         <el-divider />
         <h3>파일 설정</h3>
@@ -153,6 +175,10 @@ async function handleNext() {
 }
 .upload-options {
   margin-top: 1.5rem;
+}
+.sample-btn-area {
+  margin-top: 1.25rem;
+  text-align: center;
 }
 .hint {
   margin-left: 1rem;

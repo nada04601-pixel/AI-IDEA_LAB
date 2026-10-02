@@ -26,6 +26,7 @@ async function handleLogout() {
       <div class="logo-area" @click="router.push('/')">
         <el-icon class="logo-icon"><Document /></el-icon>
         <span class="logo-title">AI Excel 보고서 자동생성기</span>
+        <el-tag size="small" type="success" effect="plain" round style="margin-left: 0.5rem;">체험 모드 (Demo)</el-tag>
       </div>
 
       <div class="nav-actions">

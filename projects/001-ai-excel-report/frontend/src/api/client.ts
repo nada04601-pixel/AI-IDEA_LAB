@@ -17,6 +17,10 @@ const apiClient = axios.create({
   },
 })
 
+// Enable mock mode for live preview and walkthrough
+import { setupMock } from './mock'
+setupMock(apiClient)
+
 // Response Interceptor for Error Handling
 apiClient.interceptors.response.use(
   (response) => response,
