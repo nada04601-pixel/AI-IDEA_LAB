@@ -1,0 +1,10 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+
+logging:
+  level:
+    com.aiexcel.report: DEBUG
+    org.mybatis: DEBUG
+    org.springframework.web: DEBUG
