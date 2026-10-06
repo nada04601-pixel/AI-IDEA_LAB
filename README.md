@@ -6,4 +6,4 @@
 | 번호 | 프로젝트/아이디어명 | 진행 상태 | 코드 저장소 | 설계 문서 |
 |---|---|---|---|---|
 | 001 | AI Excel 보고서 자동생성기 | **개발진행중 (Slice 0 완료)** | [projects/001-ai-excel-report](projects/001-ai-excel-report) | [ideas/001-ai-excel-report](ideas/001-ai-excel-report/idea.md) |
-| 002 | 노바랩 계산소 (novalabs.co.kr, 애드센스 수익형 계산기 사이트) | **개발진행중 (애드센스 신청 준비)** | [projects/002-novalab-calc](projects/002-novalab-calc) | [README](projects/002-novalab-calc/README.md) |
+| 002 | 노바랩 계산소 (novalabs.co.kr, 애드센스 수익형 계산기 사이트) | **개발진행중 (애드센스 신청 준비)** | [novalabs-projects](https://github.com/nada04601-pixel/novalabs-projects) (별도 배포 저장소) | [README](https://github.com/nada04601-pixel/novalabs-projects#readme) |
