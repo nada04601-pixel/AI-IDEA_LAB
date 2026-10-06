@@ -24,15 +24,31 @@ npm run build && npm start
 
 ## 애드센스 승인 절차
 1. `src/data/site.ts`의 `email`을 실제 수신 가능한 주소로 변경 (`contact@novalabs.co.kr` 메일 수신 설정 또는 개인 메일)
-2. 배포: Vercel에 이 폴더를 올리고 Domains에 `novalabs.co.kr`, `www.novalabs.co.kr` 추가 → 도메인 업체 DNS에 안내된 A/CNAME 레코드 입력
+2. 배포: Cloudflare Pages (아래 "Cloudflare Pages 배포" 참고) → Custom domains에 `novalabs.co.kr` 추가
 3. Search Console에 도메인 등록 후 `https://novalabs.co.kr/sitemap.xml` 제출, 색인 생성 확인 (1~2주)
 4. 애드센스 가입 → 사이트 `novalabs.co.kr` 추가 → 게시자 ID(`ca-pub-...`) 확인
-5. Vercel 환경변수 `NEXT_PUBLIC_ADSENSE_CLIENT`에 게시자 ID 입력 후 재배포
+5. Cloudflare Pages 환경변수 `NEXT_PUBLIC_ADSENSE_CLIENT`에 게시자 ID 입력 후 재배포
    - 광고 스크립트, `google-adsense-account` 메타 태그, `/ads.txt`가 자동 생성됨
 6. 애드센스에서 "사이트 확인"(메타 태그 또는 ads.txt 방식) → "검토 요청"
 7. 승인 후 애드센스 > 광고 > 자동 광고 켜기 (추가 코드 불필요)
 
 승인 확률을 높이려면 가이드 글을 꾸준히 추가하세요(목표 20~30편). 새 글은 `src/data/guides.ts`에 항목을 추가하면 목록, 사이트맵, 관련 글에 자동 반영됩니다.
+
+## Cloudflare Pages 배포
+`next.config.ts`의 `output: "export"`로 모든 페이지를 `out/` 폴더에 정적 HTML로 만듭니다.
+
+Workers & Pages → Create → Pages → Connect to Git → `AI-IDEA_LAB` 선택 후:
+
+| 항목 | 값 |
+|---|---|
+| Framework preset | Next.js (Static HTML Export) |
+| Root directory | `projects/002-novalab-calc` |
+| Build command | `npm run build` |
+| Build output directory | `out` |
+| 환경변수 | `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` (선택) |
+
+Settings → Builds → Build watch paths의 Include paths를 `projects/002-novalab-calc/*`로 지정하면 이 폴더가 바뀔 때만 배포됩니다.
+`NEXT_PUBLIC_` 값은 빌드할 때 HTML에 들어가므로, 바꾼 뒤에는 꼭 다시 배포하세요.
 
 ## 매년 점검
 - 국민연금 기준소득월액 상·하한: 매년 7월
