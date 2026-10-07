@@ -5,6 +5,7 @@
 - 설계 문서: [ideas/003-depression-support](../../ideas/003-depression-support/idea.md)
   - [화면설계](../../ideas/003-depression-support/screens.md) · [기술 스택](../../ideas/003-depression-support/tech-stack.md)
 - 상태: **프로토타입 (기록 → 달력 → 리포트 흐름 동작)**
+- 테스트 주소: https://nada04601-pixel.github.io/AI-IDEA_LAB/ (GitHub Pages, `gh-pages` 브랜치)
 
 ## 실행
 
@@ -14,6 +15,7 @@ npm run dev       # 개발 서버 (http://localhost:5173)
 npm test          # 단위 테스트 (요약 계산, 날짜, 백업)
 npm run build     # 정적 빌드 → dist/
 npm run preview   # 빌드 결과 확인 (PWA 서비스 워커 포함)
+npm run deploy    # GitHub Pages로 배포 (gh-pages 브랜치 강제 갱신)
 ```
 
 휴대폰에서 확인하려면 같은 와이파이에서 `npm run dev -- --host`로 띄운 뒤 표시되는 주소로 접속합니다.
@@ -36,13 +38,14 @@ Vue 3 + Vite + TypeScript · vue-router (hash) · vite-plugin-pwa · Dexie (Inde
 | S-04 진료 준비하기 | ✅ 기간 선택, 요약, 하고 싶은 말 자동 저장, 질문 예시 |
 | S-05 진료용 리포트 | ✅ 메모 포함 토글, A4 한 장 PDF |
 | S-06/07 가이드 | 🟡 목록·상세 틀 (본문은 1개만, 나머지 "준비 중") |
-| S-08 도움받을 곳 | 🟡 바로 전화 (번호·운영시간 **출시 전 공식 확인 필요**) |
+| S-08 도움받을 곳 | ✅ 바로 전화 (109, 1577-0199 — 2026-10-07 보도·서울시 안내로 확인) |
 | S-09 설정 | ✅ 백업 내보내기/불러오기(합치기·덮어쓰기), 전체 삭제, 안내 다시 보기 |
 
 ## 남은 일
 
-- [ ] 도움받을 곳 번호·운영시간 공식 출처 확인 (`src/content/help.ts`)
+- [x] 도움받을 곳 번호·운영시간 확인 (2026-10-07). 정식 출시 전 보건복지부 공식 안내로 재확인
 - [ ] 가이드 본문 6개 작성 및 출처·기준일 표기 (`src/content/guides.ts`)
-- [ ] iOS용 PNG 아이콘 (apple-touch-icon은 PNG 권장, 현재 SVG)
+- [x] iOS용 PNG 아이콘
 - [ ] 실제 기기 확인: iOS 홈 화면 PWA에서 `window.print()` 동작, 오프라인 실행
-- [ ] 정적 호스팅 배포 후 테스트 사용자 모집
+- [x] GitHub Pages 배포
+- [ ] 테스트 사용자 모집
