@@ -15,10 +15,22 @@ describe('글자 읽기 정리', () => {
     expect(readAmount('+ 30,000원')).toEqual({ amount: 30000, direction: 'received' })
     expect(readAmount('100.000원')).toEqual({ amount: 100000, direction: 'received' })
     expect(readAmount('1OO,OOO원')).toEqual({ amount: 100000, direction: 'received' })
-    expect(readAmount('50000')).toEqual({ amount: 50000, direction: 'received' })
+    expect(readAmount('50000원')).toEqual({ amount: 50000, direction: 'received' })
+    expect(readAmount('50000')).toBeNull() // 쉼표도 원도 없는 숫자는 금액으로 보지 않는다 (전화번호 등)
+    expect(readAmount('01012345678')).toBeNull()
     expect(readAmount('홍길동')).toBeNull()
     expect(readAmount('10.06')).toBeNull()
     expect(readAmount('0원')).toBeNull()
+  })
+
+  it('실제 기기에서 "원"을 잘못 읽은 경우 (2026-10-07 테스트)', () => {
+    expect(readAmount('100,000A')).toEqual({ amount: 100000, direction: 'received' })
+    expect(readAmount('591,2082l')).toEqual({ amount: 591208, direction: 'received' })
+    expect(readAmount('50,000윈')).toEqual({ amount: 50000, direction: 'received' })
+    expect(readAmount('-50,000 원')).toEqual({ amount: 50000, direction: 'given' })
+    expect(readAmount('100,000')).toEqual({ amount: 100000, direction: 'received' })
+    expect(readAmount('100,000원입금')).toBeNull()
+    expect(readAmount('2026.10.06')).toBeNull()
   })
 
   it('날짜: 연도가 없으면 오늘 이전의 가장 가까운 날', () => {
@@ -48,6 +60,17 @@ describe('이체 내역 화면', () => {
     ])
     expect(rows[0].flags).toEqual(['name-split'])
     expect(rows.some((r) => [312500, 212500, 162500, 62500, 112500].includes(r.amount))).toBe(false)
+    expect(unmatched).toEqual([])
+  })
+
+  it('실제 기기처럼 "원"이 잘못 읽혀도 같은 줄 금액과 짝짓는다', () => {
+    const misread = DEV_SAMPLE_LINES.map((l) =>
+      l.text === '100,000원' ? { ...l, text: '100,000A' } : l.text === '62,500원' ? { ...l, text: '62,5002l' } : l,
+    )
+    const { rows, unmatched } = parseTransferLines(misread, '2026-10-07')
+    expect(rows.map((r) => [r.name, r.amount])).toEqual([
+      ['홍길동', 100000], ['김철수', 50000], ['이영희', 100000], ['박민준', 50000], ['박민준', 50000],
+    ])
     expect(unmatched).toEqual([])
   })
 

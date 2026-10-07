@@ -37,8 +37,15 @@ export interface OcrRow {
   flags: OcrFlag[]
 }
 
-const AMOUNT = /^([+\-−])?\s*₩?\s*(\d{1,3}(?:[,.]\d{3})+|\d{4,})\s*원?$/
-const TRAILING_AMOUNT = /^(.*?\S)\s+([+\-−]?\s*₩?\s*(?:\d{1,3}(?:[,.]\d{3})+|\d{4,})\s*원)$/
+/**
+ * 금액 뒤 "원"은 자주 잘못 읽힌다 (실제 기기: "100,000원" → "100,000A", "591,208원" → "591,2082l").
+ * 쉼표로 세 자리씩 끊긴 숫자 뒤의 짧은 글자(한글 제외 3자 이하, 또는 원과 비슷한 글자)는 "원"으로 본다.
+ * 쉼표 없는 숫자는 "원"이 정확히 붙어 있을 때만 금액으로 본다 (전화번호·계좌번호와 구분).
+ */
+const WON = '(?:원|[윈뭔웬][^\\s가-힣]{0,2}|[^\\s가-힣]{1,3})'
+const AMOUNT_BODY = `(?:(\\d{1,3}(?:[,.]\\d{3})+)\\s*${WON}?|(\\d{4,})\\s*원)`
+const AMOUNT = new RegExp(`^([+\\-−])?\\s*₩?\\s*${AMOUNT_BODY}$`)
+const TRAILING_AMOUNT = new RegExp(`^(.*?\\S)\\s+([+\\-−]?\\s*₩?\\s*(?:\\d{1,3}(?:[,.]\\d{3})+\\s*${WON}?|\\d{4,}\\s*원))$`)
 const DATE = /^(?:(\d{4})\s*[.\-/년]\s*)?(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*일?(?:\s*\(?[월화수목금토일]\)?)?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/
 /** 이름이 아닌 화면 글자 */
 const UI_WORDS = /^(거래내역(조회)?|입출금내역|이체내역|입금|출금|전체|잔액|조회|검색|필터|오늘|최근|\d+개월|더보기|정렬|최신순|과거순|입금내역|출금내역|내역|통장|계좌)$/
@@ -58,7 +65,7 @@ export function cleanText(s: string): string {
 export function readAmount(text: string): { amount: number; direction: Direction } | null {
   const m = AMOUNT.exec(cleanText(text))
   if (!m) return null
-  const amount = Number(m[2].replace(/[,.]/g, ''))
+  const amount = Number((m[2] ?? m[3]).replace(/[,.]/g, ''))
   if (!Number.isFinite(amount) || amount <= 0) return null
   return { amount, direction: m[1] === '-' || m[1] === '−' ? 'given' : 'received' }
 }
