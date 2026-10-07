@@ -3,7 +3,12 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// 화면에 표시할 빌드 번호: CI는 실행 번호, 로컬 빌드는 빌드 시각 (업데이트됐는지 확인용)
+const stamp = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-')
+const APP_BUILD = process.env.GITHUB_RUN_NUMBER ? `0.1.${process.env.GITHUB_RUN_NUMBER}` : `0.1.0+${stamp}`
+
 export default defineConfig({
+  define: { __APP_BUILD__: JSON.stringify(APP_BUILD) },
   base: './',
   plugins: [
     vue(),

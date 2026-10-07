@@ -34,6 +34,9 @@ cd android && ./gradlew assembleDebug   # 로컬 빌드 (Android SDK 필요)
 - **인터넷 권한 없음.** 앱이 외부와 통신할 수 없으므로 "기록을 서버로 보내지 않아요"가 앱 권한으로 보장됩니다.
 - 빌드는 `.github/workflows/maeum-record-apk.yml`이 담당합니다. 결과는 Actions 아티팩트와 Releases(`maeum-record-apk`, 프리릴리스)에 올라갑니다.
 - 설치: 휴대폰에서 Releases의 `maeum-record-debug.apk`를 내려받아 실행 → "출처를 알 수 없는 앱 설치" 허용.
+- 서명: `android/app/debug.keystore` 고정 키로 서명해서 새 빌드를 덮어 설치(업데이트)할 수 있습니다. 버전은 `0.1.<Actions 실행 번호>`로 빌드마다 올라가며, 앱 설정 맨 아래에 표시됩니다.
+  - ⚠️ 이 키는 디버그 전용이며 공개 저장소에 있습니다. Play 스토어 출시용 키는 저장소에 넣지 않습니다.
+  - 2026-10-07 14시 이전 빌드는 빌드마다 서명 키가 달라 업데이트가 안 됩니다. 이 경우 한 번만 기존 앱을 삭제하고 다시 설치해야 합니다.
 
 **기록 알림 (앱 전용).** `@capacitor/local-notifications`로 기기에서 예약합니다. 서버가 필요 없습니다.
 - 하루 1회, 정한 시각에만 보냅니다. 그날 이미 기록했으면 보내지 않습니다 (`src/lib/reminderSchedule.ts`).

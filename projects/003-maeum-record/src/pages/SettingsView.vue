@@ -13,7 +13,7 @@ import { syncReminder } from '../lib/reminder'
 const router = useRouter()
 const message = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
-const version = '0.1.0'
+const version = __APP_BUILD__
 const lastBackup = ref('…')
 const exporting = ref(false)
 
@@ -117,7 +117,7 @@ async function replayWelcome() {
       </div>
     </section>
 
-    <p class="muted small">버전 {{ version }} (프로토타입)</p>
+    <p class="muted small">버전 {{ version }} ({{ isNativeApp ? '안드로이드 테스트' : '웹' }})</p>
   </div>
 </template>
 
