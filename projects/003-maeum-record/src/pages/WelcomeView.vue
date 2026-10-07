@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { setSetting } from '../lib/db'
 import { markOnboarded } from '../router'
+import { isNativeApp } from '../lib/platform'
 
 /** S-01 첫 실행 안내 (3장) */
 const router = useRouter()
@@ -11,7 +12,7 @@ const step = ref(0)
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 const isStandalone =
   window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
-const showInstall = computed(() => !isStandalone)
+const showInstall = computed(() => !isStandalone && !isNativeApp)
 
 async function finish() {
   await setSetting('onboardingDone', true)
@@ -40,8 +41,14 @@ async function finish() {
 
     <section v-else class="slide">
       <div class="art" aria-hidden="true">🔔</div>
-      <h1>기록 알림은<br />앱 출시 후 제공돼요.</h1>
-      <p class="muted">지금은 웹 버전이라 정해진 시간에 알림을 보낼 수 없어요.</p>
+      <template v-if="isNativeApp">
+        <h1>기록 알림은<br />다음 업데이트에서 제공돼요.</h1>
+        <p class="muted">테스트 버전이라 아직 알림 기능이 없어요.</p>
+      </template>
+      <template v-else>
+        <h1>기록 알림은<br />앱 출시 후 제공돼요.</h1>
+        <p class="muted">지금은 웹 버전이라 정해진 시간에 알림을 보낼 수 없어요.</p>
+      </template>
       <div v-if="showInstall" class="card install">
         <h2>홈 화면에 추가하면 앱처럼 쓸 수 있어요</h2>
         <p v-if="isIOS" class="muted">Safari 아래쪽 공유 버튼 → “홈 화면에 추가”</p>

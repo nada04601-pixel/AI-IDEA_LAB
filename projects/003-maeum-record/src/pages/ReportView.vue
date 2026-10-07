@@ -6,6 +6,7 @@ import { entriesBetween, getSetting, setSetting } from '../lib/db'
 import { addDays, formatDot, formatShort, todayKey } from '../lib/date'
 import { MOODS, type Entry } from '../lib/mood'
 import { summarize } from '../lib/summary'
+import { isNativeApp } from '../lib/platform'
 
 /** S-05 진료용 리포트. 진료실에서 보여주거나 PDF로 저장. 서버를 거치지 않는다. */
 const route = useRoute()
@@ -40,9 +41,10 @@ const printPdf = () => window.print()
         <input v-model="includeMemo" type="checkbox" />
         메모 포함
       </label>
-      <button class="btn pdf" @click="printPdf">PDF 저장</button>
+      <button v-if="!isNativeApp" class="btn pdf" @click="printPdf">PDF 저장</button>
     </div>
-    <p class="muted no-print hint">인쇄 창에서 “PDF로 저장”을 고르세요.</p>
+    <p v-if="isNativeApp" class="muted no-print hint">앱에서는 PDF 저장을 준비 중이에요. 이 화면을 그대로 보여주세요.</p>
+    <p v-else class="muted no-print hint">인쇄 창에서 “PDF로 저장”을 고르세요.</p>
 
     <article v-if="ready" class="report card">
       <header>

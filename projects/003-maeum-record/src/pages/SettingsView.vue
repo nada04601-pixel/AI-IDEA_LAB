@@ -5,6 +5,7 @@ import { allEntries, getSetting, replaceAllEntries, setSetting, wipeAll } from '
 import { backupFileName, makeBackup, mergeEntries, parseBackup } from '../lib/backup'
 import { todayKey } from '../lib/date'
 import { resetOnboarded } from '../router'
+import { isNativeApp } from '../lib/platform'
 
 /** S-09 설정 */
 const router = useRouter()
@@ -13,6 +14,11 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const version = '0.1.0'
 
 async function exportBackup() {
+  if (isNativeApp) {
+    // WebView에서는 <a download>가 동작하지 않는다. 앱 단계에서 Filesystem/Share 플러그인으로 구현 예정.
+    message.value = '앱 테스트 버전에서는 백업 파일 만들기를 준비 중이에요.'
+    return
+  }
   const data = makeBackup(await allEntries(), await getSetting('visitNote', ''))
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const a = document.createElement('a')
@@ -61,8 +67,8 @@ async function replayWelcome() {
     <section>
       <h2 class="section">알림</h2>
       <div class="card">
-        <p class="row">기록 알림 <span class="badge">앱 출시 후 제공</span></p>
-        <p class="muted small">웹 버전에서는 정해진 시간에 알림을 보낼 수 없어요.</p>
+        <p class="row">기록 알림 <span class="badge">{{ isNativeApp ? '다음 업데이트' : '앱 출시 후 제공' }}</span></p>
+        <p class="muted small">{{ isNativeApp ? '테스트 버전이라 아직 알림 기능이 없어요.' : '웹 버전에서는 정해진 시간에 알림을 보낼 수 없어요.' }}</p>
       </div>
     </section>
 

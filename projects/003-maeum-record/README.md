@@ -6,6 +6,7 @@
   - [화면설계](../../ideas/003-depression-support/screens.md) · [기술 스택](../../ideas/003-depression-support/tech-stack.md)
 - 상태: **프로토타입 (기록 → 달력 → 리포트 흐름 동작)**
 - 테스트 주소: https://nada04601-pixel.github.io/AI-IDEA_LAB/ (GitHub Pages, `gh-pages` 브랜치)
+- 안드로이드 테스트 APK: [Releases → maeum-record-apk](https://github.com/nada04601-pixel/AI-IDEA_LAB/releases/tag/maeum-record-apk) (main에 푸시하면 GitHub Actions가 자동 빌드)
 
 ## 실행
 
@@ -20,6 +21,27 @@ npm run deploy    # GitHub Pages로 배포 (gh-pages 브랜치 강제 갱신)
 
 휴대폰에서 확인하려면 같은 와이파이에서 `npm run dev -- --host`로 띄운 뒤 표시되는 주소로 접속합니다.
 홈 화면 설치·오프라인 동작은 HTTPS가 필요하므로 정적 호스팅에 배포한 뒤 확인합니다.
+
+## 안드로이드 앱 (Capacitor)
+
+같은 웹 코드를 Capacitor로 감싼 안드로이드 앱입니다. (`android/`, 앱 ID `kr.co.novalabs.maeumrecord`)
+
+```bash
+npm run android:sync   # 앱용 웹 빌드(서비스 워커 제외) + android/ 동기화
+cd android && ./gradlew assembleDebug   # 로컬 빌드 (Android SDK 필요)
+```
+
+- **인터넷 권한 없음.** 앱이 외부와 통신할 수 없으므로 "기록을 서버로 보내지 않아요"가 앱 권한으로 보장됩니다.
+- 빌드는 `.github/workflows/maeum-record-apk.yml`이 담당합니다. 결과는 Actions 아티팩트와 Releases(`maeum-record-apk`, 프리릴리스)에 올라갑니다.
+- 설치: 휴대폰에서 Releases의 `maeum-record-debug.apk`를 내려받아 실행 → "출처를 알 수 없는 앱 설치" 허용.
+
+앱 테스트 버전에서 아직 안 되는 것 (웹에서는 동작):
+
+| 기능 | 이유 | 해결 방법 (앱 단계) |
+|---|---|---|
+| 리포트 PDF 저장 | WebView는 `window.print()`를 지원하지 않음 | 인쇄/공유 플러그인 |
+| 백업 파일 만들기 | WebView는 `<a download>`를 지원하지 않음 | `@capacitor/filesystem` + `@capacitor/share` |
+| 기록 알림 | 아직 미구현 | `@capacitor/local-notifications` (서버 불필요) |
 
 ## 스택
 

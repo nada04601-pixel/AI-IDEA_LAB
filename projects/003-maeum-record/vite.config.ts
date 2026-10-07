@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
+      // Capacitor 앱 빌드에서는 서비스 워커가 필요 없다 (파일이 앱에 포함됨)
+      disable: !!process.env.CAPACITOR,
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {

@@ -1,0 +1,68 @@
+name: 마음기록 APK 빌드
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'projects/003-maeum-record/**'
+      - '.github/workflows/maeum-record-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: maeum-record-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/003-maeum-record
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: projects/003-maeum-record/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: 웹 빌드 + 안드로이드 동기화
+        run: |
+          npm ci
+          npm test
+          CAPACITOR=1 npm run build
+          npx cap sync android
+
+      - name: 디버그 APK 빌드
+        working-directory: projects/003-maeum-record/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../maeum-record-debug.apk
+
+      - name: Actions 아티팩트 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: maeum-record-debug-apk
+          path: projects/003-maeum-record/maeum-record-debug.apk
+
+      - name: Releases에 최신 테스트 APK 게시
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=maeum-record-apk
+          gh release delete "$TAG" --cleanup-tag -y || true
+          gh release create "$TAG" maeum-record-debug.apk \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "마음기록 테스트 APK (디버그)" \
+            --notes "main 브랜치 ${GITHUB_SHA::7} 기준 자동 빌드. 테스트용 디버그 빌드이며 Play 스토어용이 아닙니다. 설치하려면 휴대폰에서 '출처를 알 수 없는 앱 설치'를 허용해야 합니다."
