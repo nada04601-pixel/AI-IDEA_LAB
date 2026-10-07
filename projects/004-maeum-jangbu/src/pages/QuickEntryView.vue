@@ -9,6 +9,7 @@ import { sameName } from '../lib/ledger'
 import { formatDot, todayKey } from '../lib/date'
 import { formatShort } from '../lib/money'
 import { ask } from '../lib/dialog'
+import { contactsSupported, pickContactName } from '../lib/contacts'
 import { showToast } from '../lib/toast'
 import { RELATIONS, defaultEventTitle, relationLabel, type EventType, type Method, type Relation } from '../lib/types'
 
@@ -103,6 +104,16 @@ async function saveNext() {
   }
 }
 
+async function fromContacts() {
+  try {
+    const n = await pickContactName()
+    if (n) name.value = n
+  } catch (e) {
+    showToast(`연락처를 열지 못했어요 (${(e as Error).message})`, 3000)
+  }
+  nameEl.value?.focus()
+}
+
 async function finish() {
   const count = added.value.length
   if (count >= 20) {
@@ -153,7 +164,10 @@ async function finish() {
 
       <form class="card entry" @submit.prevent="saveNext">
         <label class="label" for="qname">이름</label>
-        <input id="qname" ref="nameEl" v-model="name" class="field" autocomplete="off" enterkeyhint="done" placeholder="방명록의 이름" />
+        <div class="row">
+          <input id="qname" ref="nameEl" v-model="name" class="field grow" autocomplete="off" enterkeyhint="done" placeholder="방명록의 이름" />
+          <button v-if="contactsSupported" type="button" class="btn sm secondary" aria-label="연락처에서 고르기" @click="fromContacts">📇</button>
+        </div>
 
         <span class="label">관계 <span class="muted small">(직전 선택 유지)</span></span>
         <div class="chips">

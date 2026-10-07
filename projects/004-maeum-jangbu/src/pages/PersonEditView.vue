@@ -5,6 +5,7 @@ import { ledger, peopleById } from '../lib/store'
 import { addPerson, deletePerson, mergePeople, updatePerson } from '../lib/db'
 import { confirmAsk } from '../lib/dialog'
 import { showToast } from '../lib/toast'
+import { contactsSupported, pickContactName } from '../lib/contacts'
 import { RELATIONS, relationLabel, type Relation } from '../lib/types'
 
 /** 사람 추가·편집 (S-03 사람 추가, S-04 편집·합치기) */
@@ -25,6 +26,15 @@ const others = computed(() =>
     .sort((a, b) => Number(b.name === name.value) - Number(a.name === name.value) || a.name.localeCompare(b.name, 'ko')),
 )
 const recordCount = computed(() => ledger.value.records.filter((r) => r.personId === id).length)
+
+async function fromContacts() {
+  try {
+    const n = await pickContactName()
+    if (n) name.value = n
+  } catch (e) {
+    showToast(`연락처를 열지 못했어요 (${(e as Error).message})`, 3000)
+  }
+}
 
 async function save() {
   if (!name.value.trim()) return showToast('이름을 입력해 주세요')
@@ -66,7 +76,11 @@ async function remove() {
 <template>
   <div class="page no-tab">
     <label class="label" for="pname">이름</label>
-    <input id="pname" v-model="name" class="field" autocomplete="off" />
+    <div class="row">
+      <input id="pname" v-model="name" class="field grow" autocomplete="off" />
+      <button v-if="contactsSupported && !id" type="button" class="btn sm secondary" @click="fromContacts">📇 연락처</button>
+    </div>
+    <RouterLink v-if="contactsSupported && !id" to="/contacts" class="small many">연락처에서 여러 명 한꺼번에 불러오기 ›</RouterLink>
     <span class="label">관계</span>
     <div class="chips">
       <button v-for="r in RELATIONS" :key="r.value" type="button" class="chip" :aria-pressed="relation === r.value" @click="relation = r.value">{{ r.label }}</button>
@@ -94,6 +108,7 @@ async function remove() {
 
 <style scoped>
 .save { margin-top: 20px; }
+.many { display: inline-block; margin-top: 8px; }
 .merge { margin-top: 10px; }
 .delete { margin-top: 24px; }
 </style>

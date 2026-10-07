@@ -37,5 +37,8 @@
 
     <!-- Permissions -->
 
+    <!-- 연락처 "여러 명 불러오기"에서만 요청 (읽기 전용, 이름·회사명만 읽음). 1명 고르기는 권한 없이 시스템 선택 화면 사용 -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
     <!-- INTERNET 권한 없음: 기록을 외부로 보내지 않는다는 약속을 앱 권한으로 보장 (tech-stack.md 1-1) -->
 </manifest>

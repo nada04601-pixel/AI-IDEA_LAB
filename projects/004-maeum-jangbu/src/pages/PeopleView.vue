@@ -74,7 +74,10 @@ const rows = computed(() => {
       <p class="muted">{{ q || relation !== 'all' ? '찾는 사람이 없어요.' : '아직 등록한 사람이 없어요.' }}</p>
     </div>
 
-    <RouterLink to="/people/new" class="btn outline add">사람 추가</RouterLink>
+    <div class="btn-row add">
+      <RouterLink to="/people/new" class="btn outline">사람 추가</RouterLink>
+      <RouterLink to="/contacts" class="btn outline">📇 연락처에서 불러오기</RouterLink>
+    </div>
   </div>
 </template>
 

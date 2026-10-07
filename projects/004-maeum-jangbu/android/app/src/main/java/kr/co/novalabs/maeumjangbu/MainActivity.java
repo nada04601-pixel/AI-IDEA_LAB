@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // 앱 안에서 만든 플러그인은 super.onCreate 전에 등록해야 한다
         registerPlugin(WebPrintPlugin.class);
+        registerPlugin(ContactReaderPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

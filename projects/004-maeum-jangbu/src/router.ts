@@ -10,6 +10,7 @@ export const router = createRouter({
     { path: '/', name: 'home', component: () => import('./pages/HomeView.vue'), meta: tab },
     { path: '/people', name: 'people', component: () => import('./pages/PeopleView.vue'), meta: tab },
     { path: '/people/new', name: 'person-new', component: () => import('./pages/PersonEditView.vue'), meta: { title: '사람 추가' } },
+    { path: '/contacts', name: 'contacts', component: () => import('./pages/ContactsImportView.vue'), meta: { title: '연락처에서 불러오기' } },
     { path: '/people/:id', name: 'person', component: () => import('./pages/PersonView.vue'), meta: { title: '사람' } },
     { path: '/people/:id/edit', name: 'person-edit', component: () => import('./pages/PersonEditView.vue'), meta: { title: '사람 편집' } },
     { path: '/events', name: 'events', component: () => import('./pages/EventsView.vue'), meta: tab },

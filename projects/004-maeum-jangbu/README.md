@@ -4,7 +4,7 @@
 
 - 설계 문서: [ideas/004-gyeongjosa-ledger](../../ideas/004-gyeongjosa-ledger/idea.md)
   - [화면설계](../../ideas/004-gyeongjosa-ledger/screens.md) · [기술 스택](../../ideas/004-gyeongjosa-ledger/tech-stack.md)
-- 상태: **개발 1~3단계 완료 (장부 + 백업 + 엑셀·PDF)** — tech-stack.md 6장 개발 순서 기준
+- 상태: **OCR(4단계)을 제외한 기능 완료 (장부 + 백업 + 엑셀·PDF + 연락처)** — tech-stack.md 6장 개발 순서 기준
 - 안드로이드 테스트 APK: [Releases → maeum-jangbu-apk](https://github.com/nada04601-pixel/AI-IDEA_LAB/releases/tag/maeum-jangbu-apk) (main 또는 `claude/**` 브랜치에 푸시하면 GitHub Actions가 자동 빌드)
 
 ## 실행
@@ -26,6 +26,7 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 ```
 
 - **인터넷 권한 없음.** 기록이 휴대폰 밖으로 나가지 않는다는 약속을 앱 권한으로 보장합니다 (tech-stack.md 1-1).
+- **연락처는 읽기 전용.** `ContactReaderPlugin.java`(직접 작성): 1명 고르기는 권한 없이 기본 선택 화면, 여러 명 불러오기만 `READ_CONTACTS`. 이름·회사명만 읽고 전화번호는 읽지 않습니다. 브라우저 개발 서버(`npm run dev`)에서는 가짜 연락처로 화면을 확인할 수 있습니다.
 - 빌드: `.github/workflows/maeum-jangbu-apk.yml` → Actions 아티팩트 + Releases(`maeum-jangbu-apk`, 프리릴리스).
 - 설치: 휴대폰에서 Releases의 `maeum-jangbu-debug.apk`를 내려받아 실행 → "출처를 알 수 없는 앱 설치" 허용.
 - 서명: `android/app/debug.keystore` 고정 디버그 키(003과 같은 키)로 서명해 새 빌드를 덮어 설치할 수 있습니다. ⚠️ 디버그 전용. Play 스토어 출시용 키는 저장소에 넣지 않습니다.
@@ -43,6 +44,7 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 | `src/lib/sheet.ts` | 내보내기 표 (전체 내역·사람별 장부·행사별 명단), 범위, CSV 쓰기·읽기 |
 | `src/lib/excel.ts` | ExcelJS로 엑셀 만들기·읽기 (내보내기·가져오기 화면에서만 불러옴, 약 930KB) |
 | `src/lib/importData.ts` | 엑셀·CSV 표 → 장부 데이터 (흔한 열 이름 인식, 읽을 수 없는 줄 안내) |
+| `src/lib/contacts.ts` · `contactsImport.ts` | 연락처 플러그인 연결 / 연락처 → 사람 (중복 제거, 이미 있는 사람 표시) |
 | `src/lib/print.ts` | PDF 명단 인쇄 (웹: `window.print()`, 앱: `WebPrintPlugin`) |
 | `src/lib/share.ts` | 파일(글자·엑셀)을 만들어 공유 창 띄우기 (앱) / 다운로드 (웹) |
 | `src/pages/` | 화면 (screens.md S-01 ~ S-13) |
@@ -53,7 +55,7 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 |---|---|
 | S-01 첫 실행 안내 | ✅ 3장, "무엇부터 할까요?"에서 바로 이동 |
 | S-02 홈 | ✅ 백업 카드(없음/30일 경과/최근), 다가오는 경조사, 기록이 비어 있는 경조사([기록 안 함]), 최근 기록 |
-| S-03 / S-04 사람 | ✅ 검색·관계 필터·정렬, 사람별 받음·보냄·차이, 편집·합치기·삭제 |
+| S-03 / S-04 사람 | ✅ 연락처 1명 고르기·여러 명 불러오기, 검색·관계 필터·정렬, 사람별 받음·보냄·차이, 편집·합치기·삭제 |
 | S-05 / S-06 행사 | ✅ 내 행사 합계·감사 인사 체크, 상대 행사 D-day·기록 참고, [기록 안 함] |
 | S-07 내역 입력 | ✅ 행사 종류 직접 입력(칠순·집들이 등, 최근 입력 버튼), 이름 자동 완성, 기록 참고, 금액 빠른 선택(만원 단위 직접 입력), 상대 경조사 등록 모드 |
 | S-08 빠른 연속 입력 | ✅ [저장하고 다음]으로만 저장, 관계·방식 유지, 동명이인 확인, 20건 이상 입력 시 백업 제안 |
@@ -70,4 +72,5 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 - [x] 3단계: 엑셀(ExcelJS)·CSV 내보내기·가져오기, PDF 답례 명단 (003 `WebPrintPlugin` 사용)
 - [ ] 실제 기기 확인 (안드로이드): 엑셀 공유 → 휴대폰 엑셀·구글 시트에서 열림, PDF 명단 저장 (A4, 한글, 버튼 안 보임)
 - [ ] 4단계: OCR 사전 테스트(tech-stack.md 4장) → 사진으로 등록
-- [ ] 5단계: 연락처 불러오기
+- [x] 5단계: 연락처 불러오기
+- [ ] 실제 기기 확인 (안드로이드): 📇 1명 고르기(권한 요청 없이), 여러 명 불러오기(권한 요청 1회), 회사명이 소속으로 들어가는지

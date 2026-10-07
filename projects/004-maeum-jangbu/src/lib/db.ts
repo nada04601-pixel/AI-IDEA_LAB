@@ -64,6 +64,17 @@ export async function addPerson(input: New<Person>): Promise<Person> {
   return p
 }
 
+/** 여러 명 한 번에 추가 (연락처 불러오기). 변경 건수는 추가한 사람 수만큼 */
+export async function addPeople(inputs: New<Person>[]): Promise<number> {
+  if (!inputs.length) return 0
+  const now = Date.now()
+  await db.people.bulkAdd(
+    inputs.map((p, i) => ({ ...p, name: p.name.trim(), group: p.group.trim(), id: uuid(), createdAt: now + i, updatedAt: now + i })),
+  )
+  await changed(inputs.length)
+  return inputs.length
+}
+
 export async function updatePerson(id: string, patch: Partial<New<Person>>) {
   await db.people.update(id, { ...patch, updatedAt: Date.now() })
   await changed()
