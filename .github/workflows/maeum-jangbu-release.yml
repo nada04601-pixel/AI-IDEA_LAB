@@ -1,0 +1,91 @@
+name: 마음장부 출시 빌드 (Play 스토어용 AAB)
+
+# 실행 방법
+# - 태그: git tag maeum-jangbu-v1.0.0 && git push origin maeum-jangbu-v1.0.0  → 버전 이름 1.0.0
+# - 수동: Actions → 이 워크플로 → Run workflow (main 브랜치에 합쳐진 뒤 버튼이 보임)
+# 준비: projects/004-maeum-jangbu/RELEASE.md (업로드 키 만들기, GitHub Secrets 등록)
+on:
+  push:
+    tags: ['maeum-jangbu-v*']
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: '버전 이름 (예: 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/004-maeum-jangbu
+    env:
+      RELEASE_KEYSTORE_BASE64: ${{ secrets.MAEUM_JANGBU_UPLOAD_KEYSTORE_BASE64 }}
+      RELEASE_KEYSTORE_PASSWORD: ${{ secrets.MAEUM_JANGBU_UPLOAD_KEYSTORE_PASSWORD }}
+      RELEASE_KEY_ALIAS: ${{ secrets.MAEUM_JANGBU_UPLOAD_KEY_ALIAS }}
+      RELEASE_KEY_PASSWORD: ${{ secrets.MAEUM_JANGBU_UPLOAD_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 서명 키 확인
+        run: |
+          missing=""
+          for v in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::GitHub Secrets에 출시용 서명 키가 없어요:$missing — projects/004-maeum-jangbu/RELEASE.md를 따라 등록해 주세요."
+            exit 1
+          fi
+
+      - name: 버전 정하기
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then NAME="${GITHUB_REF_NAME#maeum-jangbu-v}"; else NAME="${{ inputs.version_name }}"; fi
+          echo "VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          # Play 스토어는 올릴 때마다 versionCode가 커져야 한다. 이 워크플로 실행 번호 + 1000
+          echo "VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "버전 $NAME (versionCode $((1000 + GITHUB_RUN_NUMBER)))"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: projects/004-maeum-jangbu/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: 웹 빌드 + 안드로이드 동기화
+        run: |
+          npm ci
+          npm test
+          CAPACITOR=1 npm run build
+          npx cap sync android
+
+      - name: 출시용 AAB 빌드 (업로드 키로 서명)
+        working-directory: projects/004-maeum-jangbu/android
+        run: |
+          export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > "$RELEASE_KEYSTORE_PATH"
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon
+          rm -f "$RELEASE_KEYSTORE_PATH"
+          cp app/build/outputs/bundle/release/app-release.aab "../maeum-jangbu-${VERSION_NAME}.aab"
+
+      - name: 들어가면 안 되는 권한 검사 (인터넷·카메라·정확한 알람)
+        run: |
+          MANIFEST=$(find android/app/build/intermediates -path '*release*' -name AndroidManifest.xml | grep -i merged | head -1)
+          bash scripts/check-permissions.sh "$MANIFEST"
+
+      - name: AAB 올리기 (Actions 아티팩트, 공개 Releases에는 올리지 않음)
+        uses: actions/upload-artifact@v4
+        with:
+          name: maeum-jangbu-release-aab-${{ env.VERSION_NAME }}
+          path: projects/004-maeum-jangbu/maeum-jangbu-${{ env.VERSION_NAME }}.aab
+          retention-days: 30

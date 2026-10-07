@@ -26,6 +26,7 @@ export const router = createRouter({
     { path: '/events/:id/print', name: 'event-print', component: () => import('./pages/PrintRosterView.vue'), meta: { title: '명단 PDF' } },
     { path: '/backup', name: 'backup', component: () => import('./pages/BackupView.vue'), meta: { title: '내보내기·백업' } },
     { path: '/restore', name: 'restore', component: () => import('./pages/RestoreView.vue'), meta: { title: '가져오기·복원' } },
+    { path: '/privacy', name: 'privacy', component: () => import('./pages/PrivacyView.vue'), meta: { title: '개인정보처리방침' } },
     { path: '/move', name: 'move', component: () => import('./pages/MoveGuideView.vue'), meta: { title: '새 휴대폰으로 옮기기' } },
     { path: '/settings', name: 'settings', component: () => import('./pages/SettingsView.vue'), meta: { tab: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },

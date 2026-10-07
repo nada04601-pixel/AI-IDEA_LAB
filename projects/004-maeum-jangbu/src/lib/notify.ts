@@ -34,6 +34,9 @@ export async function syncNotifications(): Promise<void> {
         title: p.title,
         body: p.body,
         schedule: { at: p.at, allowWhileIdle: true },
+        // 정확한 시각 알람을 쓰지 않는다: 쓰면 Android 12+에서 예약할 때마다 "알람 및 리마인더" 설정 화면이 열리고,
+        // Play 정책상 정확한 알람 권한도 필요하다. 하루 전 오전 9시 알림은 몇 분 늦어도 괜찮다.
+        isExactNotification: false,
         smallIcon: 'ic_stat_notify',
         autoCancel: true,
         extra: { route: p.route },

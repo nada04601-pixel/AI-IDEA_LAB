@@ -50,14 +50,17 @@ jobs:
           ./gradlew assembleDebug --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../maeum-jangbu-debug.apk
 
-      - name: 인터넷·카메라 권한이 없는지 확인 (tech-stack.md 1-1)
+      - name: 들어가면 안 되는 권한 검사 (인터넷·카메라·정확한 알람)
+        run: bash scripts/check-permissions.sh maeum-jangbu-debug.apk
+
+      # 출시 워크플로(maeum-jangbu-release.yml)가 깨지지 않았는지 미리 확인: 서명 없이 출시용 AAB를 만들어 본다
+      - name: 출시 빌드 점검 (서명 없이 AAB)
+        working-directory: projects/004-maeum-jangbu/android
         run: |
-          AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2"
-          "$AAPT2" dump permissions maeum-jangbu-debug.apk | tee permissions.txt
-          if grep -E "android.permission.(INTERNET|ACCESS_NETWORK_STATE|CAMERA)" permissions.txt; then
-            echo "::error::APK에 인터넷·카메라 권한이 들어 있어요. AndroidManifest.xml을 확인하세요 (카메라는 기본 카메라 앱으로 촬영해 권한이 필요 없음)."
-            exit 1
-          fi
+          VERSION_CODE=1 VERSION_NAME=check ./gradlew bundleRelease --no-daemon
+          ls -la app/build/outputs/bundle/release/
+          MANIFEST=$(find app/build/intermediates -path '*release*' -name AndroidManifest.xml | grep -i merged | head -1)
+          bash ../scripts/check-permissions.sh "$MANIFEST"
 
       - name: Actions 아티팩트 업로드
         uses: actions/upload-artifact@v4

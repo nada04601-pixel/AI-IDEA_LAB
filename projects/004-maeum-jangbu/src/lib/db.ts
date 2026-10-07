@@ -92,6 +92,15 @@ export async function deletePerson(id: string) {
   await changed()
 }
 
+/** 여러 사람의 관계를 한꺼번에 바꾸기 (사람 목록 → 선택). 바꾼 사람 수를 돌려준다 */
+export async function setRelation(ids: string[], relation: Person['relation']): Promise<number> {
+  if (!ids.length) return 0
+  const now = Date.now()
+  const n = await db.people.where('id').anyOf(ids).modify({ relation, updatedAt: now })
+  await changed(n || 1)
+  return n
+}
+
 /** 동명이인으로 잘못 나뉜 사람 합치기 (screens.md S-04): from의 기록을 into로 옮기고 from 삭제 */
 export async function mergePeople(fromId: string, intoId: string) {
   if (fromId === intoId) return

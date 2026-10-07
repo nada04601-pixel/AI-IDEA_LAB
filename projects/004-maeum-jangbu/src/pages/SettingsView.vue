@@ -112,6 +112,7 @@ async function replayWelcome() {
     </div>
     <div class="card flush links">
       <ul class="list">
+        <li><RouterLink to="/privacy" class="list-row">개인정보처리방침 <span aria-hidden="true">›</span></RouterLink></li>
         <li><button class="list-row" @click="replayWelcome">첫 실행 안내 다시 보기 <span aria-hidden="true">›</span></button></li>
         <li><button class="list-row" @click="wipe">모든 기록 삭제 <span aria-hidden="true">›</span></button></li>
       </ul>

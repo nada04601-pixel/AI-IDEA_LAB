@@ -69,13 +69,19 @@ async function add() {
 
     <template v-else-if="!rows">
       <div class="card intro">
-        <h2>연락처에서 사람 불러오기</h2>
+        <h2>연락처 사용 안내</h2>
+        <p class="small">마음장부는 사람을 빠르게 추가할 수 있도록 <strong>휴대폰 연락처의 이름과 회사명</strong>을 읽어요.</p>
         <ul class="muted small">
-          <li>이름과 회사명만 가져와요. <strong>전화번호는 가져오지 않아요.</strong></li>
-          <li>고른 사람만 장부에 추가돼요. 연락처는 바뀌지 않아요.</li>
-          <li>연락처 읽기 권한을 물어보면 허용해 주세요. 인터넷으로 보내지 않아요.</li>
+          <li><strong>전화번호·이메일·주소는 읽지 않아요.</strong></li>
+          <li>읽은 연락처 중 <strong>내가 고른 사람만</strong> 이 휴대폰의 장부에 저장돼요. 연락처는 바뀌지 않아요.</li>
+          <li>앱에 인터넷 권한이 없어 어디로도 보내지 않아요.</li>
+          <li>다음 화면에서 안드로이드가 연락처 권한을 물으면 허용해 주세요. 거부해도 다른 기능은 그대로 쓸 수 있어요.</li>
         </ul>
-        <button class="btn" :disabled="busy" @click="load">{{ busy ? '불러오는 중…' : '연락처 불러오기' }}</button>
+        <p class="small"><RouterLink to="/privacy">개인정보처리방침 보기</RouterLink></p>
+        <div class="btn-row">
+          <button class="btn outline" :disabled="busy" @click="router.back()">동의 안 함</button>
+          <button class="btn" :disabled="busy" @click="load">{{ busy ? '불러오는 중…' : '동의하고 불러오기' }}</button>
+        </div>
       </div>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <p class="muted small tip">한 명만 필요하면 기록할 때 이름 칸 옆 📇 버튼을 누르세요. 이때는 권한이 필요 없어요.</p>

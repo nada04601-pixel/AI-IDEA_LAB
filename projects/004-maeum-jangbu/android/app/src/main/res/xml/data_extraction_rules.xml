@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12 이상 백업 규칙 (AndroidManifest android:dataExtractionRules)
+  - 구글 계정 클라우드 백업: 아무것도 올리지 않는다 ("기록은 이 휴대폰에만", tech-stack.md 1-1)
+  - 휴대폰 간 직접 옮기기(스마트 스위치 등, 사용자가 직접 실행): 모두 옮긴다 → 새 휴대폰으로 바꿀 때 기록 유지
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
+    </cloud-backup>
+    <device-transfer />
+</data-extraction-rules>
