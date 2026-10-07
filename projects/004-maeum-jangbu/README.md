@@ -4,7 +4,7 @@
 
 - 설계 문서: [ideas/004-gyeongjosa-ledger](../../ideas/004-gyeongjosa-ledger/idea.md)
   - [화면설계](../../ideas/004-gyeongjosa-ledger/screens.md) · [기술 스택](../../ideas/004-gyeongjosa-ledger/tech-stack.md)
-- 상태: **OCR(4단계)을 제외한 기능 완료 (장부 + 백업 + 엑셀·PDF + 연락처)** — tech-stack.md 6장 개발 순서 기준
+- 상태: **MVP 기능 구현 완료 (장부 + 백업 + 엑셀·PDF + 연락처 + 사진으로 등록)** — 실제 기기 테스트 단계
 - 안드로이드 테스트 APK: [Releases → maeum-jangbu-apk](https://github.com/nada04601-pixel/AI-IDEA_LAB/releases/tag/maeum-jangbu-apk) (main 또는 `claude/**` 브랜치에 푸시하면 GitHub Actions가 자동 빌드)
 
 ## 실행
@@ -26,6 +26,7 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 ```
 
 - **인터넷 권한 없음.** 기록이 휴대폰 밖으로 나가지 않는다는 약속을 앱 권한으로 보장합니다 (tech-stack.md 1-1).
+- **사진으로 등록(OCR)은 휴대폰 안에서.** `TextRecognitionPlugin.java`(직접 작성)가 ML Kit 한국어 텍스트 인식(모델 앱 포함)으로 글자와 위치만 돌려주고, 이름·금액 분리는 `src/lib/ocrParse.ts`가 한다. 모델 때문에 APK가 약 25MB. 라이브러리가 넣을 수 있는 인터넷 권한은 매니페스트에서 제거하고 **빌드 워크플로가 APK 권한을 검사**한다.
 - **연락처는 읽기 전용.** `ContactReaderPlugin.java`(직접 작성): 1명 고르기는 권한 없이 기본 선택 화면, 여러 명 불러오기만 `READ_CONTACTS`. 이름·회사명만 읽고 전화번호는 읽지 않습니다. 브라우저 개발 서버(`npm run dev`)에서는 가짜 연락처로 화면을 확인할 수 있습니다.
 - 빌드: `.github/workflows/maeum-jangbu-apk.yml` → Actions 아티팩트 + Releases(`maeum-jangbu-apk`, 프리릴리스).
 - 설치: 휴대폰에서 Releases의 `maeum-jangbu-debug.apk`를 내려받아 실행 → "출처를 알 수 없는 앱 설치" 허용.
@@ -44,6 +45,7 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 | `src/lib/sheet.ts` | 내보내기 표 (전체 내역·사람별 장부·행사별 명단), 범위, CSV 쓰기·읽기 |
 | `src/lib/excel.ts` | ExcelJS로 엑셀 만들기·읽기 (내보내기·가져오기 화면에서만 불러옴, 약 930KB) |
 | `src/lib/importData.ts` | 엑셀·CSV 표 → 장부 데이터 (흔한 열 이름 인식, 읽을 수 없는 줄 안내) |
+| `src/lib/ocr.ts` · `ocrParse.ts` · `ocrImport.ts` | 사진 줄이기·인식 플러그인 연결 / 줄 단위 글자 → 이름·금액·받음/보냄 (이체 내역 화면 규칙) / 확인 화면 줄 (기존 사람 연결, 기본 체크 해제 이유) |
 | `src/lib/contacts.ts` · `contactsImport.ts` | 연락처 플러그인 연결 / 연락처 → 사람 (중복 제거, 이미 있는 사람 표시) |
 | `src/lib/print.ts` | PDF 명단 인쇄 (웹: `window.print()`, 앱: `WebPrintPlugin`) |
 | `src/lib/share.ts` | 파일(글자·엑셀)을 만들어 공유 창 띄우기 (앱) / 다운로드 (웹) |
@@ -59,7 +61,7 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 | S-05 / S-06 행사 | ✅ 내 행사 합계·감사 인사 체크, 상대 행사 D-day·기록 참고, [기록 안 함] |
 | S-07 내역 입력 | ✅ 행사 종류 직접 입력(칠순·집들이 등, 최근 입력 버튼), 이름 자동 완성, 기록 참고, 금액 빠른 선택(만원 단위 직접 입력), 상대 경조사 등록 모드 |
 | S-08 빠른 연속 입력 | ✅ [저장하고 다음]으로만 저장, 관계·방식 유지, 동명이인 확인, 20건 이상 입력 시 백업 제안 |
-| S-09 / S-10 사진으로 등록 | ⏳ 안내 화면만 (개발 4단계, OCR 사전 테스트 후) |
+| S-09 / S-10 사진으로 등록 | ✅ 받음/보냄 선택, 사진 20장, 원본에서 위치 강조, 이름·소속·금액 고치기, 출금·중복 줄 자동 제외(이유 표시), 동명이인 고르기, 일괄 등록 후 백업 제안. 개발 서버에서는 가명 샘플로 확인 |
 | S-11 내보내기·백업 | ✅ 원탭 백업, 비밀번호(선택), 비밀번호 없이 공유 시 매번 안내 |
 | 엑셀·CSV·PDF 내보내기 | ✅ 엑셀 3종 시트(금액 숫자 서식·틀 고정·필터·합계 행), CSV(BOM), 범위(전체·행사·기간·사람), A4 답례 명단 PDF, 매번 공유 안내 |
 | S-12 가져오기·복원 | ✅ 백업·엑셀·CSV, 미리보기, 합치기/덮어쓰기, 이름·소속 같으면 자동 연결, 동명이인 확인(한꺼번에 답하기), 읽을 수 없는 줄 안내, 엑셀 양식 받기, 덮어쓰기 되돌리기 |
@@ -71,6 +73,8 @@ cd android && ./gradlew assembleDebug    # 로컬 빌드 (Android SDK 필요)
 - [ ] 실제 기기 확인 (안드로이드): 경조사 알림·백업 알림이 정한 시각에 오는지, 알림을 누르면 해당 화면이 열리는지
 - [x] 3단계: 엑셀(ExcelJS)·CSV 내보내기·가져오기, PDF 답례 명단 (003 `WebPrintPlugin` 사용)
 - [ ] 실제 기기 확인 (안드로이드): 엑셀 공유 → 휴대폰 엑셀·구글 시트에서 열림, PDF 명단 저장 (A4, 한글, 버튼 안 보임)
-- [ ] 4단계: OCR 사전 테스트(tech-stack.md 4장) → 사진으로 등록
+- [x] 4단계: 사진으로 등록 (은행 앱 이체 내역 캡처 기준)
+- [ ] 실제 기기 확인 (안드로이드): 은행 앱 이체 내역 캡처 인식, 다른 은행 앱 화면, 엑셀·메모 캡처
+- [ ] 손글씨 장부·봉투 인식 (후속)
 - [x] 5단계: 연락처 불러오기
 - [ ] 실제 기기 확인 (안드로이드): 📇 1명 고르기(권한 요청 없이), 여러 명 불러오기(권한 요청 1회), 회사명이 소속으로 들어가는지

@@ -109,7 +109,7 @@ async function toggleNoRecord() {
       <div class="stack actions">
         <RouterLink :to="`/quick?eventId=${event.id}`" class="btn">+ 명단 빠르게 입력</RouterLink>
         <div class="btn-row">
-          <RouterLink to="/ocr" class="btn secondary">사진으로 등록</RouterLink>
+          <RouterLink :to="`/ocr?eventId=${event.id}`" class="btn secondary">사진으로 등록</RouterLink>
           <RouterLink :to="`/record?eventId=${event.id}&direction=received`" class="btn secondary">1건 추가</RouterLink>
         </div>
         <div class="btn-row">

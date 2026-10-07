@@ -1,24 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { parseTransferLines, readAmount, readDate, splitName, type OcrLine } from '../src/lib/ocrParse'
+import { DEV_SAMPLE_LINES } from '../src/lib/ocrDevSample'
+import { checkedSummary, draftRows } from '../src/lib/ocrImport'
+import type { LedgerData } from '../src/lib/types'
 
-/**
- * 은행 앱 "거래내역조회" 화면 배치 (실제 캡처의 좌표를 본떠 만든 가짜 데이터, 이름은 모두 가명)
- * 날짜 줄 → 이름 + 같은 줄 오른쪽 금액 → 아래 줄 잔액
- */
+/** 은행 앱 "거래내역조회" 화면 배치 (실제 캡처의 좌표를 본떠 만든 가짜 데이터, 이름은 모두 가명) */
+const BANK_SCREEN = DEV_SAMPLE_LINES
 const L = (text: string, left: number, top: number, right: number, bottom: number): OcrLine => ({ text, left, top, right, bottom })
-export const BANK_SCREEN: OcrLine[] = [
-  L('거래내역조회', 155, 50, 410, 100),
-  L('10.06 18:26', 66, 190, 243, 222),
-  L('모임회홍길동', 66, 268, 292, 315), L('100,000원', 724, 268, 922, 315), L('941,208원', 775, 345, 922, 382),
-  L('10.05 14:31', 66, 492, 241, 524),
-  L('김철수', 66, 570, 178, 617), L('50,000원', 749, 570, 922, 617), L('841,208원', 775, 648, 922, 685),
-  L('10.04 21:38', 66, 795, 243, 827),
-  L('이영희', 66, 873, 178, 920), L('100,000원', 724, 873, 922, 920), L('791,208원', 775, 950, 922, 987),
-  L('10.04 12:43', 66, 1400, 243, 1432),
-  L('박민준', 66, 1478, 178, 1525), L('-50,000원', 732, 1478, 922, 1525), L('591,208원', 775, 1555, 922, 1592),
-  L('10.04 12:39', 66, 1703, 243, 1735),
-  L('박민준', 66, 1781, 178, 1828), L('50,000원', 749, 1781, 922, 1828), L('641,208원', 775, 1858, 922, 1895),
-]
 
 describe('글자 읽기 정리', () => {
   it('금액: 쉼표·점·O 오인식, 부호로 받음/보냄', () => {
@@ -75,5 +63,42 @@ describe('이체 내역 화면', () => {
     const { rows, unmatched } = parseTransferLines([L('홍길동', 66, 268, 292, 315), L('941,208원', 775, 345, 922, 382)], '2026-10-07')
     expect(rows).toEqual([])
     expect(unmatched).toEqual(['홍길동'])
+  })
+})
+
+describe('확인 화면 줄 (S-10)', () => {
+  const parsed = parseTransferLines(BANK_SCREEN, '2026-10-07').rows.map((r) => ({ ...r, image: 0 }))
+  const data: LedgerData = {
+    people: [
+      { id: 'p1', name: '김철수', relation: 'friend', group: '', memo: '', createdAt: 1, updatedAt: 1 },
+      { id: 'p2', name: '이영희', relation: 'work', group: 'A사', memo: '', createdAt: 1, updatedAt: 1 },
+      { id: 'p3', name: '이영희', relation: 'work', group: 'B사', memo: '', createdAt: 1, updatedAt: 1 },
+    ],
+    events: [{ id: 'e1', owner: 'mine', personId: null, type: 'wedding', title: '내 결혼식', date: '2026-10-10', place: '', remind: false, noRecordNeeded: false, createdAt: 1, updatedAt: 1 }],
+    records: [{ id: 'r1', eventId: 'e1', personId: 'p1', direction: 'received', amount: 50000, method: 'transfer', attended: null, thanked: false, memo: '', source: 'manual', createdAt: 1, updatedAt: 1 }],
+  }
+
+  it('받음을 고르면: 출금 줄·이미 있는 기록은 빼고, 동명이인은 확인 요청', () => {
+    const rows = draftRows(parsed, data, { direction: 'received', eventId: 'e1' })
+    expect(rows.map((r) => [r.name, r.checked, r.personId, r.note])).toEqual([
+      ['홍길동', true, null, null],
+      ['김철수', false, 'p1', '이미 있는 기록이에요'],
+      ['이영희', true, null, '이름이 같은 사람이 있어요. 같은 사람이면 골라 주세요'],
+      ['박민준', false, null, '출금(보낸 돈)이라 뺐어요'],
+      ['박민준', true, null, null],
+    ])
+    expect(checkedSummary(rows)).toEqual({ count: 3, total: 250000 })
+  })
+
+  it('보냄을 고르면 입금 줄을 뺀다', () => {
+    const rows = draftRows(parsed, data, { direction: 'given' })
+    expect(rows.filter((r) => r.checked).map((r) => [r.name, r.amount])).toEqual([['박민준', 50000]])
+  })
+
+  it('겹쳐 찍은 사진에서 같은 내역이 두 번 나오면 하나만', () => {
+    const twice = [...parsed.slice(0, 2), ...parsed.slice(0, 2).map((r) => ({ ...r, image: 1 }))]
+    const rows = draftRows(twice, { people: [], events: [], records: [] }, { direction: 'received' })
+    expect(rows.map((r) => r.checked)).toEqual([true, true, false, false])
+    expect(rows[2].note).toBe('같은 내역을 두 번 읽었어요')
   })
 })
