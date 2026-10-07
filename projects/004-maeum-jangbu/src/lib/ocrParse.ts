@@ -3,8 +3,8 @@
  *
  * 은행 앱 이체 내역 화면 기준:
  *   10.06 18:26                 ← 날짜·시각
- *   사모회홍길동      100,000원   ← 이름(메모)과 같은 줄의 금액 = 거래 금액
- *                    941,208원   ← 아래 줄 금액 = 잔액 (무시)
+ *   모임회홍길동      100,000원   ← 이름(메모)과 같은 줄의 금액 = 거래 금액
+ *                    312,500원   ← 아래 줄 금액 = 잔액 (무시)
  * - 금액 앞에 "-"가 있으면 보냄(출금), 없거나 "+"면 받음(입금)
  * - 이름 칸에 "모임명+이름"이 붙어 있으면(5~8글자 한글) 뒤 3글자를 이름, 앞을 소속으로 제안하고 확인 표시
  * 계산(합계)은 여기서 하지 않는다. 결과는 사용자가 확인한 뒤에만 저장한다.
@@ -76,7 +76,7 @@ export function readDate(text: string, today: string): string | null {
   return `${year}-${pad(mm)}-${pad(dd)}`
 }
 
-/** "사모회홍길동" → 이름 "홍길동" + 소속 "사모회" (제안). 2~4글자면 그대로 */
+/** "모임회홍길동" → 이름 "홍길동" + 소속 "모임회" (제안). 2~4글자면 그대로 */
 export function splitName(text: string): { name: string; group: string; flags: OcrFlag[] } {
   const t = cleanText(text)
   if (HANGUL_ONLY.test(t) && t.length >= 2 && t.length <= 4) return { name: t, group: '', flags: [] }

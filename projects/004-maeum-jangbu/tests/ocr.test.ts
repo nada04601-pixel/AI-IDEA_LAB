@@ -47,20 +47,20 @@ describe('이체 내역 화면', () => {
       ['박민준', '', 50000, 'received', '2026-10-04'],
     ])
     expect(rows[0].flags).toEqual(['name-split'])
-    expect(rows.some((r) => [941208, 841208, 791208, 591208, 641208].includes(r.amount))).toBe(false)
+    expect(rows.some((r) => [312500, 212500, 162500, 62500, 112500].includes(r.amount))).toBe(false)
     expect(unmatched).toEqual([])
   })
 
   it('이름과 금액이 한 줄로 읽혀도 나눈다', () => {
     const { rows } = parseTransferLines(
-      [L('10.05 14:31', 66, 492, 241, 524), L('김철수 50,000원', 66, 570, 922, 617), L('841,208원', 775, 648, 922, 685)],
+      [L('10.05 14:31', 66, 492, 241, 524), L('김철수 50,000원', 66, 570, 922, 617), L('212,500원', 775, 648, 922, 685)],
       '2026-10-07',
     )
     expect(rows.map((r) => [r.name, r.amount, r.date])).toEqual([['김철수', 50000, '2026-10-05']])
   })
 
   it('금액 짝이 없는 이름은 따로 알려 준다', () => {
-    const { rows, unmatched } = parseTransferLines([L('홍길동', 66, 268, 292, 315), L('941,208원', 775, 345, 922, 382)], '2026-10-07')
+    const { rows, unmatched } = parseTransferLines([L('홍길동', 66, 268, 292, 315), L('312,500원', 775, 345, 922, 382)], '2026-10-07')
     expect(rows).toEqual([])
     expect(unmatched).toEqual(['홍길동'])
   })
