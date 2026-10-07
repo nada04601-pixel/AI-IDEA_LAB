@@ -1,4 +1,4 @@
-# 004. 경조사비 관리 앱
+# 004. 마음장부 (경조사비 관리 앱)
 
 # 기술 스택 결정
 
@@ -29,7 +29,7 @@
 | 배포 | **안드로이드 먼저** → APK(GitHub Actions) → Play 스토어 | 003의 APK 빌드 워크플로를 복사해 사용. iOS는 후속 (Mac·Apple 개발자 계정 필요) |
 
 - 코드 위치 (예정): `projects/004-gyeongjosa-ledger`
-- 앱 ID (가정): `kr.co.novalabs.<앱이름>` — 앱 이름 확정 후 결정. **스토어 등록 후에는 바꿀 수 없다.**
+- 앱 이름: **마음장부** / 앱 ID: **`kr.co.novalabs.maeumjangbu`** (003 `kr.co.novalabs.maeumrecord`와 같은 규칙). **스토어 등록 후에는 바꿀 수 없다.**
 
 ### 1-1. 인터넷 권한을 두지 않는다
 
@@ -165,7 +165,7 @@ OCR은 이 앱의 핵심 차별점이자 Capacitor 선택의 유일한 불확실
 ```jsonc
 // 비밀번호 없음 (기본)
 {
-  "format": "gyeongjosa-ledger-backup",
+  "format": "maeum-jangbu-backup",
   "version": 1,
   "exportedAt": "2026-10-07T09:00:00.000Z",
   "encrypted": false,
@@ -174,7 +174,7 @@ OCR은 이 앱의 핵심 차별점이자 Capacitor 선택의 유일한 불확실
 
 // 비밀번호 설정 시
 {
-  "format": "gyeongjosa-ledger-backup",
+  "format": "maeum-jangbu-backup",
   "version": 1,
   "exportedAt": "...",
   "encrypted": true,
@@ -240,7 +240,7 @@ OCR은 이 앱의 핵심 차별점이자 Capacitor 선택의 유일한 불확실
 - [x] 앱 방식: **Capacitor로 처음부터 앱** (2026-10-07 결정)
 - [ ] OCR 연결 방식: 기존 플러그인 vs 직접 작성 (사전 테스트 후)
 - [ ] ML Kit 모델: 앱 포함 vs 다운로드 (APK 크기 확인 후)
-- [ ] 앱 이름 → 앱 ID 확정
+- [x] 앱 이름 마음장부, 앱 ID `kr.co.novalabs.maeumjangbu` (2026-10-07 결정)
 - [ ] 광고·클라우드 OCR·구글 드라이브 자동 백업 도입 시점 (모두 인터넷 권한 필요 → "인터넷 연결 안 함" 약속과 함께 결정)
 - [ ] iOS 출시 시점
 - [ ] 연락처 플러그인 선정 및 Capacitor 8 호환 확인
@@ -253,3 +253,4 @@ OCR은 이 앱의 핵심 차별점이자 Capacitor 선택의 유일한 불확실
 |---|---|
 | 2026-10-07 | 최초 작성: Capacitor 결정, 인터넷 권한 없음, 데이터 구조, OCR 구조·사전 테스트, 백업 암호화·복원·엑셀 형식, 개발 순서 |
 | 2026-10-07 | 백업 알림 기준 30일 (`backupReminderDays`) 반영 |
+| 2026-10-07 | 앱 이름·앱 ID 확정, 백업 파일 format 값을 `maeum-jangbu-backup`으로 변경 |
