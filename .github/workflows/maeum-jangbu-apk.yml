@@ -50,12 +50,12 @@ jobs:
           ./gradlew assembleDebug --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../maeum-jangbu-debug.apk
 
-      - name: 인터넷 권한이 없는지 확인 (tech-stack.md 1-1)
+      - name: 인터넷·카메라 권한이 없는지 확인 (tech-stack.md 1-1)
         run: |
           AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2"
           "$AAPT2" dump permissions maeum-jangbu-debug.apk | tee permissions.txt
-          if grep -E "android.permission.(INTERNET|ACCESS_NETWORK_STATE)" permissions.txt; then
-            echo "::error::APK에 인터넷 권한이 들어 있어요. AndroidManifest.xml의 tools:node=\"remove\"를 확인하세요."
+          if grep -E "android.permission.(INTERNET|ACCESS_NETWORK_STATE|CAMERA)" permissions.txt; then
+            echo "::error::APK에 인터넷·카메라 권한이 들어 있어요. AndroidManifest.xml을 확인하세요 (카메라는 기본 카메라 앱으로 촬영해 권한이 필요 없음)."
             exit 1
           fi
 

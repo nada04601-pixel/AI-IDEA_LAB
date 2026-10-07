@@ -3,6 +3,7 @@ package kr.co.novalabs.maeumjangbu;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import android.os.Environment;
 import android.util.Base64;
 
 import com.getcapacitor.JSArray;
@@ -16,6 +17,8 @@ import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.korean.KoreanTextRecognizerOptions;
+
+import java.io.File;
 
 /**
  * 사진 → 글자 (Google ML Kit 한국어 텍스트 인식, 휴대폰 안에서 처리) — tech-stack.md 3장
@@ -83,6 +86,27 @@ public class TextRecognitionPlugin extends Plugin {
                 call.resolve(ret);
             })
             .addOnFailureListener(e -> call.reject("글자를 읽지 못했어요: " + e.getMessage(), e));
+    }
+
+    /**
+     * [촬영]으로 찍은 사진 지우기.
+     * WebView 파일 선택(capture)은 카메라 앱이 찍은 사진을 앱 전용 폴더(Pictures/JPEG_*.jpg)에 남긴다
+     * (Capacitor BridgeWebChromeClient.createImageFile). 사진을 저장하지 않는다는 약속을 위해 지운다.
+     */
+    @PluginMethod
+    public void deleteCaptures(PluginCall call) {
+        int deleted = 0;
+        File dir = getContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File[] files = dir == null ? null : dir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                String n = f.getName();
+                if (f.isFile() && n.startsWith("JPEG_") && n.endsWith(".jpg") && f.delete()) deleted++;
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("deleted", deleted);
+        call.resolve(ret);
     }
 
     @Override

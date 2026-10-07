@@ -36,6 +36,14 @@
         </provider>
     </application>
 
+    <!-- 사진으로 등록의 [촬영]: 안드로이드 기본 카메라 앱을 찾기 위해 필요 (Android 11+).
+         카메라 권한은 선언하지 않는다 → 촬영은 카메라 앱이 하고 이 앱은 결과 사진만 받는다 -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <!-- 연락처 "여러 명 불러오기"에서만 요청 (읽기 전용, 이름·회사명만 읽음). 1명 고르기는 권한 없이 시스템 선택 화면 사용 -->

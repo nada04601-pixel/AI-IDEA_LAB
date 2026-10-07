@@ -5,6 +5,7 @@ import type { OcrLine } from './ocrParse'
 /** android/.../TextRecognitionPlugin.java — 휴대폰 안에서 글자 인식 */
 interface TextRecognitionPlugin {
   recognize(options: { base64: string }): Promise<{ width: number; height: number; lines: OcrLine[] }>
+  deleteCaptures(): Promise<{ deleted: number }>
 }
 const native = registerPlugin<TextRecognitionPlugin>('TextRecognition')
 
@@ -50,6 +51,20 @@ const useMock = !isNativeApp && import.meta.env.DEV
 
 /** 사진 인식은 안드로이드 앱에서만 */
 export const ocrSupported = isNativeApp || useMock
+
+/**
+ * [촬영]으로 찍은 사진 지우기.
+ * 앱 WebView(Capacitor)는 카메라 앱이 찍은 사진을 앱 전용 폴더(Pictures/JPEG_*.jpg)에 남긴다.
+ * 사진은 저장하지 않는다는 약속(idea.md 3-2)을 지키기 위해 읽은 뒤·화면을 떠날 때 지운다.
+ */
+export async function deleteCapturedPhotos(): Promise<void> {
+  if (!isNativeApp) return
+  try {
+    await native.deleteCaptures()
+  } catch (e) {
+    console.warn('촬영 사진 정리 실패', e)
+  }
+}
 
 /** 줄인 사진 → 줄 단위 글자와 위치 (사진 좌표) */
 export async function recognize(img: PreparedImage): Promise<OcrLine[]> {

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, shallowRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EventTypePicker from '../components/EventTypePicker.vue'
 import { ledger, eventsById } from '../lib/store'
 import { addEvent, addPerson, addRecord } from '../lib/db'
-import { ocrSupported, prepareImage, recognize, type PreparedImage } from '../lib/ocr'
+import { deleteCapturedPhotos, ocrSupported, prepareImage, recognize, type PreparedImage } from '../lib/ocr'
 import { parseTransferLines } from '../lib/ocrParse'
 import { checkedSummary, draftRows, type DraftRow } from '../lib/ocrImport'
 import { formatDot, todayKey } from '../lib/date'
@@ -34,13 +34,15 @@ const givenType = ref<EventType>('wedding')
 const givenCustomType = ref('')
 
 const fileInput = ref<HTMLInputElement | null>(null)
+const cameraInput = ref<HTMLInputElement | null>(null)
 const images = shallowRef<PreparedImage[]>([])
 const reading = ref<{ done: number; total: number } | null>(null)
 const error = ref<string | null>(null)
 
 async function onFiles(ev: Event) {
-  const files = Array.from((ev.target as HTMLInputElement).files ?? [])
-  if (fileInput.value) fileInput.value.value = ''
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
   const room = 20 - images.value.length
   if (files.length > room) showToast(`사진은 한 번에 20장까지예요`, 2500)
   const added: PreparedImage[] = []
@@ -52,7 +54,11 @@ async function onFiles(ev: Event) {
     }
   }
   images.value = [...images.value, ...added]
+  // 줄인 사진은 메모리에만 두고, 카메라 앱이 남긴 원본 파일은 바로 지운다
+  if (input === cameraInput.value) void deleteCapturedPhotos()
 }
+
+onBeforeUnmount(() => void deleteCapturedPhotos())
 
 function removeImage(i: number) {
   images.value = images.value.filter((_, k) => k !== i)
@@ -236,9 +242,14 @@ const flagText: Record<string, string> = {
           <img :src="img.url" :alt="`사진 ${i + 1}`" />
           <button class="x" :aria-label="`사진 ${i + 1} 빼기`" @click="removeImage(i)">✕</button>
         </div>
-        <button v-if="images.length < 20" class="thumb add" @click="fileInput?.click()">＋<span class="small">사진 추가</span></button>
+      </div>
+      <div v-if="images.length < 20" class="btn-row pickers">
+        <button class="btn secondary" @click="cameraInput?.click()">📷 촬영</button>
+        <button class="btn secondary" @click="fileInput?.click()">🖼 앨범에서 선택</button>
       </div>
       <input ref="fileInput" type="file" accept="image/*" multiple hidden @change="onFiles" />
+      <!-- capture: 앱에서는 기본 카메라 앱이 바로 열린다 (카메라 권한 불필요) -->
+      <input ref="cameraInput" type="file" accept="image/*" capture="environment" hidden @change="onFiles" />
 
       <div class="card tips">
         <p class="small"><strong>잘 읽히는 사진</strong></p>
@@ -321,7 +332,7 @@ const flagText: Record<string, string> = {
 .thumb { position: relative; aspect-ratio: 3 / 5; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
 .thumb .x { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgb(0 0 0 / 0.55); color: #fff; font-size: 0.8rem; }
-.thumb.add { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 1.6rem; color: var(--accent); border-style: dashed; }
+.pickers { margin-top: 10px; }
 .tips { margin-top: 14px; }
 .tips p { margin: 0 0 4px; }
 .tips ul { margin: 0 0 6px; padding-left: 18px; }
