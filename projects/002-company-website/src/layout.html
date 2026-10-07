@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <meta name="description" content="{{description}}">
+  <link rel="canonical" href="{{canonical}}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{site_name}}">
+  <meta property="og:title" content="{{title}}">
+  <meta property="og:description" content="{{description}}">
+  <meta property="og:url" content="{{canonical}}">
+  <meta property="og:locale" content="ko_KR">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  {{head_extra}}
+  <script src="/assets/js/common.js" defer></script>{{scripts}}
+</head>
+<body>
+  <a class="skip-link" href="#main">본문 바로가기</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="/">{{site_name}}</a>
+      <button class="nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="메뉴 열기">
+        <span></span><span></span><span></span>
+      </button>
+      <nav id="site-nav" class="site-nav" aria-label="주 메뉴">
+        <ul>
+          {{nav}}
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+{{content}}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <ul class="footer-links">
+        <li><a href="/about.html">회사 소개</a></li>
+        <li><a href="/privacy.html"><strong>개인정보처리방침</strong></a></li>
+        <li><a href="/terms.html">이용약관</a></li>
+        <li><a href="/contact.html">문의하기</a></li>
+        <li><a href="/sitemap.xml">사이트맵</a></li>
+      </ul>
+      <p class="biz-info">
+        상호: {{company_name}} · 대표: {{ceo}} · 사업자등록번호: {{business_number}}<br>
+        주소: {{address}} · 이메일: <a href="mailto:{{email}}">{{email}}</a>
+      </p>
+      <p class="copyright">© {{year}} {{company_name}}. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>
