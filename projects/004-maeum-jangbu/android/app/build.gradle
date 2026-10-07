@@ -53,6 +53,8 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    // 사진 → 글자: ML Kit 한국어 텍스트 인식, 모델을 앱에 포함 (인터넷 없이 동작, tech-stack.md 3-2)
+    implementation 'com.google.mlkit:text-recognition-korean:16.0.1'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
