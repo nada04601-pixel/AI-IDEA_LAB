@@ -89,7 +89,8 @@
 |---|---|
 | `onboardingDone` | boolean |
 | `lastBackupAt` | number \| null |
-| `changesSinceBackup` | number — 백업 이후 추가·수정 건수 (백업 알림 기준) |
+| `changesSinceBackup` | number — 백업 이후 추가·수정 건수. 홈 백업 카드의 "그 뒤로 N건 추가" 표시와, 0건이면 알림을 생략하는 데 사용 |
+| `backupReminderDays` | number — 기본 **30** (설정에서 변경 가능) |
 | `eventReminderDaysBefore`, `eventReminderTime` | number, `HH:mm` — 기본 1일 전 오전 9시 `(가정)` |
 
 - **금액 합계, 사람별 받은/준/차이, 금액 추천은 저장하지 않고 매번 코드로 계산**한다. (저장값과 계산값이 어긋나는 문제 방지)
@@ -251,3 +252,4 @@ OCR은 이 앱의 핵심 차별점이자 Capacitor 선택의 유일한 불확실
 | 일자 | 내용 |
 |---|---|
 | 2026-10-07 | 최초 작성: Capacitor 결정, 인터넷 권한 없음, 데이터 구조, OCR 구조·사전 테스트, 백업 암호화·복원·엑셀 형식, 개발 순서 |
+| 2026-10-07 | 백업 알림 기준 30일 (`backupReminderDays`) 반영 |
