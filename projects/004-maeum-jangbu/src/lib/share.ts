@@ -1,6 +1,7 @@
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { isNativeApp } from './platform'
+import { toBase64 } from './crypto'
 
 export type ShareResult = 'shared' | 'canceled'
 
@@ -10,13 +11,15 @@ export type ShareResult = 'shared' | 'canceled'
  * - 웹: 다운로드.
  * 앱은 인터넷 권한이 없으므로 스스로 파일을 어디에도 보내지 않는다.
  */
-export async function shareTextFile(name: string, text: string, mime: string, title: string): Promise<ShareResult> {
+export async function shareFile(name: string, content: string | Uint8Array, mime: string, title: string): Promise<ShareResult> {
   if (!isNativeApp) {
-    const blob = new Blob([text], { type: mime })
+    const blob = new Blob([typeof content === 'string' ? content : new Uint8Array(content)], { type: mime })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = name
+    document.body.appendChild(a)
     a.click()
+    a.remove()
     setTimeout(() => URL.revokeObjectURL(a.href), 1000)
     return 'shared'
   }
@@ -29,7 +32,11 @@ export async function shareTextFile(name: string, text: string, mime: string, ti
   } catch {
     /* 이전 임시 파일 정리 실패는 무시 */
   }
-  const { uri } = await Filesystem.writeFile({ path: name, data: text, directory: Directory.Cache, encoding: Encoding.UTF8 })
+  // 글자 파일은 UTF-8로, 엑셀 같은 이진 파일은 base64로 쓴다
+  const { uri } =
+    typeof content === 'string'
+      ? await Filesystem.writeFile({ path: name, data: content, directory: Directory.Cache, encoding: Encoding.UTF8 })
+      : await Filesystem.writeFile({ path: name, data: toBase64(content), directory: Directory.Cache })
   try {
     await Share.share({ title, files: [uri], dialogTitle: '저장하거나 보낼 곳을 고르세요' })
   } catch (e) {

@@ -112,7 +112,10 @@ async function toggleNoRecord() {
           <RouterLink to="/ocr" class="btn secondary">사진으로 등록</RouterLink>
           <RouterLink :to="`/record?eventId=${event.id}&direction=received`" class="btn secondary">1건 추가</RouterLink>
         </div>
-        <RouterLink to="/export" class="btn outline">명단 내보내기 (엑셀·PDF)</RouterLink>
+        <div class="btn-row">
+          <RouterLink :to="`/export?eventId=${event.id}`" class="btn outline">엑셀로 내보내기</RouterLink>
+          <RouterLink :to="`/events/${event.id}/print`" class="btn outline">PDF 명단</RouterLink>
+        </div>
       </div>
     </template>
 

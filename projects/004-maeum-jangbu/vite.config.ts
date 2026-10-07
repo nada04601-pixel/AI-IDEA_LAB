@@ -10,6 +10,8 @@ const APP_BUILD = process.env.GITHUB_RUN_NUMBER ? `0.1.${process.env.GITHUB_RUN_
 export default defineConfig({
   define: { __APP_BUILD__: JSON.stringify(APP_BUILD) },
   base: './',
+  // 엑셀 라이브러리(ExcelJS)는 내보내기·가져오기 화면에서만 따로 불러오는 큰 조각이다
+  build: { chunkSizeWarningLimit: 1000 },
   plugins: [vue()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
 })

@@ -126,20 +126,36 @@ export interface NameConflict {
   incoming: Person
 }
 
+export interface PeopleMatch {
+  /** 자동으로 같은 사람으로 본 쌍 (incoming id → existing id) */
+  sameAs: Record<string, string>
+  /** 사용자에게 물어야 하는 쌍 */
+  conflicts: NameConflict[]
+}
+
 /**
- * 이름은 같지만 id가 다른 사람 (tech-stack.md 5-2).
- * 자동으로 합치지 않고 사용자에게 "같은 사람인가요?"를 묻는다.
+ * 가져오는 사람과 기존 사람 짝짓기 (tech-stack.md 5-2)
+ * - id가 같으면 같은 사람 (mergeData가 처리)
+ * - 이름과 소속이 모두 같은 사람이 딱 1명이면 자동으로 같은 사람 (엑셀 왕복처럼 id가 새로 생기는 경우)
+ * - 이름만 같으면(동명이인 가능성) 자동으로 합치지 않고 "같은 사람인가요?"를 묻는다
  */
-export function findNameConflicts(existing: LedgerData, incoming: LedgerData): NameConflict[] {
+export function matchPeople(existing: LedgerData, incoming: LedgerData): PeopleMatch {
   const ids = new Set(existing.people.map((p) => p.id))
-  const out: NameConflict[] = []
+  const sameAs: Record<string, string> = {}
+  const conflicts: NameConflict[] = []
   for (const p of incoming.people) {
     if (ids.has(p.id)) continue
-    const same = existing.people.find((e) => e.name === p.name)
-    if (same) out.push({ existing: same, incoming: p })
+    const sameName = existing.people.filter((e) => e.name === p.name)
+    if (!sameName.length) continue
+    const exact = sameName.filter((e) => e.group === p.group)
+    if (exact.length === 1) sameAs[p.id] = exact[0].id
+    else conflicts.push({ existing: exact[0] ?? sameName[0], incoming: p })
   }
-  return out
+  return { sameAs, conflicts }
 }
+
+/** 이름만 같은 사람 (사용자 확인 필요) */
+export const findNameConflicts = (existing: LedgerData, incoming: LedgerData) => matchPeople(existing, incoming).conflicts
 
 export interface MergeResult {
   result: LedgerData
@@ -151,6 +167,7 @@ export interface MergeResult {
  * 합치기. sameAs: 사용자가 "같은 사람"이라고 답한 쌍 (incoming id → existing id)
  * - 사람: id가 같으면 같은 사람. sameAs에 있으면 기존 사람으로 연결.
  * - 행사: id가 같거나, owner + type + date + 대상 사람이 같으면 같은 행사.
+ *   종류를 모르는 내 행사는 같은 날 내 행사가 하나뿐이면 그 행사.
  * - 내역: id가 같거나, 행사 + 사람 + 받음/보냄 + 금액이 같으면 중복으로 건너뜀.
  */
 export function mergeData(existing: LedgerData, incoming: LedgerData, sameAs: Record<string, string> = {}): MergeResult {
@@ -176,9 +193,15 @@ export function mergeData(existing: LedgerData, incoming: LedgerData, sameAs: Re
   const eventById = new Map(events.map((e) => [e.id, e]))
   const eventByKey = new Map(events.map((e) => [eventKey(e), e]))
   const eventMap = new Map<string, string>()
+  // 종류를 모르는 내 행사(엑셀에 행사 열이 없을 때)는 같은 날 내 행사가 하나뿐이면 그 행사로 본다
+  const sameDayMine = (e: LedgerEvent) => {
+    if (e.owner !== 'mine' || e.type !== 'other') return undefined
+    const same = events.filter((x) => x.owner === 'mine' && x.date === e.date)
+    return same.length === 1 ? same[0] : undefined
+  }
   for (const raw of incoming.events) {
     const e = { ...raw, personId: raw.personId ? (personMap.get(raw.personId) ?? null) : null }
-    const found = eventById.get(e.id) ?? eventByKey.get(eventKey(e))
+    const found = eventById.get(e.id) ?? eventByKey.get(eventKey(e)) ?? sameDayMine(e)
     if (found) eventMap.set(e.id, found.id)
     else {
       events.push(e)

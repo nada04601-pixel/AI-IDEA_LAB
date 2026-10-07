@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { formatFull, formatSentence, formatShort, parseAmount } from '../src/lib/money'
 import { addDays, daysBetween, ddayLabel } from '../src/lib/date'
 import { diffShort, diffText, eventSummary, missingGiven, receivedFrom, searchPeople, totalsByPerson, totalsOf, upcomingTheirs } from '../src/lib/ledger'
-import { backupStatus, findNameConflicts, makeBackupText, mergeData, openBackup, previewOf, readBackupFile } from '../src/lib/backup'
+import { backupStatus, findNameConflicts, makeBackupText, matchPeople, mergeData, openBackup, previewOf, readBackupFile } from '../src/lib/backup'
 import { WrongPasswordError, decryptText, encryptText } from '../src/lib/crypto'
 import { BACKUP_ID, DEFAULT_NOTIFY, EVENT_ID_BASE, planNotifications } from '../src/lib/notifySchedule'
 import type { LedgerData, LedgerEvent, LedgerRecord, Person } from '../src/lib/types'
@@ -197,6 +197,10 @@ describe('합치기 (tech-stack.md 5-2)', () => {
     // "다른 사람" → 따로 추가
     const separate = mergeData(existing, incoming)
     expect(separate.added.people).toBe(1)
+
+    // 이름과 소속까지 같으면 묻지 않고 같은 사람으로 본다
+    const exact = matchPeople(existing, { ...incoming, people: [person('q1', '김민수', '대학 동기')] })
+    expect(exact).toEqual({ sameAs: { q1: 'p1' }, conflicts: [] })
 
     // "같은 사람" → 기존 사람으로 연결 (행사·내역의 사람도 바뀐다)
     const same = mergeData(existing, incoming, { q2: 'p2' })

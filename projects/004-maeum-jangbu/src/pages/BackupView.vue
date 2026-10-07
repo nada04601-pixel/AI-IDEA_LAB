@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ledger } from '../lib/store'
 import { getSetting, loadAll, markBackedUp } from '../lib/db'
 import { backupFileName, makeBackupText } from '../lib/backup'
-import { shareTextFile } from '../lib/share'
+import { shareFile } from '../lib/share'
 import { ask } from '../lib/dialog'
 import { todayKey } from '../lib/date'
 import { isNativeApp } from '../lib/platform'
@@ -45,7 +45,7 @@ async function makeBackup() {
   try {
     const data = await loadAll()
     const text = await makeBackupText(data, usePassword.value ? pw1.value : undefined)
-    const res = await shareTextFile(backupFileName(todayKey()), text, 'application/json', '마음장부 백업')
+    const res = await shareFile(backupFileName(todayKey()), text, 'application/json', '마음장부 백업')
     if (res === 'canceled') {
       message.value = '백업을 취소했어요.'
       return
@@ -87,8 +87,8 @@ async function makeBackup() {
 
     <h2 class="section-title">보기 좋은 파일로 내보내기</h2>
     <RouterLink to="/export" class="card plain between">
-      <span><strong>엑셀 · CSV · PDF 명단</strong><br /><span class="muted small">다음 업데이트에서 제공해요</span></span>
-      <span class="badge">준비 중</span>
+      <span><strong>엑셀 · CSV · PDF 명단</strong><br /><span class="muted small">전체 내역 · 사람별 장부 · 행사별 명단</span></span>
+      <span aria-hidden="true">›</span>
     </RouterLink>
 
     <h2 class="section-title">다른 곳에서 가져오기</h2>
