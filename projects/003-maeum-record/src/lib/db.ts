@@ -81,3 +81,8 @@ export async function wipeAll() {
     await db.settings.clear()
   })
 }
+
+export async function oldestEntryDate(): Promise<string | null> {
+  const first = await db.entries.orderBy('date').first()
+  return first?.date ?? null
+}

@@ -75,3 +75,28 @@ export function mergeEntries(existing: Entry[], incoming: Entry[], mode: 'merge'
 export function backupFileName(dateKey: string) {
   return `마음기록_백업_${dateKey}.json`
 }
+
+export const BACKUP_NUDGE_DAYS = 30
+
+/**
+ * 백업 권유 (idea.md 6-5). 마지막 백업(없으면 첫 기록) 후 30일이 지나면 경과 일수를 돌려준다.
+ * 기록이 없으면 권유하지 않는다. 독촉 알림은 보내지 않고, 화면에 조용히 한 줄만 보여준다.
+ */
+export function backupNudgeDays(lastBackupAt: number | null, oldestEntryDate: string | null, now = new Date()): number | null {
+  if (!oldestEntryDate) return null
+  const since = lastBackupAt !== null ? new Date(lastBackupAt) : (() => {
+    const [y, m, d] = oldestEntryDate.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  })()
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((startOf(now) - startOf(since)) / 86_400_000)
+  return days >= BACKUP_NUDGE_DAYS ? days : null
+}
+
+/** 설정 화면용: "오늘", "3일 전", "아직 없음" */
+export function lastBackupLabel(lastBackupAt: number | null, now = new Date()): string {
+  if (lastBackupAt === null) return '아직 없음'
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((startOf(now) - startOf(new Date(lastBackupAt))) / 86_400_000)
+  return days <= 0 ? '오늘' : `${days}일 전`
+}

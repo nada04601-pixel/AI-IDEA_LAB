@@ -125,3 +125,25 @@ describe('reminder schedule', () => {
     expect(() => parseTime('abc')).toThrow()
   })
 })
+
+import { backupNudgeDays, lastBackupLabel } from '../src/lib/backup'
+
+describe('backup nudge', () => {
+  const now = new Date('2026-10-07T12:00:00')
+  it('기록이 없으면 권유 안 함', () => {
+    expect(backupNudgeDays(null, null, now)).toBeNull()
+  })
+  it('백업한 적 없으면 첫 기록 기준 30일부터', () => {
+    expect(backupNudgeDays(null, '2026-09-08', now)).toBeNull() // 29일: 권유 안 함
+    expect(backupNudgeDays(null, '2026-09-07', now)).toBe(30)
+  })
+  it('마지막 백업 기준', () => {
+    expect(backupNudgeDays(new Date('2026-09-01T23:00:00').getTime(), '2026-01-01', now)).toBe(36)
+    expect(backupNudgeDays(new Date('2026-10-01T09:00:00').getTime(), '2026-01-01', now)).toBeNull()
+  })
+  it('설정 표시 문구', () => {
+    expect(lastBackupLabel(null, now)).toBe('아직 없음')
+    expect(lastBackupLabel(new Date('2026-10-07T08:00:00').getTime(), now)).toBe('오늘')
+    expect(lastBackupLabel(new Date('2026-10-04T23:59:00').getTime(), now)).toBe('3일 전')
+  })
+})

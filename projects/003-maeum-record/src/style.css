@@ -87,10 +87,11 @@ textarea.field { resize: vertical; min-height: 96px; }
 .list { list-style: none; margin: 0; padding: 0; }
 .list-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 16px; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--text);
-  background: none; border-left: 0; border-right: 0; border-top: 0; width: 100%; text-align: left;
+  padding: 14px 16px; border: 0; text-decoration: none; color: var(--text);
+  background: none; width: 100%; text-align: left;
 }
-.list-row:last-child { border-bottom: 0; }
+/* 구분선은 항목(li) 사이에 둔다. 버튼 옆에 숨은 input 등이 있어도 줄이 빠지지 않게 */
+.list > li + li { border-top: 1px solid var(--line); }
 
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--tab-h) + 20px + env(safe-area-inset-bottom)); transform: translateX(-50%);

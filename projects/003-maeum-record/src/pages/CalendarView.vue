@@ -169,7 +169,7 @@ onMounted(load)
 }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .sheet-head h2 { margin: 0; }
-.entry { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.entry { padding: 12px 0; }
 .entry-main { display: flex; gap: 12px; }
 .memo { margin: 6px 0 0; }
 .tags { margin: 4px 0 0; }

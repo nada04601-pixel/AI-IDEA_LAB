@@ -1,19 +1,26 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import EntryForm from '../components/EntryForm.vue'
-import { addEntry, entriesOn } from '../lib/db'
+import { addEntry, entriesOn, oldestEntryDate } from '../lib/db'
 import { formatLong, formatTime, todayKey } from '../lib/date'
 import { moodInfo, type Entry, type Mood } from '../lib/mood'
 import { showToast, toastText } from '../lib/toast'
 import { syncReminder } from '../lib/reminder'
+import { backupNudgeDays } from '../lib/backup'
+import { getLastBackupAt } from '../lib/backupExport'
 
 /** S-02 홈 (오늘 기록) */
 const today = todayKey()
 const todays = ref<Entry[]>([])
 const lastWasHardest = ref(false)
+/** 백업 권유: null이면 표시 안 함, 그 외에는 마지막 백업(또는 첫 기록) 후 경과 일수 */
+const nudge = ref<{ days: number; never: boolean } | null>(null)
 
 async function load() {
   todays.value = await entriesOn(today)
+  const last = await getLastBackupAt()
+  const days = backupNudgeDays(last, await oldestEntryDate())
+  nudge.value = days === null ? null : { days, never: last === null }
 }
 
 async function save(v: { mood: Mood; memo: string; tags: string[] }) {
@@ -55,6 +62,12 @@ onMounted(load)
       </ul>
     </section>
 
+    <!-- 백업 권유: 독촉하지 않고 조용히 한 줄 (idea.md 6-5) -->
+    <p v-if="nudge" class="muted nudge">
+      {{ nudge.never ? '아직 기록을 백업한 적이 없어요.' : `마지막 백업: ${nudge.days}일 전` }}
+      <RouterLink to="/settings">백업하기 →</RouterLink>
+    </p>
+
     <div v-if="toastText" class="toast" role="status">{{ toastText }}</div>
   </div>
 </template>
@@ -64,9 +77,9 @@ onMounted(load)
 .gentle { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--text-2); }
 .today { margin-top: 24px; }
 .flush { padding: 0; }
-.row { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.row:last-child { border-bottom: 0; }
+.row { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; }
 .time { color: var(--text-2); font-size: 0.88rem; min-width: 68px; padding-top: 2px; }
 .emoji { font-size: 1.25rem; }
 .text { flex: 1; word-break: break-all; }
+.nudge { margin-top: 24px; font-size: 0.88rem; text-align: center; }
 </style>

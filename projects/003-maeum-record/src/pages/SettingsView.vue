@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { allEntries, getSetting, replaceAllEntries, setSetting, wipeAll } from '../lib/db'
-import { backupFileName, makeBackup, mergeEntries, parseBackup } from '../lib/backup'
-import { todayKey } from '../lib/date'
+import { allEntries, replaceAllEntries, setSetting, wipeAll } from '../lib/db'
+import { lastBackupLabel, mergeEntries, parseBackup } from '../lib/backup'
+import { exportBackup as doExport, getLastBackupAt } from '../lib/backupExport'
 import { resetOnboarded } from '../router'
 import { isNativeApp } from '../lib/platform'
 import ReminderSettings from '../components/ReminderSettings.vue'
@@ -14,21 +14,30 @@ const router = useRouter()
 const message = ref<string | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const version = '0.1.0'
+const lastBackup = ref('…')
+const exporting = ref(false)
+
+const refreshLastBackup = async () => (lastBackup.value = lastBackupLabel(await getLastBackupAt()))
+onMounted(refreshLastBackup)
 
 async function exportBackup() {
-  if (isNativeApp) {
-    // WebView에서는 <a download>가 동작하지 않는다. 앱 단계에서 Filesystem/Share 플러그인으로 구현 예정.
-    message.value = '앱 테스트 버전에서는 백업 파일 만들기를 준비 중이에요.'
-    return
+  exporting.value = true
+  message.value = null
+  try {
+    const res = await doExport()
+    if (res.status === 'saved') {
+      message.value = isNativeApp
+        ? `기록 ${res.count}개를 백업 파일로 만들었어요. 고른 곳에 잘 저장됐는지 확인해 주세요.`
+        : `기록 ${res.count}개를 백업 파일로 만들었어요.`
+      await refreshLastBackup()
+    } else {
+      message.value = '백업을 취소했어요.'
+    }
+  } catch (e) {
+    message.value = `백업 파일을 만들지 못했어요. (${(e as Error).message})`
+  } finally {
+    exporting.value = false
   }
-  const data = makeBackup(await allEntries(), await getSetting('visitNote', ''))
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = backupFileName(todayKey())
-  a.click()
-  URL.revokeObjectURL(a.href)
-  message.value = `기록 ${data.entries.length}개를 백업 파일로 만들었어요.`
 }
 
 async function importBackup(ev: Event) {
@@ -80,14 +89,21 @@ async function replayWelcome() {
     <section>
       <h2 class="section">데이터</h2>
       <ul class="list card flush">
-        <li><button class="list-row" @click="exportBackup">기록 백업 파일 만들기 <span aria-hidden="true">›</span></button></li>
+        <li>
+          <button class="list-row" :disabled="exporting" @click="exportBackup">
+            <span>기록 백업 파일 만들기<br /><span class="muted small">마지막 백업: {{ lastBackup }}</span></span>
+            <span aria-hidden="true">›</span>
+          </button>
+        </li>
         <li>
           <button class="list-row" @click="fileInput?.click()">백업 파일에서 불러오기 <span aria-hidden="true">›</span></button>
-          <input ref="fileInput" type="file" accept="application/json,.json" hidden @change="importBackup" />
+          <!-- 안드로이드 파일 선택기는 .json을 MIME으로 못 알아보는 경우가 있어 앱에서는 제한하지 않는다 (내용은 parseBackup이 검사) -->
+          <input ref="fileInput" type="file" :accept="isNativeApp ? undefined : 'application/json,.json'" hidden @change="importBackup" />
         </li>
         <li><button class="list-row" @click="wipe">모든 기록 삭제 <span aria-hidden="true">›</span></button></li>
       </ul>
       <p v-if="message" class="muted msg" role="status">{{ message }}</p>
+      <p class="muted small hint">백업 파일에는 기록 내용이 그대로 들어 있어요. 믿을 수 있는 곳에만 저장해 주세요.</p>
     </section>
 
     <section>
@@ -111,5 +127,6 @@ async function replayWelcome() {
 .row { display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px; }
 .small { font-size: 0.85rem; margin: 0; }
 .msg { margin-top: 8px; }
+.hint { margin-top: 8px; }
 .about { margin-top: 12px; }
 </style>
