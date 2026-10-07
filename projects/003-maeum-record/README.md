@@ -46,18 +46,14 @@ cd android && ./gradlew assembleDebug   # 로컬 빌드 (Android SDK 필요)
 **백업 (앱).** 백업 파일을 앱 임시 폴더에 만든 뒤 공유 창을 띄웁니다. 저장할 곳(내 파일, 드라이브, 나에게 보내기 등)은 사용자가 고릅니다. 앱은 인터넷 권한이 없어 스스로 파일을 보내지 않습니다.
 - 설정에 "마지막 백업: N일 전" 표시. 마지막 백업(없으면 첫 기록) 후 30일이 지나면 홈 아래에 한 줄로 권유합니다.
 
-앱 테스트 버전에서 아직 안 되는 것 (웹에서는 동작):
-
-| 기능 | 이유 | 해결 방법 (앱 단계) |
-|---|---|---|
-| 리포트 PDF 저장 | WebView는 `window.print()`를 지원하지 않음 | 인쇄/공유 플러그인 |
+**리포트 PDF (앱).** 앱 안의 작은 플러그인(`android/.../WebPrintPlugin.java`)이 현재 화면을 안드로이드 기본 인쇄 화면으로 넘깁니다. 인쇄 화면에서 "PDF로 저장"을 고르면 웹과 같은 A4 리포트가 PDF로 저장됩니다 (인쇄용 CSS 동일 적용, 인터넷 불필요).
 
 ## 스택
 
 Vue 3 + Vite + TypeScript · vue-router (hash) · vite-plugin-pwa · Dexie (IndexedDB) · Vitest
 
 - 모든 기록은 **기기 IndexedDB에만** 저장합니다. 서버·외부 전송 없음.
-- 리포트 PDF는 인쇄용 CSS + `window.print()`로 만듭니다.
+- 리포트 PDF는 인쇄용 CSS + 인쇄 화면으로 만듭니다 (웹: `window.print()`, 앱: `WebPrint` 플러그인, `src/lib/print.ts`).
 
 ## 구현 범위
 
@@ -77,6 +73,7 @@ Vue 3 + Vite + TypeScript · vue-router (hash) · vite-plugin-pwa · Dexie (Inde
 - [x] 도움받을 곳 번호·운영시간 확인 (2026-10-07). 정식 출시 전 보건복지부 공식 안내로 재확인
 - [ ] 가이드 본문 6개 작성 및 출처·기준일 표기 (`src/content/guides.ts`)
 - [x] iOS용 PNG 아이콘
+- [ ] 실제 기기 확인 (안드로이드): 리포트 PDF 저장 (A4 한 장, 한글 정상, 헤더·버튼 안 보임)
 - [ ] 실제 기기 확인 (안드로이드): 백업 공유 → 내 파일 저장 → 불러오기 왕복
 - [ ] 실제 기기 확인 (안드로이드): 알림이 정한 시각에 오는지, 재부팅 후에도 오는지, 기록한 날은 안 오는지
 - [ ] 실제 기기 확인: iOS 홈 화면 PWA에서 `window.print()` 동작, 오프라인 실행

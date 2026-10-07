@@ -6,7 +6,7 @@ import { entriesBetween, getSetting, setSetting } from '../lib/db'
 import { addDays, formatDot, formatShort, todayKey } from '../lib/date'
 import { MOODS, type Entry } from '../lib/mood'
 import { summarize } from '../lib/summary'
-import { isNativeApp } from '../lib/platform'
+import { printReport } from '../lib/print'
 
 /** S-05 진료용 리포트. 진료실에서 보여주거나 PDF로 저장. 서버를 거치지 않는다. */
 const route = useRoute()
@@ -31,7 +31,17 @@ onMounted(async () => {
 })
 watch(includeMemo, (v) => ready.value && setSetting('reportIncludeMemo', v))
 
-const printPdf = () => window.print()
+const printError = ref<string | null>(null)
+
+async function printPdf() {
+  printError.value = null
+  try {
+    // 안드로이드 인쇄 화면에서 "PDF로 저장" 시 기본 파일 이름이 된다
+    await printReport(`마음기록_리포트_${summary.value.from}_${summary.value.to}`)
+  } catch (e) {
+    printError.value = (e as Error).message || '인쇄 화면을 열지 못했어요.'
+  }
+}
 </script>
 
 <template>
@@ -41,10 +51,10 @@ const printPdf = () => window.print()
         <input v-model="includeMemo" type="checkbox" />
         메모 포함
       </label>
-      <button v-if="!isNativeApp" class="btn pdf" @click="printPdf">PDF 저장</button>
+      <button class="btn pdf" @click="printPdf">PDF 저장</button>
     </div>
-    <p v-if="isNativeApp" class="muted no-print hint">앱에서는 PDF 저장을 준비 중이에요. 이 화면을 그대로 보여주세요.</p>
-    <p v-else class="muted no-print hint">인쇄 창에서 “PDF로 저장”을 고르세요.</p>
+    <p class="muted no-print hint">인쇄 화면에서 “PDF로 저장”을 고르세요.</p>
+    <p v-if="printError" class="no-print hint error" role="alert">{{ printError }}</p>
 
     <article v-if="ready" class="report card">
       <header>
@@ -94,6 +104,7 @@ const printPdf = () => window.print()
 .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
 .pdf { width: auto; padding: 10px 18px; }
 .hint { margin: 6px 0 12px; }
+.error { color: var(--help); }
 
 /* 상대에게 화면을 보여주는 상황이라 본문보다 크게 (screens.md S-05) */
 .report { font-size: 1.05rem; }
