@@ -4,7 +4,7 @@
  */
 import { totalsByPerson } from './ledger'
 import {
-  directionLabel, eventTypeLabel, methodLabel, relationLabel,
+  directionLabel, eventKindLabel, methodLabel, relationLabel,
   type LedgerData, type LedgerEvent, type LedgerRecord, type Person,
 } from './types'
 
@@ -59,7 +59,7 @@ export function recordRows(data: LedgerData): Row[] {
   return joined(data)
     .sort((a, b) => a.e.date.localeCompare(b.e.date) || a.e.title.localeCompare(b.e.title) || a.r.createdAt - b.r.createdAt)
     .map(({ r, p, e }) => [
-      e.date, e.title, eventTypeLabel(e.type), p.name, relationLabel(p.relation), p.group,
+      e.date, e.title, eventKindLabel(e), p.name, relationLabel(p.relation), p.group,
       directionLabel(r.direction), r.amount, methodLabel(r.method), attendedText(r.attended),
       r.direction === 'received' && r.thanked ? '완료' : '', r.memo,
     ])

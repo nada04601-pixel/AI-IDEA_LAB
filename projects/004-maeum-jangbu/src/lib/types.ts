@@ -24,6 +24,8 @@ export interface LedgerEvent {
   /** 상대 행사일 때 대상 사람 */
   personId: string | null
   type: EventType
+  /** 직접 입력한 행사 종류 (type이 'other'일 때, 예: "칠순", "집들이"). 예전 데이터에는 없을 수 있다 */
+  customType?: string
   title: string
   /** YYYY-MM-DD */
   date: string
@@ -87,14 +89,18 @@ export const METHODS: { value: Method; label: string }[] = [
 
 export const relationLabel = (r: Relation) => RELATIONS.find((x) => x.value === r)?.label ?? '기타'
 export const eventTypeLabel = (t: EventType) => EVENT_TYPES.find((x) => x.value === t)?.label ?? '기타'
+/** 행사 종류 표시: 직접 입력한 종류가 있으면 그것 */
+export const eventKindLabel = (e: Pick<LedgerEvent, 'type' | 'customType'>) =>
+  e.type === 'other' && e.customType?.trim() ? e.customType.trim() : eventTypeLabel(e.type)
+export const CUSTOM_TYPE_MAX = 20
 export const eventTypeIcon = (t: EventType) => EVENT_TYPES.find((x) => x.value === t)?.icon ?? '📌'
 export const methodLabel = (m: Method) => METHODS.find((x) => x.value === m)?.label ?? '기타'
 export const directionLabel = (d: Direction) => (d === 'received' ? '받음' : '보냄')
 
 /** 새 행사의 기본 제목: "내 결혼식", "김민수 결혼식" */
-export function defaultEventTitle(owner: EventOwner, type: EventType, personName?: string): string {
+export function defaultEventTitle(owner: EventOwner, type: EventType, personName?: string, customType?: string): string {
   const names: Record<EventType, string> = {
-    wedding: '결혼식', funeral: '장례', firstBirthday: '돌잔치', birthday: '생신', opening: '개업', other: '경조사',
+    wedding: '결혼식', funeral: '장례', firstBirthday: '돌잔치', birthday: '생신', opening: '개업', other: customType?.trim() || '경조사',
   }
   return owner === 'mine' ? `내 ${names[type]}` : `${personName ?? ''} ${names[type]}`.trim()
 }

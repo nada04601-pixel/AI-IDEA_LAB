@@ -9,7 +9,7 @@ const person = (id: string, name: string, group = '', relation: Person['relation
   id, name, relation, group, memo: '', createdAt: 1, updatedAt: 1,
 })
 const event = (id: string, owner: 'mine' | 'theirs', date: string, title: string, personId: string | null = null): LedgerEvent => ({
-  id, owner, personId, type: 'wedding', title, date, place: '', remind: false, noRecordNeeded: false, createdAt: 1, updatedAt: 1,
+  id, owner, personId, type: 'wedding', customType: '', title, date, place: '', remind: false, noRecordNeeded: false, createdAt: 1, updatedAt: 1,
 })
 const record = (id: string, eventId: string, personId: string, direction: 'received' | 'given', amount: number, extra: Partial<LedgerRecord> = {}): LedgerRecord => ({
   id, eventId, personId, direction, amount, method: 'cash', attended: null, thanked: false, memo: '', source: 'manual',
@@ -139,8 +139,33 @@ describe('가져오기', () => {
     expect(merged.result.records.find((r) => r.amount === 50000)?.eventId).toBe('e1')
   })
 
+  it('목록에 없는 행사 종류는 직접 입력한 종류로 가져온다', () => {
+    const { data: d } = tableToData([
+      ['날짜', '행사 종류', '이름', '받음/보냄', '금액'],
+      ['2026-03-01', '집들이', '김민수', '보냄', '5만'],
+      ['2026-04-01', '기타', '박지영', '보냄', '3만'],
+    ])
+    expect(d.events[0]).toMatchObject({ type: 'other', customType: '집들이', title: '김민수 집들이' })
+    expect(d.events[1]).toMatchObject({ type: 'other', customType: '', title: '박지영 경조사' })
+  })
+
   it('필수 열이 없으면 알려 준다', () => {
     expect(() => tableToData([['이름', '금액']])).toThrow('"날짜" 열')
+  })
+})
+
+describe('직접 입력한 행사 종류', () => {
+  it('엑셀 "행사 종류" 열에 그대로 나가고, 다시 가져와도 유지된다', async () => {
+    const withCustom: LedgerData = {
+      ...data,
+      events: [...data.events, { ...event('c1', 'mine', '2026-05-05', '아버지 칠순'), type: 'other', customType: '칠순' }],
+      records: [...data.records, record('r9', 'c1', 'p3', 'received', 200000)],
+    }
+    const row = recordRows(withCustom).find((r) => r[1] === '아버지 칠순')!
+    expect(row[2]).toBe('칠순')
+    const buf = await buildWorkbook(withCustom, 't')
+    const { data: back } = tableToData(await readWorkbook(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer))
+    expect(back.events.find((e) => e.title === '아버지 칠순')).toMatchObject({ type: 'other', customType: '칠순' })
   })
 })
 

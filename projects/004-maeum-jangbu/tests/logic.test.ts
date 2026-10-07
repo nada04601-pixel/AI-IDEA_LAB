@@ -11,7 +11,7 @@ const person = (id: string, name: string, group = ''): Person => ({
   id, name, relation: 'friend', group, memo: '', createdAt: 1, updatedAt: 1,
 })
 const event = (id: string, owner: 'mine' | 'theirs', date: string, personId: string | null = null, extra: Partial<LedgerEvent> = {}): LedgerEvent => ({
-  id, owner, personId, type: 'wedding', title: owner === 'mine' ? '내 결혼식' : '결혼식', date, place: '', remind: true,
+  id, owner, personId, type: 'wedding', customType: '', title: owner === 'mine' ? '내 결혼식' : '결혼식', date, place: '', remind: true,
   noRecordNeeded: false, createdAt: 1, updatedAt: 1, ...extra,
 })
 const record = (id: string, eventId: string, personId: string, direction: 'received' | 'given', amount: number, extra: Partial<LedgerRecord> = {}): LedgerRecord => ({
@@ -158,6 +158,33 @@ describe('백업 파일', () => {
 
   it('미리보기', () => {
     expect(previewOf(data)).toEqual({ people: 1, events: 1, records: 1, from: '2024-05-18', to: '2024-05-18' })
+  })
+})
+
+describe('행사 제목·종류 표시', () => {
+  it('직접 입력한 종류로 기본 제목을 만든다', async () => {
+    const { defaultEventTitle, eventKindLabel } = await import('../src/lib/types')
+    expect(defaultEventTitle('mine', 'other', undefined, '칠순')).toBe('내 칠순')
+    expect(defaultEventTitle('theirs', 'other', '김민수', ' 집들이 ')).toBe('김민수 집들이')
+    expect(defaultEventTitle('theirs', 'other', '김민수', '')).toBe('김민수 경조사')
+    expect(defaultEventTitle('mine', 'wedding')).toBe('내 결혼식')
+    expect(eventKindLabel({ type: 'other', customType: '칠순' })).toBe('칠순')
+    expect(eventKindLabel({ type: 'other' })).toBe('기타')
+    expect(eventKindLabel({ type: 'wedding', customType: '무시됨' })).toBe('결혼')
+  })
+
+  it('같은 날 직접 입력한 종류가 다르면 다른 행사로 합친다', () => {
+    const base: LedgerData = { people: [person('p1', '김민수')], events: [{ ...event('a', 'theirs', '2026-05-05', 'p1'), type: 'other', customType: '칠순' }], records: [] }
+    const inc: LedgerData = { people: [person('p1', '김민수')], events: [{ ...event('b', 'theirs', '2026-05-05', 'p1'), type: 'other', customType: '집들이' }], records: [] }
+    expect(mergeData(base, inc).added.events).toBe(1)
+    const same: LedgerData = { ...inc, events: [{ ...inc.events[0], customType: '칠순' }] }
+    expect(mergeData(base, same).added.events).toBe(0)
+  })
+
+  it('예전 백업(customType 없음)도 읽는다', async () => {
+    const old = { format: 'maeum-jangbu-backup', version: 1, encrypted: false, data: { people: [person('p1', '김')], events: [{ ...event('e', 'mine', '2024-01-01'), customType: undefined }], records: [] } }
+    const f = readBackupFile(JSON.stringify(old))
+    expect(f.encrypted || f.data.events[0].customType).toBe('')
   })
 })
 

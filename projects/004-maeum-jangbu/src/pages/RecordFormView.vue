@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PersonInput from '../components/PersonInput.vue'
 import AmountPicker from '../components/AmountPicker.vue'
+import EventTypePicker from '../components/EventTypePicker.vue'
 import { ledger, eventsById, peopleById } from '../lib/store'
 import { addEvent, addPerson, addRecord, deleteRecord, updateRecord } from '../lib/db'
 import { receivedFrom } from '../lib/ledger'
@@ -12,7 +13,7 @@ import { confirmAsk } from '../lib/dialog'
 import { ensureNotifyPermission, notifySupported } from '../lib/notify'
 import { showToast } from '../lib/toast'
 import {
-  EVENT_TYPES, METHODS, RELATIONS, defaultEventTitle,
+  METHODS, RELATIONS, defaultEventTitle,
   type Direction, type EventType, type Method, type Relation,
 } from '../lib/types'
 
@@ -46,6 +47,7 @@ const newGroup = ref('')
 
 const eventChoice = ref<string>(theirsMode ? 'new' : (presetEventId ?? ''))
 const newType = ref<EventType>('wedding')
+const newCustomType = ref('')
 const newDate = ref(todayKey())
 const newPlace = ref('')
 const newRemind = ref(true)
@@ -111,7 +113,8 @@ async function save() {
         owner,
         personId: owner === 'theirs' ? pid : null,
         type: newType.value,
-        title: defaultEventTitle(owner, newType.value, name),
+        customType: newType.value === 'other' ? newCustomType.value.trim() : '',
+        title: defaultEventTitle(owner, newType.value, name, newCustomType.value),
         date: newDate.value,
         place: newPlace.value.trim(),
         remind,
@@ -181,9 +184,7 @@ async function remove() {
 
     <div v-if="eventChoice === 'new'" class="card new-event">
       <span class="label">{{ direction === 'received' ? '내 행사 종류' : '행사 종류' }}</span>
-      <div class="chips">
-        <button v-for="t in EVENT_TYPES" :key="t.value" type="button" class="chip" :aria-pressed="newType === t.value" @click="newType = t.value">{{ t.icon }} {{ t.label }}</button>
-      </div>
+      <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" />
       <label class="label" for="ndate">날짜</label>
       <input id="ndate" v-model="newDate" type="date" class="field" />
       <label class="label" for="nplace">장소 <span class="muted small">(선택)</span></label>

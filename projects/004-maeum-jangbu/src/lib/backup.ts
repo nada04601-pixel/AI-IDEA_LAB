@@ -90,6 +90,7 @@ export function sanitizeData(raw: unknown): LedgerData {
       owner: oneOf(e.owner, ['mine', 'theirs'] as const, 'mine'),
       personId: typeof e.personId === 'string' && personIds.has(e.personId) ? e.personId : null,
       type: oneOf(e.type, ['wedding', 'funeral', 'firstBirthday', 'birthday', 'opening', 'other'] as const, 'other'),
+      customType: str(e.customType).slice(0, 40),
       title: str(e.title, '경조사'),
       date: e.date as string,
       place: str(e.place),
@@ -189,13 +190,13 @@ export function mergeData(existing: LedgerData, incoming: LedgerData, sameAs: Re
     }
   }
 
-  const eventKey = (e: LedgerEvent) => `${e.owner}|${e.type}|${e.date}|${e.personId ?? ''}`
+  const eventKey = (e: LedgerEvent) => `${e.owner}|${e.type}|${e.type === 'other' ? (e.customType?.trim() ?? '') : ''}|${e.date}|${e.personId ?? ''}`
   const eventById = new Map(events.map((e) => [e.id, e]))
   const eventByKey = new Map(events.map((e) => [eventKey(e), e]))
   const eventMap = new Map<string, string>()
   // 종류를 모르는 내 행사(엑셀에 행사 열이 없을 때)는 같은 날 내 행사가 하나뿐이면 그 행사로 본다
   const sameDayMine = (e: LedgerEvent) => {
-    if (e.owner !== 'mine' || e.type !== 'other') return undefined
+    if (e.owner !== 'mine' || e.type !== 'other' || e.customType?.trim()) return undefined
     const same = events.filter((x) => x.owner === 'mine' && x.date === e.date)
     return same.length === 1 ? same[0] : undefined
   }

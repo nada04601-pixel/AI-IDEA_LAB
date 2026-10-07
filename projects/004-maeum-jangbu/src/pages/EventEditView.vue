@@ -7,7 +7,8 @@ import { confirmAsk } from '../lib/dialog'
 import { ensureNotifyPermission, notifySupported } from '../lib/notify'
 import { showToast } from '../lib/toast'
 import { todayKey } from '../lib/date'
-import { EVENT_TYPES, defaultEventTitle, relationLabel, type EventOwner, type EventType } from '../lib/types'
+import EventTypePicker from '../components/EventTypePicker.vue'
+import { defaultEventTitle, relationLabel, type EventOwner, type EventType } from '../lib/types'
 
 /** 행사 추가·편집 */
 const route = useRoute()
@@ -17,6 +18,7 @@ const existing = id ? eventsById.value.get(id) : undefined
 
 const owner = ref<EventOwner>(existing?.owner ?? (route.query.owner === 'theirs' ? 'theirs' : 'mine'))
 const type = ref<EventType>(existing?.type ?? 'wedding')
+const customType = ref(existing?.customType ?? '')
 const personId = ref<string>(existing?.personId ?? '')
 const date = ref(existing?.date ?? todayKey())
 const place = ref(existing?.place ?? '')
@@ -25,7 +27,7 @@ const title = ref(existing?.title ?? '')
 const titleTouched = ref(!!existing)
 
 const people = computed(() => [...ledger.value.people].sort((a, b) => a.name.localeCompare(b.name, 'ko')))
-const autoTitle = computed(() => defaultEventTitle(owner.value, type.value, peopleById.value.get(personId.value)?.name))
+const autoTitle = computed(() => defaultEventTitle(owner.value, type.value, peopleById.value.get(personId.value)?.name, customType.value))
 const recordCount = computed(() => ledger.value.records.filter((r) => r.eventId === id).length)
 
 async function save() {
@@ -34,6 +36,7 @@ async function save() {
   const data = {
     owner: owner.value,
     type: type.value,
+    customType: type.value === 'other' ? customType.value.trim() : '',
     personId: owner.value === 'theirs' ? personId.value : null,
     date: date.value,
     place: place.value.trim(),
@@ -79,9 +82,7 @@ async function remove() {
     </template>
 
     <span class="label">종류</span>
-    <div class="chips">
-      <button v-for="t in EVENT_TYPES" :key="t.value" type="button" class="chip" :aria-pressed="type === t.value" @click="type = t.value">{{ t.icon }} {{ t.label }}</button>
-    </div>
+    <EventTypePicker v-model:type="type" v-model:custom-type="customType" />
 
     <label class="label" for="edate">날짜</label>
     <input id="edate" v-model="date" type="date" class="field" />

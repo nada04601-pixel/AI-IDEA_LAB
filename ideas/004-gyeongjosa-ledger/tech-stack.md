@@ -62,6 +62,7 @@
 | owner | `'mine' \| 'theirs'` | 내 행사 / 상대 행사 |
 | personId | string \| null | 상대 행사일 때 대상 사람 |
 | type | `'wedding' \| 'funeral' \| 'firstBirthday' \| 'birthday' \| 'opening' \| 'other'` | 결혼·장례·돌잔치·생신·개업·기타 |
+| customType | string (선택) | 직접 입력한 행사 종류 (type이 `'other'`일 때, 예: "칠순"). 합치기에서는 종류가 다르면 다른 행사로 본다 |
 | title | string | 예: "내 결혼식", "김민수 결혼식" |
 | date | string `YYYY-MM-DD` | 인덱스. 시간대 문제를 피하려고 문자열 저장 (003과 동일) |
 | place | string | 선택 |
@@ -256,3 +257,4 @@ OCR은 이 앱의 핵심 차별점이자 Capacitor 선택의 유일한 불확실
 | 2026-10-07 | 앱 이름·앱 ID 확정, 백업 파일 format 값을 `maeum-jangbu-backup`으로 변경 |
 | 2026-10-07 | 1·2단계 구현 완료 표시. 경조사 D-day 알림도 2단계에 함께 구현 |
 | 2026-10-07 | 3단계 구현: 전체 내역 열에 "행사 종류" 추가(왕복 시 종류 보존), 사람·행사 자동 짝짓기 규칙 추가 |
+| 2026-10-07 | 행사에 `customType`(직접 입력한 종류) 추가 |

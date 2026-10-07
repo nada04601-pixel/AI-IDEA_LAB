@@ -94,14 +94,22 @@ function toDirection(v: unknown): Direction | null {
   return null
 }
 
-function toType(v: unknown, title: string): EventType {
-  const n = norm(v) || title
+/** 행사 종류: 알려진 종류면 그 값, 아니면 'other' + 직접 입력한 종류(원래 글자) */
+function toType(v: unknown, title: string): { type: EventType; customType: string } {
+  const raw = String(v ?? '').trim()
+  const type = guessType(raw, title)
+  return { type, customType: type === 'other' && raw && raw !== '기타' ? raw.slice(0, 20) : '' }
+}
+
+function guessType(raw: string, title: string): EventType {
+  const n = norm(raw) || norm(title)
   if (/결혼|웨딩|혼례/.test(n)) return 'wedding'
   if (/장례|부고|별세|조의|부의|상$/.test(n)) return 'funeral'
   if (/돌/.test(n)) return 'firstBirthday'
-  if (/생신|생일|칠순|팔순|환갑|회갑/.test(n)) return 'birthday'
+  // 칠순·환갑 등은 사용자가 쓴 말을 그대로 두기 위해 생신으로 바꾸지 않는다 (직접 입력한 종류로 보존)
+  if (/생신|생일/.test(n)) return 'birthday'
   if (/개업|개원|창업/.test(n)) return 'opening'
-  return pickLabel(v, EVENT_TYPES, 'other')
+  return pickLabel(raw, EVENT_TYPES, 'other')
 }
 
 function toMethod(v: unknown): Method {
@@ -169,14 +177,14 @@ export function tableToData(table: unknown[][], now = Date.now()): ImportResult 
     }
 
     const title0 = str(get(row, 'event'))
-    const type = toType(get(row, 'type'), title0)
+    const { type, customType } = toType(get(row, 'type'), title0)
     const owner = direction === 'received' ? 'mine' : 'theirs'
-    const title = title0 || defaultEventTitle(owner, type, name)
+    const title = title0 || defaultEventTitle(owner, type, name, customType)
     const eKey = owner === 'mine' ? `mine|${date}|${title}` : `theirs|${date}|${title}|${person.id}`
     let event = events.get(eKey)
     if (!event) {
       event = {
-        id: uuid(), owner, personId: owner === 'theirs' ? person.id : null, type, title, date, place: '',
+        id: uuid(), owner, personId: owner === 'theirs' ? person.id : null, type, customType, title, date, place: '',
         remind: false, noRecordNeeded: false, createdAt: now, updatedAt: now,
       }
       events.set(eKey, event)

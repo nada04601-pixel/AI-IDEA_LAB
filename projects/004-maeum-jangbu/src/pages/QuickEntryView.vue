@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AmountPicker from '../components/AmountPicker.vue'
+import EventTypePicker from '../components/EventTypePicker.vue'
 import { ledger, eventsById, peopleById } from '../lib/store'
 import { addEvent, addPerson, addRecord } from '../lib/db'
 import { sameName } from '../lib/ledger'
@@ -9,7 +10,7 @@ import { formatDot, todayKey } from '../lib/date'
 import { formatShort } from '../lib/money'
 import { ask } from '../lib/dialog'
 import { showToast } from '../lib/toast'
-import { EVENT_TYPES, RELATIONS, defaultEventTitle, relationLabel, type EventType, type Method, type Relation } from '../lib/types'
+import { RELATIONS, defaultEventTitle, relationLabel, type EventType, type Method, type Relation } from '../lib/types'
 
 /**
  * S-08 빠른 연속 입력 (내 행사 명단)
@@ -24,6 +25,7 @@ const event = computed(() => (eventId.value ? eventsById.value.get(eventId.value
 const mineEvents = computed(() => ledger.value.events.filter((e) => e.owner === 'mine').sort((a, b) => b.date.localeCompare(a.date)))
 const pick = ref(mineEvents.value[0]?.id ?? 'new')
 const newType = ref<EventType>('wedding')
+const newCustomType = ref('')
 const newDate = ref(todayKey())
 const newPlace = ref('')
 
@@ -33,7 +35,8 @@ async function start() {
   } else {
     if (!newDate.value) return showToast('날짜를 입력해 주세요')
     const e = await addEvent({
-      owner: 'mine', personId: null, type: newType.value, title: defaultEventTitle('mine', newType.value),
+      owner: 'mine', personId: null, type: newType.value, customType: newType.value === 'other' ? newCustomType.value.trim() : '',
+      title: defaultEventTitle('mine', newType.value, undefined, newCustomType.value),
       date: newDate.value, place: newPlace.value.trim(), remind: false, noRecordNeeded: false,
     })
     eventId.value = e.id
@@ -129,9 +132,7 @@ async function finish() {
       </div>
       <div v-if="pick === 'new'" class="card new-event">
         <span class="label">종류</span>
-        <div class="chips">
-          <button v-for="t in EVENT_TYPES" :key="t.value" type="button" class="chip" :aria-pressed="newType === t.value" @click="newType = t.value">{{ t.icon }} {{ t.label }}</button>
-        </div>
+        <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" />
         <label class="label" for="qdate">날짜</label>
         <input id="qdate" v-model="newDate" type="date" class="field" />
         <label class="label" for="qplace">장소 <span class="muted small">(선택)</span></label>
