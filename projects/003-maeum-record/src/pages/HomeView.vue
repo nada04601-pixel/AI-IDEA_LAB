@@ -5,6 +5,7 @@ import { addEntry, entriesOn } from '../lib/db'
 import { formatLong, formatTime, todayKey } from '../lib/date'
 import { moodInfo, type Entry, type Mood } from '../lib/mood'
 import { showToast, toastText } from '../lib/toast'
+import { syncReminder } from '../lib/reminder'
 
 /** S-02 홈 (오늘 기록) */
 const today = todayKey()
@@ -17,6 +18,8 @@ async function load() {
 
 async function save(v: { mood: Mood; memo: string; tags: string[] }) {
   await addEntry(v)
+  // 오늘 기록했으니 오늘 알림은 취소 (reminderSchedule.ts 규칙)
+  void syncReminder()
   lastWasHardest.value = v.mood === 1
   showToast('기록했어요')
   await load()

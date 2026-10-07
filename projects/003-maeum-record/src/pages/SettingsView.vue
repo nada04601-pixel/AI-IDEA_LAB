@@ -6,6 +6,8 @@ import { backupFileName, makeBackup, mergeEntries, parseBackup } from '../lib/ba
 import { todayKey } from '../lib/date'
 import { resetOnboarded } from '../router'
 import { isNativeApp } from '../lib/platform'
+import ReminderSettings from '../components/ReminderSettings.vue'
+import { syncReminder } from '../lib/reminder'
 
 /** S-09 설정 */
 const router = useRouter()
@@ -39,6 +41,7 @@ async function importBackup(ev: Event) {
     )
     const { result, added, skipped } = mergeEntries(await allEntries(), backup.entries, replace ? 'replace' : 'merge')
     await replaceAllEntries(result)
+    void syncReminder()
     message.value = replace ? `기록 ${added}개로 덮어썼어요.` : `기록 ${added}개를 합쳤어요. (중복 ${skipped}개 제외)`
   } catch (e) {
     message.value = (e as Error).message
@@ -51,6 +54,7 @@ async function wipe() {
   const typed = prompt('모든 기록을 삭제해요. 되돌릴 수 없어요.\n계속하려면 “삭제”를 입력해 주세요.')
   if (typed?.trim() !== '삭제') return
   await wipeAll()
+  await syncReminder() // 설정도 지워졌으므로 예약된 알림 취소
   resetOnboarded()
   router.replace('/welcome')
 }
@@ -66,9 +70,10 @@ async function replayWelcome() {
   <div class="page stack">
     <section>
       <h2 class="section">알림</h2>
-      <div class="card">
-        <p class="row">기록 알림 <span class="badge">{{ isNativeApp ? '다음 업데이트' : '앱 출시 후 제공' }}</span></p>
-        <p class="muted small">{{ isNativeApp ? '테스트 버전이라 아직 알림 기능이 없어요.' : '웹 버전에서는 정해진 시간에 알림을 보낼 수 없어요.' }}</p>
+      <ReminderSettings v-if="isNativeApp" />
+      <div v-else class="card">
+        <p class="row">기록 알림 <span class="badge">앱에서 제공</span></p>
+        <p class="muted small">웹 버전에서는 정해진 시간에 알림을 보낼 수 없어요. 안드로이드 앱에서는 쓸 수 있어요.</p>
       </div>
     </section>
 

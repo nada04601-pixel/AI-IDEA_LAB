@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { setSetting } from '../lib/db'
 import { markOnboarded } from '../router'
 import { isNativeApp } from '../lib/platform'
+import { enableReminder } from '../lib/reminder'
+import { DEFAULT_REMINDER_TIME } from '../lib/reminderSchedule'
 
 /** S-01 첫 실행 안내 (3장) */
 const router = useRouter()
@@ -13,6 +15,19 @@ const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 const isStandalone =
   window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
 const showInstall = computed(() => !isStandalone && !isNativeApp)
+
+const reminderTime = ref(DEFAULT_REMINDER_TIME)
+const denied = ref(false)
+
+async function turnOnReminder() {
+  const res = await enableReminder(reminderTime.value || DEFAULT_REMINDER_TIME)
+  if (res === 'denied') {
+    // 거부해도 다시 묻지 않는다. 설정에서 켤 수 있다 (screens.md S-01)
+    denied.value = true
+    return
+  }
+  await finish()
+}
 
 async function finish() {
   await setSetting('onboardingDone', true)
@@ -42,8 +57,13 @@ async function finish() {
     <section v-else class="slide">
       <div class="art" aria-hidden="true">🔔</div>
       <template v-if="isNativeApp">
-        <h1>기록 알림은<br />다음 업데이트에서 제공돼요.</h1>
-        <p class="muted">테스트 버전이라 아직 알림 기능이 없어요.</p>
+        <h1>하루 한 번,<br />기록할 시간을 알려드릴까요?</h1>
+        <p class="muted">그날 이미 기록했다면 알림을 보내지 않아요.</p>
+        <label class="time-pick">
+          <span>시간</span>
+          <input v-model="reminderTime" type="time" class="field" />
+        </label>
+        <p v-if="denied" class="muted">알림이 허용되지 않았어요. 나중에 설정에서 켤 수 있어요.</p>
       </template>
       <template v-else>
         <h1>기록 알림은<br />앱 출시 후 제공돼요.</h1>
@@ -61,6 +81,10 @@ async function finish() {
         <span v-for="i in 3" :key="i" :class="{ on: step === i - 1 }" />
       </div>
       <button v-if="step < 2" class="btn" @click="step++">다음</button>
+      <template v-else-if="isNativeApp && !denied">
+        <button class="btn" @click="turnOnReminder">알림 켜기</button>
+        <button class="later" @click="finish">나중에 할게요</button>
+      </template>
       <button v-else class="btn" @click="finish">시작하기</button>
     </div>
   </div>
@@ -75,6 +99,9 @@ h1 { font-size: 1.6rem; margin-bottom: 12px; }
 p { margin: 0 0 8px; }
 .note { margin-top: 24px; }
 .install { margin-top: 24px; }
+.time-pick { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; }
+.time-pick .field { width: auto; }
+.later { background: none; border: 0; color: var(--text-2); padding: 4px; margin-top: -6px; }
 .footer { display: flex; flex-direction: column; gap: 16px; }
 .dots { display: flex; gap: 6px; justify-content: center; }
 .dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }

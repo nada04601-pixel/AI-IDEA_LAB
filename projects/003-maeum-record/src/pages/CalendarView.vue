@@ -6,6 +6,7 @@ import { WEEKDAYS, formatLong, formatTime, fromKey, monthCells, nowTime, todayKe
 import { moodInfo, type Entry, type Mood } from '../lib/mood'
 import { dayMood, groupByDate } from '../lib/summary'
 import { showToast, toastText } from '../lib/toast'
+import { syncReminder } from '../lib/reminder'
 
 /** S-03 기록 달력 */
 const today = todayKey()
@@ -45,6 +46,7 @@ async function add(v: { mood: Mood; memo: string; tags: string[] }) {
   // 지난 날짜에 추가하면 시각은 현재 시각으로 둔다 (프로토타입)
   await addEntry({ ...v, date: selected.value, time: nowTime() })
   mode.value = 'view'
+  void syncReminder()
   showToast('기록했어요')
   await load()
 }
@@ -59,6 +61,7 @@ async function edit(id: string, v: { mood: Mood; memo: string; tags: string[] })
 async function remove(e: Entry) {
   if (!confirm('이 기록을 삭제할까요? 되돌릴 수 없어요.')) return
   await deleteEntry(e.id)
+  void syncReminder()
   await load()
 }
 
