@@ -10,4 +10,4 @@
 | 003 | 마음기록 + 첫 진료 길잡이 (우울감 기록·진료 연결, A+C 통합안) | **프로토타입 (PWA, [테스트 링크](https://nada04601-pixel.github.io/AI-IDEA_LAB/))** | [projects/003-maeum-record](projects/003-maeum-record) | [ideas/003-depression-support](ideas/003-depression-support/idea.md) |
 | 004 | 마음장부 (주고받은 경조사비 장부·사진 등록·백업) | **개발진행중 (MVP 구현 완료, 안드로이드 테스트 앱)** | [projects/004-maeum-jangbu](projects/004-maeum-jangbu) | [ideas/004-gyeongjosa-ledger](ideas/004-gyeongjosa-ledger/idea.md) |
 | 005 | 오늘의 떡상 쇼츠 분석기 (급상승 쇼츠·키워드 순위) | **공개 페이지 (1시간마다 자동 수집, [링크](https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/))** | [projects/005-shorts-trend](projects/005-shorts-trend) | [ideas/005-shorts-trend](ideas/005-shorts-trend/idea.md) |
-| 006 | 새 글 알림기 → 상용화 방향: 지자체 공고 알림 (전국 고시·공고를 지역·키워드로 알림) | **엔진 프로토타입 (목록 인식·새 글 판단)** | [projects/006-new-post-alert](projects/006-new-post-alert) | [ideas/006-new-post-alert](ideas/006-new-post-alert/idea.md) |
+| 006 | 새 글 알림기 → 상용화 방향: 지자체 공고 알림 (전국 고시·공고를 지역·키워드로 알림) | **보류 (엔진 프로토타입까지 완료)** | [projects/006-new-post-alert](projects/006-new-post-alert) | [ideas/006-new-post-alert](ideas/006-new-post-alert/idea.md) |
