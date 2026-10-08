@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import config
 from app.api import generation, projects, render, scenes
 from app.db import init_db
+from app.errors import install_error_handlers
 from app.services.jobs import recover_interrupted_jobs
 
 
@@ -23,6 +24,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+install_error_handlers(app)
 app.include_router(projects.router)
 app.include_router(scenes.router)
 app.include_router(generation.router)

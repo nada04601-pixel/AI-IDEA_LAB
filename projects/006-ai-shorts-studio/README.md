@@ -3,7 +3,8 @@
 쇼츠 주제를 입력하면 대본·장면을 만들고, 장면별로 승인한 뒤 세로형 MP4로 내보내는 개인용 웹 애플리케이션.
 
 - 요구사항·작업 지침: [ideas/006-ai-shorts-studio/idea.md](../../ideas/006-ai-shorts-studio/idea.md)
-- 현재 단계: **4단계 완료 — 음성, 자막, 렌더링** (1단계: 기본 뼈대·프로젝트 관리, 2단계: 대본·스토리보드, 3단계: 장면 생성·승인)
+- 현재 단계: **MVP 완료 (5단계 안정화까지)** — 1단계 기본 뼈대·프로젝트 관리, 2단계 대본·스토리보드, 3단계 장면 생성·승인, 4단계 음성·자막·렌더링, 5단계 안정화
+- 사용 방법: [docs/user-guide.md](docs/user-guide.md)
 - 외부 AI·유료 API 호출: **없음** — 대본·스토리보드·장면 이미지·영상·음성 모두 mock provider로 만들고, 최종 MP4는 로컬 FFmpeg로 렌더링한다
 
 ## 구성
@@ -14,7 +15,16 @@
 | `frontend/` | Next.js(App Router) + TypeScript |
 | `storage/` | 실행 시 자동 생성. SQLite DB, 장면 자산 `projects/{프로젝트}/scenes/{장면}/image_v1.png`·`audio_v1.wav` 등, 최종 결과 `projects/{프로젝트}/renders/v1/shorts.mp4`·`subtitles.srt` (Git 제외) |
 
-## 실행 방법
+## 빠른 시작
+
+```bash
+cd projects/006-ai-shorts-studio
+./start.sh        # 처음 한 번은 패키지 설치 후 실행. 브라우저에서 http://localhost:3000
+```
+
+macOS·Linux용 스크립트입니다 (Windows는 Git Bash·WSL, 또는 아래 수동 실행). 사용 순서와 문제 해결은 [사용 가이드](docs/user-guide.md)를 보세요.
+
+## 실행 방법 (수동)
 
 필요한 도구: Python 3.11 이상, Node.js 20 이상, FFmpeg (mock 영상 생성과 최종 렌더링에 사용. 영상에 자막을 입히려면 libass가 포함된 빌드가 필요하며, 대부분의 배포판에 포함되어 있다. FFmpeg가 없으면 영상 생성과 렌더링만 안 되고 나머지는 동작)
 
@@ -43,12 +53,23 @@ npm run dev
 ## 테스트
 
 ```bash
-# 백엔드 (프로젝트·장면·작업 API, mock 공급자, 승인 규칙, 재시도, 유료 확인, 음성·자막·렌더링, 재시작 후 데이터 유지, 이전 DB 업그레이드)
+# 백엔드 (API·mock 공급자·승인 규칙·재시도·유료 확인·음성·자막·렌더링·오류 메시지·이전 DB 업그레이드,
+#         tests/test_full_flow.py는 주제 입력부터 MP4 내려받기까지 요구사항 5장 흐름 전체)
 cd backend && pytest
 
-# 프런트엔드 (입력 검증·장면·작업·렌더링 도우미 단위 테스트, 타입 검사, 빌드)
+# 프런트엔드 단위 테스트, 타입 검사, 빌드
 cd frontend && npm test && npm run typecheck && npm run build
+
+# 브라우저 흐름 테스트 (1~4단계 화면을 실제로 조작). 백엔드 가상환경이 있어야 한다.
+# 포트 8100·3100과 임시 저장 폴더를 쓰므로 개발 중인 데이터에는 영향이 없다.
+cd frontend
+npx playwright install chromium    # 처음 한 번
+npm run test:e2e
 ```
+
+- FFmpeg가 없으면 영상·렌더링 관련 테스트는 건너뛴다(skip).
+- Playwright가 받은 Chromium은 H.264를 재생하지 못하므로, 브라우저 테스트에서는 영상 파일을 ffprobe로 검사한다 (ffprobe가 없으면 그 검사만 건너뛴다).
+- 다른 브라우저를 쓰려면 `PLAYWRIGHT_CHROMIUM_PATH`로 실행 파일 경로를 지정한다. Windows에서 Python 경로가 다르면 `AISS_PYTHON`으로 지정한다.
 
 ### 수동 확인 체크리스트 (1단계)
 
@@ -109,7 +130,7 @@ cd frontend && npm test && npm run typecheck && npm run build
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/api/health` | 상태 확인 |
-| GET | `/api/projects` | 프로젝트 목록 (최근 수정순) |
+| GET | `/api/projects` | 프로젝트 목록 (최근 수정순). 장면 수·승인 수·진행 중/실패 작업 수·최신 렌더 버전 포함 |
 | POST | `/api/projects` | 프로젝트 생성 |
 | GET | `/api/projects/{id}` | 프로젝트 상세 |
 | PATCH | `/api/projects/{id}` | 프로젝트 수정 (보낸 필드만) |
@@ -137,6 +158,8 @@ cd frontend && npm test && npm run typecheck && npm run build
 | GET | `/api/projects/{id}/subtitles` | 장면 대사·길이로 계산한 자막 (cue 목록과 SRT 텍스트) |
 | POST | `/api/projects/{id}/render` | `{"include_audio": true, "burn_subtitles": true}`로 최종 MP4 렌더링 작업 시작. 점검에 문제가 있으면 409 |
 | GET | `/api/system/ffmpeg` | FFmpeg 사용 가능 여부와 버전 |
+
+오류 응답은 항상 `{"detail": "화면에 보여줄 한국어 문장"}` 형식이다. 입력 검증 오류(422)는 `errors`에 필드 위치와 종류도 담는다. 예상하지 못한 오류(500)는 내부 내용을 숨기고 안내 문장만 돌려주며, 자세한 내용은 백엔드 로그에 남긴다.
 
 입력 규칙
 - 프로젝트: 제목 1~200자, 주제 2000자 이하, 목표 길이 5~180초, 화면 비율 `9:16`(기본)·`16:9`·`1:1`, 스타일 200자 이하, 대본 20,000자 이하
@@ -188,11 +211,24 @@ mock 공급자 규칙 (외부 호출·비용 없음, 같은 입력이면 항상 
 
 ## 데이터베이스 초기화
 
-MVP 단계에서는 서버 시작 시 테이블이 없으면 자동으로 만든다 (`app/db.py`의 `init_db`). 이전 단계에서 만든 DB를 열면 나중에 추가된 열을 자동으로 붙인다 (`ADDED_COLUMNS`, 예: 2단계의 `projects.script`). 기존 데이터는 그대로 남는다. 3단계의 `jobs`·`assets` 테이블은 없으면 새로 만든다. 열 추가보다 복잡한 변경(이름 변경·삭제·타입 변경)이 필요해지면 Alembic으로 옮긴다. 데이터를 처음부터 다시 시작하려면 서버를 끄고 `storage/app.db`를 지운다.
+SQLite는 외래 키 검사(`foreign_keys=ON`)와 WAL 모드, 30초 잠금 대기로 연다 (백그라운드 작업과 요청이 동시에 써도 덜 막히게). MVP 단계에서는 서버 시작 시 테이블이 없으면 자동으로 만든다 (`app/db.py`의 `init_db`). 이전 단계에서 만든 DB를 열면 나중에 추가된 열을 자동으로 붙인다 (`ADDED_COLUMNS`, 예: 2단계의 `projects.script`). 기존 데이터는 그대로 남는다. 3단계의 `jobs`·`assets` 테이블은 없으면 새로 만든다. 열 추가보다 복잡한 변경(이름 변경·삭제·타입 변경)이 필요해지면 Alembic으로 옮긴다. 데이터를 처음부터 다시 시작하려면 서버를 끄고 `storage/app.db`를 지운다.
 
-## 다음 단계 (5단계 — 안정화)
+## 완료 기준 점검 (요구사항 12장)
 
-- 주요 흐름 테스트 보강, 잘못된 입력·실패 상황 점검
-- 비용·작업 상태 표시 개선
-- README와 사용자 실행 가이드 완성
-- (선택) 실제 AI 공급자 연결: 공급자와 비용을 먼저 확인받은 뒤 진행
+| 완료 기준 | 상태 | 확인 방법 |
+|---|---|---|
+| 로컬에서 프런트엔드와 백엔드를 실행할 수 있다 | ✅ | `./start.sh` 또는 수동 실행, 브라우저 테스트가 두 서버를 띄워 확인 |
+| 프로젝트를 만들고 다시 열어도 데이터가 유지된다 | ✅ | `test_data_persists_across_restart`, `test_full_flow` (서버 재시작 후 이어서 진행) |
+| 프로젝트의 장면을 생성/수정/정렬할 수 있다 | ✅ | `test_scenes.py`, `e2e/02-script-storyboard.spec.ts` |
+| 장면을 승인·반려하고 반려 사유를 확인할 수 있다 | ✅ | `test_generation.py`, `e2e/03-review.spec.ts` |
+| AI 키 없이 mock provider로 주요 흐름을 테스트할 수 있다 | ✅ | 모든 공급자 기본값이 mock, `test_full_flow.py` |
+| 실제 외부 AI는 공급자 설정·비용을 알린 뒤 사용할 수 있다 | ✅ (구조) | 유료 공급자는 `confirm_paid` 없이는 작업을 만들지 않음 (`test_paid_provider_requires_confirmation`), 화면에서 예상 비용 확인창. 실제 공급자는 아직 연결하지 않음 |
+| 승인 장면으로 최종 MP4를 생성하고 로컬로 내보낼 수 있다 | ✅ | `test_render.py`, `e2e/04-render.spec.ts` (내려받은 파일을 ffprobe로 확인) |
+| 설치·실행·테스트 방법이 README에 기록되어 있다 | ✅ | 이 문서와 [사용 가이드](docs/user-guide.md) |
+
+## 이후 할 수 있는 일
+
+- 실제 AI 공급자 연결 (대본·이미지·영상·음성). `app/providers/`에 어댑터를 추가하고 환경 변수로 고른다. 비용이 들므로 공급자와 요금을 먼저 정한 뒤 진행한다.
+- 자막 직접 편집, 효과음·배경음악, 장면 전환 효과
+- 작업이 많아지면 별도 작업 큐(지금은 같은 서버 프로세스의 백그라운드에서 실행)
+- 스키마 변경이 복잡해지면 Alembic 마이그레이션

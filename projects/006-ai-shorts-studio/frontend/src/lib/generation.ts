@@ -108,3 +108,20 @@ export function totalCost(items: { amount: number | null; currency: string | nul
   }
   return totals;
 }
+
+export type JobFilter = "all" | "active" | "failed" | "succeeded";
+
+export function filterJobs(jobs: Job[], status: JobFilter, kind: string): Job[] {
+  return jobs.filter((j) => {
+    if (kind !== "all" && j.job_type !== kind) return false;
+    if (status === "active") return isJobActive(j);
+    if (status === "all") return true;
+    return j.status === status;
+  });
+}
+
+/** 작업에 걸린 시간(초). 끝나지 않았으면 null. */
+export function jobSeconds(job: Pick<Job, "created_at" | "finished_at">): number | null {
+  if (!job.finished_at) return null;
+  return Math.max(0, Math.round((Date.parse(job.finished_at) - Date.parse(job.created_at)) / 100) / 10);
+}

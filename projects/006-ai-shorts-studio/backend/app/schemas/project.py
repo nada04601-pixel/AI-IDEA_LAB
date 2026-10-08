@@ -53,3 +53,13 @@ class ScriptGenerateRequest(BaseModel):
 
 class StoryboardGenerateRequest(BaseModel):
     replace: bool = False
+
+
+class ProjectSummary(ProjectRead):
+    """대시보드용: 프로젝트 정보 + 진행 상황 요약."""
+
+    scene_count: int = 0
+    approved_count: int = 0
+    active_job_count: int = 0
+    failed_job_count: int = 0
+    latest_render_version: int | None = None

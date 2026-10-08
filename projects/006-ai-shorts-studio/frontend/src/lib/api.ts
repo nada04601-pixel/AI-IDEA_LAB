@@ -1,4 +1,4 @@
-import type { Project, ProjectForm, ProjectStatus } from "./project";
+import type { Project, ProjectForm, ProjectStatus, ProjectSummary } from "./project";
 import type { Asset, Job, MediaKind, ProviderInfo } from "./generation";
 import type { RenderCheck, Subtitles } from "./render";
 import type { Scene, SceneForm } from "./scene";
@@ -39,7 +39,7 @@ const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const api = {
-  listProjects: () => request<Project[]>("/api/projects"),
+  listProjects: () => request<ProjectSummary[]>("/api/projects"),
   getProject: (id: number) => request<Project>(`/api/projects/${id}`),
   createProject: (body: ProjectForm) => post<Project>("/api/projects", body),
   updateProject: (id: number, body: Partial<ProjectForm> & { script?: string; status?: ProjectStatus }) =>

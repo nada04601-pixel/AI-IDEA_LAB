@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { formatCost, isJobActive, JOB_STATUS_LABELS, KIND_LABELS, totalCost, type Job } from "@/lib/generation";
+import { filterJobs, formatCost, isJobActive, jobSeconds, JOB_STATUS_LABELS, KIND_LABELS, totalCost, type Job, type JobFilter } from "@/lib/generation";
 import { confirmCost, useProjectMedia } from "@/lib/useProjectMedia";
 
 export default function JobsPage() {
@@ -12,6 +12,8 @@ export default function JobsPage() {
   const { data, error, reload } = useProjectMedia(projectId);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<JobFilter>("all");
+  const [kindFilter, setKindFilter] = useState("all");
 
   if (!data) {
     return <section className="card">{error ? <p className="error">{error}</p> : <p className="muted">불러오는 중…</p>}</section>;
@@ -27,6 +29,20 @@ export default function JobsPage() {
     : "없음";
   const failed = jobs.filter((j) => j.status === "failed").length;
   const active = jobs.filter(isJobActive).length;
+  const visible = filterJobs(jobs, statusFilter, kindFilter);
+  const kinds = Array.from(new Set(jobs.map((j) => j.job_type)));
+  const costByKind = kinds
+    .map((k) => {
+      const t = totalCost(assets.filter((a) => a.asset_type === k).map((a) => ({ amount: a.cost_amount, currency: a.cost_currency })));
+      return `${KIND_LABELS[k] ?? k} ${Object.entries(t).map(([cur, amt]) => formatCost(amt, cur)).join(", ") || "-"}`;
+    })
+    .join(" · ");
+  const FILTERS: [JobFilter, string, number][] = [
+    ["all", "전체", jobs.length],
+    ["active", "진행 중", active],
+    ["failed", "실패", failed],
+    ["succeeded", "성공", jobs.filter((j) => j.status === "succeeded").length],
+  ];
 
   async function retry(job: Job) {
     if (busyId) return;
@@ -50,7 +66,25 @@ export default function JobsPage() {
       <p className="muted">
         전체 {jobs.length}건 · 진행 중 {active} · 실패 {failed} · 실제 비용 합계 {actualText}
       </p>
+      {costByKind && <p className="muted cost-breakdown">종류별 실제 비용: {costByKind}</p>}
       {(error || actionError) && <p className="error">{actionError ?? error}</p>}
+      {jobs.length > 0 && (
+        <div className="filters">
+          {FILTERS.map(([key, label, count]) => (
+            <button key={key} className={statusFilter === key ? "chip active" : "chip"} onClick={() => setStatusFilter(key)}>
+              {label} {count}
+            </button>
+          ))}
+          <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)} aria-label="작업 종류">
+            <option value="all">모든 종류</option>
+            {kinds.map((k) => (
+              <option key={k} value={k}>
+                {KIND_LABELS[k] ?? k}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {jobs.length === 0 ? (
         <p className="muted">아직 작업이 없습니다. 검토 화면에서 장면 이미지나 영상을 생성하세요.</p>
       ) : (
@@ -65,12 +99,20 @@ export default function JobsPage() {
                 <th>상태</th>
                 <th>시도</th>
                 <th>예상 비용</th>
+                <th>걸린 시간</th>
                 <th>요청 시각</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {jobs.map((job) => (
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="muted">
+                    조건에 맞는 작업이 없습니다.
+                  </td>
+                </tr>
+              )}
+              {visible.map((job) => (
                 <tr key={job.id} data-testid={`job-${job.id}`}>
                   <td>{job.id}</td>
                   <td>{job.scene_id === null ? "전체" : (sceneNumber(job.scene_id) ?? "-")}</td>
@@ -82,6 +124,7 @@ export default function JobsPage() {
                   </td>
                   <td>{job.attempts}</td>
                   <td>{formatCost(job.estimated_cost, job.cost_currency)}</td>
+                  <td>{isJobActive(job) ? `${job.progress}%` : jobSeconds(job) !== null ? `${jobSeconds(job)}초` : "-"}</td>
                   <td className="nowrap">{new Date(job.created_at).toLocaleString("ko-KR")}</td>
                   <td>
                     {job.status === "failed" && (
