@@ -1,0 +1,16 @@
+# Python
+backend/.venv/
+__pycache__/
+.pytest_cache/
+
+# Next.js
+frontend/.next/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+
+# 로컬 데이터·생성 자산 (DB, 이미지, 영상, 렌더 결과)
+storage/
+
+# 비밀값
+.env
+frontend/.env.local
