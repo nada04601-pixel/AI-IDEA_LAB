@@ -8,6 +8,7 @@ const TABS = [
   { href: "/script", label: "대본" },
   { href: "/storyboard", label: "스토리보드" },
   { href: "/review", label: "검토" },
+  { href: "/render", label: "렌더링" },
   { href: "/jobs", label: "작업" },
 ];
 

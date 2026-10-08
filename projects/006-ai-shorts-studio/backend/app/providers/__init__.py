@@ -4,11 +4,13 @@ from app.providers.base import ScriptProvider
 from app.providers.media import MediaProvider
 from app.providers.mock import MockScriptProvider
 from app.providers.mock_media import MockImageProvider, MockVideoProvider
+from app.providers.mock_tts import MockTTSProvider
 
 _SCRIPT_PROVIDERS: dict[str, type] = {"mock": MockScriptProvider}
 MEDIA_PROVIDERS: dict[str, dict[str, type]] = {
     "image": {"mock": MockImageProvider},
     "video": {"mock": MockVideoProvider},
+    "audio": {"mock": MockTTSProvider},  # 음성(TTS): prompt에 읽을 대사를 넣는다
 }
 
 
@@ -22,7 +24,7 @@ def get_script_provider() -> ScriptProvider:
 
 
 def media_provider_name(kind: str) -> str:
-    """AISS_IMAGE_PROVIDER / AISS_VIDEO_PROVIDER 환경 변수 (기본: mock)."""
+    """AISS_IMAGE_PROVIDER / AISS_VIDEO_PROVIDER / AISS_AUDIO_PROVIDER 환경 변수 (기본: mock)."""
     return os.getenv(f"AISS_{kind.upper()}_PROVIDER", "mock")
 
 

@@ -1,6 +1,7 @@
 import type { Scene } from "./scene";
 
 export type MediaKind = "image" | "video";
+export type JobKind = MediaKind | "audio" | "render";
 
 export interface Job {
   id: number;
