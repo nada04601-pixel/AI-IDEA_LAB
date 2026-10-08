@@ -9,7 +9,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'projects/004-shorts-trend/**'
+      - 'projects/005-shorts-trend/**'
       - '.github/workflows/shorts-trend.yml'
   workflow_dispatch:
 
@@ -31,7 +31,7 @@ jobs:
           node-version: 22
 
       - name: 테스트
-        working-directory: projects/004-shorts-trend
+        working-directory: projects/005-shorts-trend
         run: npm test
 
       - name: gh-pages 가져오기
@@ -43,14 +43,14 @@ jobs:
       - name: 쇼츠 수집
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: node projects/004-shorts-trend/scripts/collect.mjs site/shorts/data/latest.json site/shorts/data/latest.json
+        run: node projects/005-shorts-trend/scripts/collect.mjs site/shorts/data/latest.json site/shorts/data/latest.json
 
       - name: 페이지 파일 복사
         run: |
           mkdir -p site/shorts
           rm -rf site/shorts/src
-          cp projects/004-shorts-trend/index.html projects/004-shorts-trend/search.html site/shorts/
-          cp -r projects/004-shorts-trend/src site/shorts/src
+          cp projects/005-shorts-trend/index.html projects/005-shorts-trend/search.html site/shorts/
+          cp -r projects/005-shorts-trend/src site/shorts/src
           touch site/.nojekyll
 
       # gh-pages는 배포용이라 기록이 필요 없다. 매시간 커밋이 쌓이지 않게 마지막 커밋을 고쳐 쓴다.
