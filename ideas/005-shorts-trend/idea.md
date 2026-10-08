@@ -1,10 +1,10 @@
-# 004. 오늘의 떡상 쇼츠 분석기
+# 005. 오늘의 떡상 쇼츠 분석기
 
 # 아이디어 노트
 
 - 상태: **공개 페이지 + 1시간마다 자동 수집** ([주소](https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/))
 - 작성일: 2026-10-08
-- 프로젝트 코드 저장소: [projects/004-shorts-trend](../../projects/004-shorts-trend)
+- 프로젝트 코드 저장소: [projects/005-shorts-trend](../../projects/005-shorts-trend)
 - 서비스명은 임시입니다. 후보: "오늘의 떡상 쇼츠 분석기", "쇼츠 키워드 순위 검색"
 - `(가정)` 표시는 아직 확인되지 않아 임시로 정한 내용입니다.
 

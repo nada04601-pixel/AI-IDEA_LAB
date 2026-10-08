@@ -8,7 +8,7 @@ npm run build
 touch dist/.nojekyll
 TMP=$(mktemp -d)
 cp -r dist/. "$TMP"
-# 같은 gh-pages에 있는 004 떡상 쇼츠(shorts/, 1시간마다 자동 갱신)는 그대로 둔다
+# 같은 gh-pages에 있는 005 떡상 쇼츠(shorts/, 1시간마다 자동 갱신)는 그대로 둔다
 if git -C ../.. fetch -q "$REMOTE" gh-pages; then
   git -C ../.. archive FETCH_HEAD shorts 2>/dev/null | tar -x -C "$TMP" || true
 fi

@@ -1,8 +1,8 @@
-# 오늘의 떡상 쇼츠 (004 프로토타입)
+# 오늘의 떡상 쇼츠 (005 프로토타입)
 
 최근 24시간 안에 올라온 유튜브 쇼츠를 **시간당 조회수**로 줄 세우고, 떡상 쇼츠들에 함께 나오는 **급상승 키워드**를 뽑아 보여주는 웹 도구입니다.
 
-- 설계 문서: [ideas/004-shorts-trend](../../ideas/004-shorts-trend/idea.md)
+- 설계 문서: [ideas/005-shorts-trend](../../ideas/005-shorts-trend/idea.md)
 - 상태: **공개 페이지 + 1시간마다 자동 수집 (GitHub Actions)**
 - 공개 주소: https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/
 - 빌드 도구·외부 라이브러리 없음 (HTML + ES 모듈)
