@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>쇼츠 직접 검색</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>" />
+  <link rel="stylesheet" href="src/style.css" />
+</head>
+<body>
+  <header>
+    <p class="back"><a href="./">← 오늘의 떡상 쇼츠</a></p>
+    <h1>🔎 쇼츠 직접 검색</h1>
+    <p class="sub">내 API 키로 국가·기간·분야를 골라 바로 분석해요. 최근 쇼츠를 <b>시간당 조회수</b>로 줄 세우고 <b>키워드</b>를 뽑습니다.</p>
+  </header>
+
+  <main>
+    <form id="form" class="panel">
+      <label class="wide">
+        YouTube API 키
+        <input id="apiKey" type="password" autocomplete="off" placeholder="AIza... (이 브라우저에만 저장됩니다)" />
+      </label>
+      <label>
+        국가
+        <select id="region">
+          <option value="KR">한국</option>
+          <option value="JP">일본</option>
+          <option value="US">미국</option>
+          <option value="GB">영국</option>
+          <option value="TW">대만</option>
+          <option value="VN">베트남</option>
+          <option value="ID">인도네시아</option>
+        </select>
+      </label>
+      <label>
+        기간
+        <select id="hours">
+          <option value="6">최근 6시간</option>
+          <option value="12">최근 12시간</option>
+          <option value="24" selected>최근 24시간</option>
+          <option value="48">최근 48시간</option>
+        </select>
+      </label>
+      <label>
+        검색 범위
+        <select id="pages">
+          <option value="1">50개 (100단위)</option>
+          <option value="2" selected>100개 (200단위)</option>
+          <option value="4">200개 (400단위)</option>
+        </select>
+      </label>
+      <label class="wide">
+        분야 키워드 (선택)
+        <input id="query" type="text" placeholder="예: 먹방, 게임, 축구 — 비우면 전체" />
+      </label>
+      <div class="actions wide">
+        <button type="submit" id="run">분석하기</button>
+        <button type="button" id="demo" class="ghost">샘플 데이터로 보기</button>
+      </div>
+      <p class="hint wide">
+        API 키는 <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">Google Cloud 콘솔</a>에서
+        YouTube Data API v3를 켜고 <b>사용자 인증 정보 → API 키</b>로 무료 발급합니다. 하루 기본 10,000단위라 한 번 분석(100개)에 약 200단위가 듭니다.
+      </p>
+    </form>
+
+    <p id="status" class="status" hidden></p>
+
+    <section id="results" hidden>
+      <div class="meta" id="meta"></div>
+
+      <h2>📈 급상승 키워드</h2>
+      <p class="hint">여러 떡상 쇼츠에 함께 나온 해시태그·제목 단어 순위입니다. 누르면 해당 영상만 봅니다.</p>
+      <ol id="keywords" class="keywords"></ol>
+
+      <div class="row">
+        <h2 id="videosTitle">🚀 떡상 쇼츠 순위</h2>
+        <button type="button" id="clearFilter" class="ghost small" hidden>필터 해제</button>
+      </div>
+      <ol id="videos" class="videos"></ol>
+    </section>
+  </main>
+
+  <footer>
+    YouTube Data API 기반 · 쇼츠 판별은 영상 길이 3분 이하 기준 (API가 쇼츠 여부를 직접 알려주지 않음)
+  </footer>
+
+  <script type="module" src="src/search.js"></script>
+</body>
+</html>

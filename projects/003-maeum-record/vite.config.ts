@@ -34,7 +34,11 @@ export default defineConfig({
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png}'] },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // 같은 사이트의 /shorts/ (004 떡상 쇼츠)는 이 앱이 가로채지 않는다
+        navigateFallbackDenylist: [/\/shorts\//],
+      },
     }),
   ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },

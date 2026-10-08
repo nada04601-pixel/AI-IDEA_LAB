@@ -1,21 +1,53 @@
 # 오늘의 떡상 쇼츠 (004 프로토타입)
 
-최근 24시간(선택 가능) 안에 올라온 유튜브 쇼츠를 **시간당 조회수**로 줄 세우고, 떡상 쇼츠들에 함께 나오는 **급상승 키워드**를 뽑아 보여주는 웹 도구입니다.
+최근 24시간 안에 올라온 유튜브 쇼츠를 **시간당 조회수**로 줄 세우고, 떡상 쇼츠들에 함께 나오는 **급상승 키워드**를 뽑아 보여주는 웹 도구입니다.
 
 - 설계 문서: [ideas/004-shorts-trend](../../ideas/004-shorts-trend/idea.md)
-- 상태: **프로토타입 (검색 → 순위 → 키워드 흐름 동작, 샘플 데이터 모드 포함)**
+- 상태: **공개 페이지 + 1시간마다 자동 수집 (GitHub Actions)**
+- 공개 주소: https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/
 - 빌드 도구·외부 라이브러리 없음 (HTML + ES 모듈)
+
+## 페이지 2개
+
+| 페이지 | 파일 | 내용 |
+|---|---|---|
+| 공개 페이지 | `index.html` | 자동 수집된 `data/latest.json`을 보여준다. 키 필요 없음. 전체 + 분야 탭 |
+| 직접 검색 | `search.html` | 내 API 키로 국가·기간·분야를 골라 바로 분석. 샘플 데이터 모드 |
 
 ## 실행
 
 ```bash
 npm start      # http://localhost:5174 (python3 -m http.server)
-npm test       # 단위 테스트 (Node 22 내장 테스트 러너)
+npm test       # 단위 테스트 + 수집 스크립트 테스트 (Node 22 내장 테스트 러너)
+YOUTUBE_API_KEY=... node scripts/collect.mjs data/latest.json data/latest.json   # 수동 수집
 ```
 
-`index.html`을 파일로 바로 열면 ES 모듈이 막히므로 꼭 로컬 서버로 엽니다. 다른 정적 서버(`npx serve` 등)도 됩니다.
+`index.html`을 파일로 바로 열면 ES 모듈이 막히므로 꼭 로컬 서버로 엽니다. 로컬에서 공개 페이지를 보려면 위 수동 수집으로 `data/latest.json`을 먼저 만듭니다. (`data/`는 저장소에 넣지 않음)
 
-## 사용법
+## 자동 수집 (GitHub Actions)
+
+`.github/workflows/shorts-trend.yml`이 **매시 17분**에 실행됩니다.
+
+1. `npm test`
+2. `gh-pages` 브랜치를 받아 `shorts/data/latest.json`(지난 결과)을 읽음
+3. `scripts/collect.mjs`로 **전체(100개) + 분야 하나(50개)** 수집 — 분야 7개(먹방·요리, 게임, 스포츠, 동물, 아이돌·음악, 뷰티·패션, 웃긴 영상)는 한 시간에 하나씩 돌아가며 갱신
+4. 페이지 파일과 데이터를 `gh-pages`의 `shorts/`에 넣고 마지막 커밋을 고쳐 써서 푸시 (gh-pages에 커밋이 쌓이지 않음)
+
+- **할당량:** 1회 약 303단위 × 24회 ≈ 하루 7,300단위 (무료 10,000단위 안). 남는 여유는 수동 실행용.
+- **지금 시간당:** 지난 수집에도 있던 영상은 그 사이 늘어난 조회수를 시간당으로 환산해 함께 보여줍니다.
+- **오류:** 할당량 초과·키 오류가 나면 지난 데이터를 그대로 두고 `errors`에 기록, Actions에는 경고로 표시합니다.
+- 페이지 코드는 `main`에 푸시하면 바로, 데이터는 1시간마다 반영됩니다.
+
+### 처음 설정 (한 번만)
+
+1. 아래 "직접 검색 사용법" 1~2번으로 API 키 발급. 공개 수집용 키는 **API 제한만** 걸고(YouTube Data API v3), HTTP 리퍼러 제한은 걸지 않습니다. (서버에서 쓰므로)
+2. 저장소 **Settings → Secrets and variables → Actions → New repository secret** — 이름 `YOUTUBE_API_KEY`, 값에 키.
+3. 이 브랜치를 `main`에 병합. 예약 실행은 기본 브랜치에서만 돕니다.
+4. **Actions → 떡상 쇼츠 자동 수집 → Run workflow**로 첫 수집을 바로 실행해도 됩니다.
+
+> 공개 저장소에서 60일 동안 저장소 활동이 없으면 GitHub가 예약 실행을 자동으로 끕니다. 그러면 Actions 탭에서 다시 켭니다.
+
+## 직접 검색 사용법
 
 1. [Google Cloud 콘솔](https://console.cloud.google.com/apis/library/youtube.googleapis.com)에서 프로젝트를 만들고 **YouTube Data API v3**를 사용 설정합니다.
 2. **API 및 서비스 → 사용자 인증 정보 → API 키 만들기**로 키를 발급합니다. (무료, 하루 10,000단위)
@@ -36,7 +68,7 @@ npm test       # 단위 테스트 (Node 22 내장 테스트 러너)
 - **급상승 키워드:** 각 영상의 해시태그·태그·제목 단어를 모아, 2개(영상 40개 이상이면 3개) 이상 영상에 나온 단어를
   `영상들의 시간당 조회수 합 × √영상 수`로 정렬합니다. 흔한 단어(쇼츠, 진짜, 반응 …)와 조사(은·는·을·를 …)는 걸러냅니다.
 
-기본 설정(100개)으로 한 번 분석하면 약 202단위라, 하루 40번 정도 돌릴 수 있습니다.
+직접 검색은 기본 설정(100개)으로 한 번에 약 202단위입니다. 자동 수집과 같은 키를 쓰면 할당량을 나눠 쓰게 되니, 직접 검색용 키는 따로 만드는 것을 권장합니다.
 
 ## 한계
 
@@ -48,6 +80,9 @@ npm test       # 단위 테스트 (Node 22 내장 테스트 러너)
 
 - `src/trend.js` — 길이 파싱, 쇼츠 판별, 떡상 점수, 키워드 추출 (순수 함수)
 - `src/youtube.js` — API 호출, 페이지 넘기기, 할당량 계산, 한국어 오류 안내
-- `src/app.js` — 화면
+- `src/snapshot.js` — 자동 수집 결과(latest.json) 만들기: 섹션·분야 순환, 지금 시간당 증가량, 병합
+- `src/view.js` — 키워드·쇼츠 순위 화면 (두 페이지 공용)
+- `src/public.js` — 공개 페이지, `src/search.js` — 직접 검색 페이지
 - `src/demo.js` — 샘플 데이터 (실제 영상 아님)
-- `tests/trend.test.js`
+- `scripts/collect.mjs` — 수집 스크립트 (Actions에서 실행)
+- `tests/` — 분석 로직, API 호출, 수집 스크립트(가짜 API로 실행) 테스트

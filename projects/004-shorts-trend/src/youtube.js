@@ -8,8 +8,9 @@ async function call(path, params, fetchImpl) {
   const res = await fetchImpl(url);
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const reason = body.error?.errors?.[0]?.reason || '';
     const message = body.error?.message || `HTTP ${res.status}`;
+    // 잘못된 키는 reason이 'badRequest'로 와서 메시지로 구분한다
+    const reason = /API key not valid/i.test(message) ? 'keyInvalid' : body.error?.errors?.[0]?.reason || '';
     const err = new Error(explain(reason, message));
     err.reason = reason;
     throw err;
@@ -19,7 +20,7 @@ async function call(path, params, fetchImpl) {
 
 function explain(reason, message) {
   if (reason === 'quotaExceeded') return '오늘 API 할당량을 다 썼어요. 한국 시간 오후 4~5시(태평양 자정)에 초기화됩니다.';
-  if (reason === 'keyInvalid' || /API key not valid/i.test(message)) return 'API 키가 올바르지 않아요. 키를 다시 확인해 주세요.';
+  if (reason === 'keyInvalid') return 'API 키가 올바르지 않아요. 키를 다시 확인해 주세요.';
   if (reason === 'accessNotConfigured') return '이 키의 프로젝트에서 YouTube Data API v3가 사용 설정되지 않았어요.';
   return `YouTube API 오류: ${message}`;
 }

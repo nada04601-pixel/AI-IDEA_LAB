@@ -111,3 +111,16 @@ a.video:hover { border-color: var(--accent); }
 .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .channel, .stats { font-size: 13px; color: var(--muted); }
 .stats b { color: var(--accent); }
+
+.back { margin: 0 0 8px; font-size: 14px; }
+.back a, .more a { color: var(--muted); }
+.more { margin-top: 28px; }
+.recent { color: var(--accent); font-weight: 600; }
+
+.tabs { display: flex; gap: 6px; overflow-x: auto; margin-top: 16px; padding-bottom: 4px; scrollbar-width: none; }
+.tabs a {
+  flex: none; text-decoration: none; font-weight: 600; font-size: 14px;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--line);
+}
+.tabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }

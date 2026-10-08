@@ -16,8 +16,10 @@ npm run dev       # 개발 서버 (http://localhost:5173)
 npm test          # 단위 테스트 (요약 계산, 날짜, 백업)
 npm run build     # 정적 빌드 → dist/
 npm run preview   # 빌드 결과 확인 (PWA 서비스 워커 포함)
-npm run deploy    # GitHub Pages로 배포 (gh-pages 브랜치 강제 갱신)
+npm run deploy    # GitHub Pages로 배포 (gh-pages 브랜치 강제 갱신, 004의 shorts/ 폴더는 유지)
 ```
+
+같은 gh-pages에 004 떡상 쇼츠(`/shorts/`)가 함께 올라갑니다. 서비스 워커는 `/shorts/` 접속을 가로채지 않도록 설정되어 있습니다.
 
 휴대폰에서 확인하려면 같은 와이파이에서 `npm run dev -- --host`로 띄운 뒤 표시되는 주소로 접속합니다.
 홈 화면 설치·오프라인 동작은 HTTPS가 필요하므로 정적 호스팅에 배포한 뒤 확인합니다.
