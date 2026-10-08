@@ -19,6 +19,7 @@ const existing = id ? eventsById.value.get(id) : undefined
 const owner = ref<EventOwner>(existing?.owner ?? (route.query.owner === 'theirs' ? 'theirs' : 'mine'))
 const type = ref<EventType>(existing?.type ?? 'wedding')
 const customType = ref(existing?.customType ?? '')
+const kin = ref('')
 const personId = ref<string>(existing?.personId ?? '')
 const date = ref(existing?.date ?? todayKey())
 const place = ref(existing?.place ?? '')
@@ -27,7 +28,7 @@ const title = ref(existing?.title ?? '')
 const titleTouched = ref(!!existing)
 
 const people = computed(() => [...ledger.value.people].sort((a, b) => a.name.localeCompare(b.name, 'ko')))
-const autoTitle = computed(() => defaultEventTitle(owner.value, type.value, peopleById.value.get(personId.value)?.name, customType.value))
+const autoTitle = computed(() => defaultEventTitle(owner.value, type.value, peopleById.value.get(personId.value)?.name, customType.value, kin.value))
 const recordCount = computed(() => ledger.value.records.filter((r) => r.eventId === id).length)
 
 async function save() {
@@ -82,7 +83,7 @@ async function remove() {
     </template>
 
     <span class="label">종류</span>
-    <EventTypePicker v-model:type="type" v-model:custom-type="customType" />
+    <EventTypePicker v-model:type="type" v-model:custom-type="customType" v-model:kin="kin" :owner="owner" />
 
     <label class="label" for="edate">날짜</label>
     <input id="edate" v-model="date" type="date" class="field" />

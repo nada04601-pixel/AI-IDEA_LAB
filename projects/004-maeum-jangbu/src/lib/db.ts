@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import { uuid, type LedgerData, type LedgerEvent, type LedgerRecord, type Person } from './types'
+import { renameOldDefaultTitle } from './migrate'
 
 interface Setting {
   key: string
@@ -20,6 +21,15 @@ class JangbuDB extends Dexie {
       records: 'id, eventId, personId, direction',
       settings: 'key',
     })
+    // v2 (2026-10-08): 예전 기본 제목 "내 장례", "내 돌잔치" 등을 자연스러운 제목으로 (사용자가 고친 제목은 그대로)
+    this.version(2)
+      .stores({})
+      .upgrade((tx) =>
+        tx.table<LedgerEvent>('events').toCollection().modify((e) => {
+          const t = renameOldDefaultTitle(e)
+          if (t) e.title = t
+        }),
+      )
   }
 }
 

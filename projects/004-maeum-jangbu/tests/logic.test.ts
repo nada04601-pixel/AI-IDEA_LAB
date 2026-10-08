@@ -164,13 +164,35 @@ describe('백업 파일', () => {
 describe('행사 제목·종류 표시', () => {
   it('직접 입력한 종류로 기본 제목을 만든다', async () => {
     const { defaultEventTitle, eventKindLabel } = await import('../src/lib/types')
-    expect(defaultEventTitle('mine', 'other', undefined, '칠순')).toBe('내 칠순')
+    expect(defaultEventTitle('mine', 'other', undefined, '칠순')).toBe('칠순')
+    expect(defaultEventTitle('mine', 'other')).toBe('우리 집 경조사')
+    // "내 장례", "내 돌잔치"처럼 어색한 제목을 만들지 않는다 (2026-10-08)
+    expect(defaultEventTitle('mine', 'funeral')).toBe('가족 장례')
+    expect(defaultEventTitle('mine', 'funeral', undefined, '', '부친')).toBe('부친상')
+    expect(defaultEventTitle('theirs', 'funeral', '김민수', '', '모친')).toBe('김민수 모친상')
+    expect(defaultEventTitle('theirs', 'funeral', '김민수', '', '본인')).toBe('김민수 본인상')
+    expect(defaultEventTitle('theirs', 'funeral', '김민수')).toBe('김민수 장례')
+    expect(defaultEventTitle('mine', 'firstBirthday')).toBe('아이 돌잔치')
+    expect(defaultEventTitle('mine', 'birthday')).toBe('부모님 생신')
+    expect(defaultEventTitle('mine', 'opening')).toBe('우리 가게 개업')
+    expect(defaultEventTitle('mine', 'wedding', undefined, '', '부친')).toBe('내 결혼식') // 장례가 아니면 무시
     expect(defaultEventTitle('theirs', 'other', '김민수', ' 집들이 ')).toBe('김민수 집들이')
     expect(defaultEventTitle('theirs', 'other', '김민수', '')).toBe('김민수 경조사')
     expect(defaultEventTitle('mine', 'wedding')).toBe('내 결혼식')
     expect(eventKindLabel({ type: 'other', customType: '칠순' })).toBe('칠순')
     expect(eventKindLabel({ type: 'other' })).toBe('기타')
     expect(eventKindLabel({ type: 'wedding', customType: '무시됨' })).toBe('결혼')
+  })
+
+  it('예전 기본 제목만 새 제목으로 바꾼다 (사용자가 고친 제목은 그대로)', async () => {
+    const { renameOldDefaultTitle } = await import('../src/lib/migrate')
+    const e = (type: LedgerEvent['type'], title: string, customType = '', owner: 'mine' | 'theirs' = 'mine') => ({ owner, type, customType, title })
+    expect(renameOldDefaultTitle(e('funeral', '내 장례'))).toBe('가족 장례')
+    expect(renameOldDefaultTitle(e('firstBirthday', '내 돌잔치'))).toBe('아이 돌잔치')
+    expect(renameOldDefaultTitle(e('other', '내 칠순', '칠순'))).toBe('칠순')
+    expect(renameOldDefaultTitle(e('wedding', '내 결혼식'))).toBeNull() // 그대로 괜찮음
+    expect(renameOldDefaultTitle(e('funeral', '아버지 장례'))).toBeNull() // 사용자가 고친 제목
+    expect(renameOldDefaultTitle(e('funeral', '김민수 장례', '', 'theirs'))).toBeNull()
   })
 
   it('같은 날 직접 입력한 종류가 다르면 다른 행사로 합친다', () => {

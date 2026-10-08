@@ -28,10 +28,12 @@ const mineEvents = computed(() => ledger.value.events.filter((e) => e.owner === 
 const eventChoice = ref<string>(presetEvent?.owner === 'mine' ? presetEvent.id : (mineEvents.value[0]?.id ?? 'new'))
 const newType = ref<EventType>('wedding')
 const newCustomType = ref('')
+const newKin = ref('')
 const newDate = ref(today)
 /** 보냄: 사람마다 만들 상대 행사의 종류 */
 const givenType = ref<EventType>('wedding')
 const givenCustomType = ref('')
+const givenKin = ref('')
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
@@ -149,7 +151,7 @@ async function register() {
     if (direction.value === 'received' && !eventId) {
       eventId = (await addEvent({
         owner: 'mine', personId: null, type: newType.value, customType: newType.value === 'other' ? newCustomType.value.trim() : '',
-        title: defaultEventTitle('mine', newType.value, undefined, newCustomType.value), date: newDate.value || today,
+        title: defaultEventTitle('mine', newType.value, undefined, newCustomType.value, newKin.value), date: newDate.value || today,
         place: '', remind: false, noRecordNeeded: false,
       })).id
     }
@@ -171,7 +173,7 @@ async function register() {
         const found = createdEvents.get(`${pid}|${date}`) ?? ledger.value.events.find((e) => e.owner === 'theirs' && e.personId === pid && e.date === date)?.id
         eid = found ?? (await addEvent({
           owner: 'theirs', personId: pid, type: givenType.value, customType: givenType.value === 'other' ? givenCustomType.value.trim() : '',
-          title: defaultEventTitle('theirs', givenType.value, r.name.trim(), givenCustomType.value), date, place: '',
+          title: defaultEventTitle('theirs', givenType.value, r.name.trim(), givenCustomType.value, givenKin.value), date, place: '',
           remind: false, noRecordNeeded: false,
         })).id
         createdEvents.set(`${pid}|${date}`, eid)
@@ -225,14 +227,14 @@ const flagText: Record<string, string> = {
           <option value="new">+ 새 행사</option>
         </select>
         <div v-if="eventChoice === 'new'" class="card new-event">
-          <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" />
+          <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" v-model:kin="newKin" owner="mine" />
           <label class="label" for="odate">날짜</label>
           <input id="odate" v-model="newDate" type="date" class="field" />
         </div>
       </template>
       <template v-else>
         <span class="label">어떤 경조사에 보낸 돈인가요?</span>
-        <EventTypePicker v-model:type="givenType" v-model:custom-type="givenCustomType" />
+        <EventTypePicker v-model:type="givenType" v-model:custom-type="givenCustomType" v-model:kin="givenKin" owner="theirs" />
         <p class="muted small hint">사람마다 이체한 날짜로 상대 경조사를 만들어요. (같은 날 경조사가 이미 있으면 거기에 넣어요)</p>
       </template>
 

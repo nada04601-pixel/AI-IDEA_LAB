@@ -98,11 +98,35 @@ export const methodLabel = (m: Method) => METHODS.find((x) => x.value === m)?.la
 export const directionLabel = (d: Direction) => (d === 'received' ? '받음' : '보냄')
 
 /** 새 행사의 기본 제목: "내 결혼식", "김민수 결혼식" */
-export function defaultEventTitle(owner: EventOwner, type: EventType, personName?: string, customType?: string): string {
-  const names: Record<EventType, string> = {
-    wedding: '결혼식', funeral: '장례', firstBirthday: '돌잔치', birthday: '생신', opening: '개업', other: customType?.trim() || '경조사',
+/** 장례: 누구의 상(喪)인지 → 제목 "부친상", "김민수 모친상" (2026-10-08) */
+export const FUNERAL_KIN = ['부친', '모친', '빙부', '빙모', '시부', '시모', '조부', '조모', '배우자'] as const
+/** 상대 행사에서만: 그 사람 본인의 장례 */
+export const FUNERAL_KIN_THEIRS_ONLY = ['본인'] as const
+
+/**
+ * 새 행사의 기본 제목.
+ * - 내 행사: "내 장례", "내 돌잔치"처럼 어색하지 않게 실제로 많이 쓰는 말로
+ *   (결혼식 → 내 결혼식, 장례 → 부친상/가족 장례, 돌잔치 → 아이 돌잔치, 생신 → 부모님 생신, 개업 → 우리 가게 개업, 직접 입력 → 그 말 그대로)
+ * - 상대 행사: "김민수 결혼식", "김민수 부친상"
+ */
+export function defaultEventTitle(owner: EventOwner, type: EventType, personName?: string, customType?: string, kin?: string): string {
+  const custom = customType?.trim()
+  const mourning = kin?.trim() ? `${kin.trim()}상` : ''
+  if (owner === 'mine') {
+    const mine: Record<EventType, string> = {
+      wedding: '내 결혼식',
+      funeral: mourning || '가족 장례',
+      firstBirthday: '아이 돌잔치',
+      birthday: '부모님 생신',
+      opening: '우리 가게 개업',
+      other: custom || '우리 집 경조사',
+    }
+    return mine[type]
   }
-  return owner === 'mine' ? `내 ${names[type]}` : `${personName ?? ''} ${names[type]}`.trim()
+  const theirs: Record<EventType, string> = {
+    wedding: '결혼식', funeral: mourning || '장례', firstBirthday: '돌잔치', birthday: '생신', opening: '개업', other: custom || '경조사',
+  }
+  return `${personName ?? ''} ${theirs[type]}`.trim()
 }
 
 export const uuid = () =>

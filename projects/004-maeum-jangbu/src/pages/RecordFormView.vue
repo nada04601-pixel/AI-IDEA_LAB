@@ -48,6 +48,7 @@ const newGroup = ref('')
 const eventChoice = ref<string>(theirsMode ? 'new' : (presetEventId ?? ''))
 const newType = ref<EventType>('wedding')
 const newCustomType = ref('')
+const newKin = ref('')
 const newDate = ref(todayKey())
 const newPlace = ref('')
 const newRemind = ref(true)
@@ -114,7 +115,7 @@ async function save() {
         personId: owner === 'theirs' ? pid : null,
         type: newType.value,
         customType: newType.value === 'other' ? newCustomType.value.trim() : '',
-        title: defaultEventTitle(owner, newType.value, name, newCustomType.value),
+        title: defaultEventTitle(owner, newType.value, name, newCustomType.value, newKin.value),
         date: newDate.value,
         place: newPlace.value.trim(),
         remind,
@@ -184,7 +185,7 @@ async function remove() {
 
     <div v-if="eventChoice === 'new'" class="card new-event">
       <span class="label">{{ direction === 'received' ? '내 행사 종류' : '행사 종류' }}</span>
-      <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" />
+      <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" v-model:kin="newKin" :owner="direction === 'received' ? 'mine' : 'theirs'" />
       <label class="label" for="ndate">날짜</label>
       <input id="ndate" v-model="newDate" type="date" class="field" />
       <label class="label" for="nplace">장소 <span class="muted small">(선택)</span></label>

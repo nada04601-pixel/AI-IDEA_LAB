@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { ledger } from '../lib/store'
-import { CUSTOM_TYPE_MAX, EVENT_TYPES, type EventType } from '../lib/types'
+import { CUSTOM_TYPE_MAX, EVENT_TYPES, FUNERAL_KIN, FUNERAL_KIN_THEIRS_ONLY, type EventOwner, type EventType } from '../lib/types'
 
 /**
  * 행사 종류 고르기. 정해진 종류 + "직접 입력" (예: 칠순, 집들이, 졸업).
@@ -9,6 +9,11 @@ import { CUSTOM_TYPE_MAX, EVENT_TYPES, type EventType } from '../lib/types'
  */
 const type = defineModel<EventType>('type', { required: true })
 const customType = defineModel<string>('customType', { required: true })
+/** 장례일 때 누구의 상인지 (부친, 모친…). 제목에만 쓰고 따로 저장하지 않는다 */
+const kin = defineModel<string>('kin', { default: '' })
+const props = defineProps<{ owner?: EventOwner }>()
+const kinOptions = computed(() => (props.owner === 'theirs' ? [...FUNERAL_KIN_THEIRS_ONLY, ...FUNERAL_KIN] : [...FUNERAL_KIN]))
+const pickKin = (k: string) => (kin.value = kin.value === k ? '' : k)
 
 const standard = EVENT_TYPES.filter((t) => t.value !== 'other')
 const typing = ref(type.value === 'other' && !recentHas(customType.value))
@@ -30,6 +35,7 @@ function recentHas(c: string) {
 function pick(t: EventType) {
   type.value = t
   customType.value = ''
+  if (t !== 'funeral') kin.value = ''
   typing.value = false
 }
 function pickRecent(c: string) {
@@ -59,6 +65,12 @@ async function startTyping() {
     >📌 {{ c }}</button>
     <button type="button" class="chip" :aria-pressed="type === 'other' && typing" @click="startTyping">✏ 직접 입력</button>
   </div>
+  <div v-if="type === 'funeral'" class="kin">
+    <span class="muted small">누구의 장례인가요? <span class="small">(선택)</span></span>
+    <div class="chips">
+      <button v-for="k in kinOptions" :key="k" type="button" class="chip" :aria-pressed="kin === k" @click="pickKin(k)">{{ k }}상</button>
+    </div>
+  </div>
   <input
     v-if="type === 'other' && typing"
     ref="inputEl"
@@ -72,4 +84,5 @@ async function startTyping() {
 
 <style scoped>
 .custom { margin-top: 10px; }
+.kin { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
 </style>

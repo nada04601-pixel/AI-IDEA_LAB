@@ -27,6 +27,7 @@ const mineEvents = computed(() => ledger.value.events.filter((e) => e.owner === 
 const pick = ref(mineEvents.value[0]?.id ?? 'new')
 const newType = ref<EventType>('wedding')
 const newCustomType = ref('')
+const newKin = ref('')
 const newDate = ref(todayKey())
 const newPlace = ref('')
 
@@ -37,7 +38,7 @@ async function start() {
     if (!newDate.value) return showToast('날짜를 입력해 주세요')
     const e = await addEvent({
       owner: 'mine', personId: null, type: newType.value, customType: newType.value === 'other' ? newCustomType.value.trim() : '',
-      title: defaultEventTitle('mine', newType.value, undefined, newCustomType.value),
+      title: defaultEventTitle('mine', newType.value, undefined, newCustomType.value, newKin.value),
       date: newDate.value, place: newPlace.value.trim(), remind: false, noRecordNeeded: false,
     })
     eventId.value = e.id
@@ -143,7 +144,7 @@ async function finish() {
       </div>
       <div v-if="pick === 'new'" class="card new-event">
         <span class="label">종류</span>
-        <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" />
+        <EventTypePicker v-model:type="newType" v-model:custom-type="newCustomType" v-model:kin="newKin" owner="mine" />
         <label class="label" for="qdate">날짜</label>
         <input id="qdate" v-model="newDate" type="date" class="field" />
         <label class="label" for="qplace">장소 <span class="muted small">(선택)</span></label>
