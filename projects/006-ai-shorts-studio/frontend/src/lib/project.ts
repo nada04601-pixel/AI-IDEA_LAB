@@ -8,6 +8,7 @@ export interface Project {
   target_duration_sec: number;
   aspect_ratio: AspectRatio;
   visual_style: string;
+  script: string;
   status: ProjectStatus;
   created_at: string;
   updated_at: string;
@@ -64,4 +65,20 @@ export function toForm(p: Project): ProjectForm {
     aspect_ratio: p.aspect_ratio,
     visual_style: p.visual_style,
   };
+}
+
+export const MAX_SCRIPT_LENGTH = 20000;
+
+/** 빈 줄로 나눈 장면 문단 수 (백엔드 mock 스토리보드와 같은 규칙). */
+export function countParagraphs(script: string): number {
+  return script
+    .replace(/\r\n/g, "\n")
+    .split(/\n\s*\n/)
+    .filter((p) => p.trim()).length;
+}
+
+/** 한국어 내레이션 기준 대략적인 읽기 시간(초). 공백 제외 초당 약 7자. */
+export function estimateReadSeconds(text: string): number {
+  const chars = text.replace(/\s/g, "").length;
+  return Math.round(chars / 7);
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
@@ -66,14 +65,12 @@ export default function ProjectDetailPage() {
     return (
       <section className="card">
         {error ? <p className="error">{error}</p> : <p className="muted">불러오는 중…</p>}
-        <Link href="/">← 목록으로</Link>
       </section>
     );
   }
 
   return (
     <section className="card narrow">
-      <Link href="/">← 목록으로</Link>
       <h2>{project.title}</h2>
       <p className="muted">
         상태: {STATUS_LABELS[project.status] ?? project.status} · 만든 날짜:{" "}
