@@ -1,0 +1,10 @@
+{
+  "name": "new-post-alert",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "test": "node --test tests/*.test.js"
+  }
+}

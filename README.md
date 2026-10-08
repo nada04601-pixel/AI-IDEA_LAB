@@ -10,4 +10,4 @@
 | 003 | 마음기록 + 첫 진료 길잡이 (우울감 기록·진료 연결, A+C 통합안) | **프로토타입 (PWA, [테스트 링크](https://nada04601-pixel.github.io/AI-IDEA_LAB/))** | [projects/003-maeum-record](projects/003-maeum-record) | [ideas/003-depression-support](ideas/003-depression-support/idea.md) |
 | 004 | 마음장부 (주고받은 경조사비 장부·사진 등록·백업) | **개발진행중 (MVP 구현 완료, 안드로이드 테스트 앱)** | [projects/004-maeum-jangbu](projects/004-maeum-jangbu) | [ideas/004-gyeongjosa-ledger](ideas/004-gyeongjosa-ledger/idea.md) |
 | 005 | 오늘의 떡상 쇼츠 분석기 (급상승 쇼츠·키워드 순위) | **공개 페이지 (1시간마다 자동 수집, [링크](https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/))** | [projects/005-shorts-trend](projects/005-shorts-trend) | [ideas/005-shorts-trend](ideas/005-shorts-trend/idea.md) |
-| 006 | 새 글 알림기 (게시판 URL 등록 → 새 글·키워드 제목 글 알림, 첫 사례: 수영장 결원 공지) | **아이디어 구체화** | - | [ideas/006-new-post-alert](ideas/006-new-post-alert/idea.md) |
+| 006 | 새 글 알림기 (게시판 URL 등록 → 새 글·키워드 제목 글 알림, 첫 사례: 수영장 결원 공지) | **엔진 프로토타입 (목록 인식·새 글 판단)** | [projects/006-new-post-alert](projects/006-new-post-alert) | [ideas/006-new-post-alert](ideas/006-new-post-alert/idea.md) |
