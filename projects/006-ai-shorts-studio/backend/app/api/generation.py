@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy import select
@@ -7,7 +9,7 @@ from app.api.projects import get_project_or_404
 from app.db import get_session
 from app.models.asset import Asset
 from app.models.job import Job
-from app.models.project import utcnow
+from app.models.project import Project, utcnow
 from app.models.scene import Scene
 from app.providers import MEDIA_PROVIDERS, get_media_provider, get_script_provider, media_provider_name
 from app.providers.base import ScriptProvider
@@ -29,6 +31,8 @@ def _scene_or_404(session: Session, scene_id: int) -> Scene:
 
 
 def _prompt_for(scene: Scene, kind: str) -> str:
+    if kind == "audio":
+        return scene.dialogue.strip()
     if kind == "image":
         candidates = (scene.image_prompt, scene.visual_description, scene.dialogue)
     else:
@@ -56,18 +60,21 @@ def list_providers(script: ScriptProvider = Depends(get_script_provider)):
     return infos
 
 
-def _start(kind: str, scene_id: int, body: GenerateRequest | None, background: BackgroundTasks, session: Session) -> Job:
-    scene = _scene_or_404(session, scene_id)
+def create_job(kind: str, scene: Scene, confirm_paid: bool, session: Session) -> Job:
+    """장면 작업을 만든다 (커밋은 호출한 쪽에서). 실행할 수 없으면 HTTPException."""
+    if job_service.project_render_active(session, scene.project_id):
+        raise HTTPException(status_code=409, detail="최종 렌더링 중입니다. 렌더링이 끝난 뒤 다시 시도하세요.")
     if job_service.scene_has_active_job(session, scene.id):
-        raise HTTPException(status_code=409, detail="이 장면은 이미 생성 중입니다. 끝난 뒤 다시 시도하세요.")
+        raise HTTPException(status_code=409, detail=f"장면 {scene.scene_number}은(는) 이미 생성 중입니다. 끝난 뒤 다시 시도하세요.")
     prompt = _prompt_for(scene, kind)
     if not prompt:
-        raise HTTPException(status_code=422, detail="프롬프트가 비어 있습니다. 스토리보드에서 프롬프트나 대사를 입력하세요.")
+        detail = "대사가 비어 있어 음성을 만들 수 없습니다." if kind == "audio" else "프롬프트가 비어 있습니다. 스토리보드에서 프롬프트나 대사를 입력하세요."
+        raise HTTPException(status_code=422, detail=detail)
     try:
         provider = get_media_provider(kind)
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
-    estimate = _check_paid(provider, bool(body and body.confirm_paid), scene.duration_sec)
+    estimate = _check_paid(provider, confirm_paid, scene.duration_sec)
     job = Job(
         project_id=scene.project_id,
         scene_id=scene.id,
@@ -78,8 +85,15 @@ def _start(kind: str, scene_id: int, body: GenerateRequest | None, background: B
         cost_currency=provider.currency,
     )
     session.add(job)
-    scene.status = "queued"
-    scene.approved_at = None
+    if kind in job_service.REVIEWABLE_KINDS:
+        scene.status = "queued"
+        scene.approved_at = None
+    return job
+
+
+def _start(kind: str, scene_id: int, body: GenerateRequest | None, background: BackgroundTasks, session: Session) -> Job:
+    scene = _scene_or_404(session, scene_id)
+    job = create_job(kind, scene, bool(body and body.confirm_paid), session)
     session.commit()
     background.add_task(job_service.run_job, job.id)
     return job
@@ -95,13 +109,19 @@ def generate_video(scene_id: int, background: BackgroundTasks, body: GenerateReq
     return _start("video", scene_id, body, background, session)
 
 
+@router.post("/api/scenes/{scene_id}/generate-audio", response_model=JobRead, status_code=202)
+def generate_audio(scene_id: int, background: BackgroundTasks, body: GenerateRequest | None = None, session: Session = Depends(get_session)):
+    """장면 대사로 음성을 만든다. 장면의 검토·승인 상태는 바뀌지 않는다."""
+    return _start("audio", scene_id, body, background, session)
+
+
 @router.post("/api/scenes/{scene_id}/approve", response_model=SceneRead)
 def approve_scene(scene_id: int, session: Session = Depends(get_session)):
     scene = _scene_or_404(session, scene_id)
     if scene.status != "review_required":
         raise HTTPException(status_code=409, detail="검토 필요 상태인 장면만 승인할 수 있습니다.")
-    if not scene.assets:
-        raise HTTPException(status_code=409, detail="생성된 결과가 없는 장면은 승인할 수 없습니다.")
+    if not any(a.asset_type in job_service.REVIEWABLE_KINDS for a in scene.assets):
+        raise HTTPException(status_code=409, detail="생성된 이미지나 영상이 없는 장면은 승인할 수 없습니다.")
     scene.status = "approved"
     scene.approved_at = utcnow()
     scene.rejection_reason = None
@@ -148,20 +168,27 @@ def retry_job(job_id: int, background: BackgroundTasks, body: GenerateRequest | 
         raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다.")
     if job.status != "failed":
         raise HTTPException(status_code=409, detail="실패한 작업만 재시도할 수 있습니다.")
-    scene = _scene_or_404(session, job.scene_id)
-    if job_service.scene_has_active_job(session, scene.id):
-        raise HTTPException(status_code=409, detail="이 장면은 이미 생성 중입니다. 끝난 뒤 다시 시도하세요.")
-    try:
-        provider = get_media_provider(job.job_type, job.provider)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-    _check_paid(provider, bool(body and body.confirm_paid), scene.duration_sec)
+    if job.job_type == "render":
+        if job_service.project_has_active_job(session, job.project_id):
+            raise HTTPException(status_code=409, detail="진행 중인 작업이 있습니다. 끝난 뒤 다시 시도하세요.")
+    else:
+        scene = _scene_or_404(session, job.scene_id)
+        if job_service.project_render_active(session, scene.project_id):
+            raise HTTPException(status_code=409, detail="최종 렌더링 중입니다. 렌더링이 끝난 뒤 다시 시도하세요.")
+        if job_service.scene_has_active_job(session, scene.id):
+            raise HTTPException(status_code=409, detail="이 장면은 이미 생성 중입니다. 끝난 뒤 다시 시도하세요.")
+        try:
+            provider = get_media_provider(job.job_type, job.provider)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+        _check_paid(provider, bool(body and body.confirm_paid), scene.duration_sec)
+        if job.job_type in job_service.REVIEWABLE_KINDS:
+            scene.status = "queued"
+            scene.approved_at = None
     job.status = "queued"
     job.progress = 0
     job.error_message = None
     job.finished_at = None
-    scene.status = "queued"
-    scene.approved_at = None
     session.commit()
     background.add_task(job_service.run_job, job.id)
     return job
@@ -174,9 +201,15 @@ def list_assets(project_id: int, session: Session = Depends(get_session)):
 
 
 @router.get("/api/assets/{asset_id}/file")
-def asset_file(asset_id: int, session: Session = Depends(get_session)):
+def asset_file(asset_id: int, download: bool = False, session: Session = Depends(get_session)):
+    """자산 파일. download=true면 '프로젝트명_v1.mp4' 같은 이름으로 내려받게 한다."""
     asset = session.get(Asset, asset_id)
     path = storage.resolve(asset.file_path) if asset else None
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
-    return FileResponse(path)
+    if not download:
+        return FileResponse(path)
+    project = session.get(Project, asset.project_id)
+    title = re.sub(r'[\\/:*?"<>|\s]+', "_", project.title if project else "shorts").strip("_") or "shorts"
+    suffix = "" if asset.asset_type == "render" else f"_{asset.asset_type}"
+    return FileResponse(path, filename=f"{title}{suffix}_v{asset.version}{path.suffix}")

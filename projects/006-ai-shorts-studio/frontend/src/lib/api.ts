@@ -1,5 +1,6 @@
 import type { Project, ProjectForm, ProjectStatus } from "./project";
 import type { Asset, Job, MediaKind, ProviderInfo } from "./generation";
+import type { RenderCheck, Subtitles } from "./render";
 import type { Scene, SceneForm } from "./scene";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -67,4 +68,12 @@ export const api = {
   listJobs: (projectId: number) => request<Job[]>(`/api/projects/${projectId}/jobs`),
   retryJob: (jobId: number, confirmPaid: boolean) => post<Job>(`/api/jobs/${jobId}/retry`, { confirm_paid: confirmPaid }),
   listAssets: (projectId: number) => request<Asset[]>(`/api/projects/${projectId}/assets`),
+
+  generateProjectAudio: (projectId: number, confirmPaid: boolean) =>
+    post<Job[]>(`/api/projects/${projectId}/generate-audio`, { confirm_paid: confirmPaid }),
+  renderCheck: (projectId: number, includeAudio: boolean) =>
+    request<RenderCheck>(`/api/projects/${projectId}/render-check?include_audio=${includeAudio}`),
+  getSubtitles: (projectId: number) => request<Subtitles>(`/api/projects/${projectId}/subtitles`),
+  startRender: (projectId: number, body: { include_audio: boolean; burn_subtitles: boolean }) =>
+    post<Job>(`/api/projects/${projectId}/render`, body),
 };

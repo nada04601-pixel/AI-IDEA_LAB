@@ -11,6 +11,10 @@ def scene_asset_base(project_id: int, scene_id: int, kind: str, version: int) ->
     return config.storage_dir() / "projects" / str(project_id) / "scenes" / str(scene_id) / f"{kind}_v{version}"
 
 
+def render_dir(project_id: int, version: int) -> Path:
+    return config.storage_dir() / "projects" / str(project_id) / "renders" / f"v{version}"
+
+
 def to_relative(path: Path) -> str:
     return path.resolve().relative_to(config.storage_dir()).as_posix()
 

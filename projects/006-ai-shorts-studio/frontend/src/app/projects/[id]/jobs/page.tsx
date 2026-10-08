@@ -73,7 +73,7 @@ export default function JobsPage() {
               {jobs.map((job) => (
                 <tr key={job.id} data-testid={`job-${job.id}`}>
                   <td>{job.id}</td>
-                  <td>{sceneNumber(job.scene_id) ?? "-"}</td>
+                  <td>{job.scene_id === null ? "전체" : (sceneNumber(job.scene_id) ?? "-")}</td>
                   <td>{KIND_LABELS[job.job_type] ?? job.job_type}</td>
                   <td>{job.provider}</td>
                   <td>

@@ -19,7 +19,8 @@ export default function ReviewPage() {
 
   const { project, scenes, jobs, assets, providers } = data;
   const summary = summarizeReview(scenes);
-  const paid = providers.filter((p) => p.kind !== "script" && p.is_paid);
+  const mediaProviders = providers.filter((p) => p.kind === "image" || p.kind === "video");
+  const paid = mediaProviders.filter((p) => p.is_paid);
 
   async function onGenerate(scene: Scene, kind: MediaKind) {
     const { ok, confirmPaid } = confirmCost(providers, kind);
@@ -52,8 +53,7 @@ export default function ReviewPage() {
         </div>
         <p className="muted small">
           공급자:{" "}
-          {providers
-            .filter((p) => p.kind !== "script")
+          {mediaProviders
             .map((p) => `${p.kind === "image" ? "이미지" : "영상"} ${p.name}${p.is_paid ? " (유료)" : " (무료)"}`)
             .join(" · ")}
           {paid.length === 0 && " — 외부 AI를 호출하지 않으며 비용이 들지 않습니다."}

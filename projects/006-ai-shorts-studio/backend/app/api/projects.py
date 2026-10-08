@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
+from app.models.asset import Asset
+from app.models.job import Job
 from app.models.project import Project, utcnow
 from app.models.scene import Scene
 from app.providers import ScriptProvider, get_script_provider
@@ -73,6 +75,9 @@ def delete_project(project_id: int, session: Session = Depends(get_session)):
     project = get_project_or_404(session, project_id)
     if project_has_active_job(session, project_id):
         raise HTTPException(status_code=409, detail="생성 중인 작업이 있어 삭제할 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.")
+    # 장면에 속하지 않는 자산·작업(최종 렌더 등)도 함께 지운다
+    session.execute(delete(Asset).where(Asset.project_id == project_id))
+    session.execute(delete(Job).where(Job.project_id == project_id))
     session.delete(project)
     session.commit()
     storage.delete_project_dir(project_id)
