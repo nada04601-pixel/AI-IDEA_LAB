@@ -47,6 +47,7 @@ for (const section of sectionsForRun(now)) {
       prev: prev?.sections?.[section.key],
       now: now.getTime(),
       hours,
+      koreanOnly: regionCode === 'KR',
     });
     const s = updated[section.key];
     console.log(`${section.label}: 쇼츠 ${s.videos.length}개, 키워드 ${s.keywords.length}개`);

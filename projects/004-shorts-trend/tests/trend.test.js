@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseDuration, toVideo, isShort, rankVideos, keywordsOf, rankKeywords, formatCount, formatAgo } from '../src/trend.js';
+import { parseDuration, toVideo, isShort, isKorean, rankVideos, keywordsOf, rankKeywords, formatCount, formatAgo } from '../src/trend.js';
 import { demoItems } from '../src/demo.js';
 import { searchRecentShortIds, fetchVideoDetails } from '../src/youtube.js';
 
@@ -109,4 +109,14 @@ test('youtube: 상세 조회는 50개씩 끊는다', async () => {
 test('youtube: 할당량 초과는 한국어로 안내', async () => {
   const fake = async () => ({ ok: false, status: 403, json: async () => ({ error: { message: 'quota', errors: [{ reason: 'quotaExceeded' }] } }) });
   await assert.rejects(searchRecentShortIds({ apiKey: 'k' }, fake), /할당량/);
+});
+
+test('isKorean: 제목이나 채널에 한글이 있어야 한다', () => {
+  assert.equal(isKorean({ title: 'Which Baby Is It? #shorts', channel: 'Kids' }), false);
+  assert.equal(isKorean({ title: 'BTS cover', channel: '커버하는언니' }), true);
+});
+
+test('keywordsOf: ㅋㅋ 같은 자모만 있는 말과 영어 흔한 말은 뺀다', () => {
+  const k = keywordsOf(toVideo(item({ title: '고양이 반응 ㅋㅋ ㄷㄷ #funny #comedy #ytshorts' }), NOW));
+  assert.deepEqual([...k], ['고양이']);
 });

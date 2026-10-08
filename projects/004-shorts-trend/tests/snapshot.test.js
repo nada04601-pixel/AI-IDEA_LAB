@@ -92,3 +92,11 @@ test('collect.mjs: 할당량 초과면 지난 데이터를 유지하고 오류�
   assert.equal(out.errors[0].section, 'all');
   assert.match(stdout, /FAKE_CALLS=1\b/); // 첫 실패 후 바로 멈춘다
 });
+
+test('buildSection: koreanOnly면 한글 영상만 남긴다', () => {
+  const items = demoItems(NOW);
+  items[0].snippet.title = 'Which Baby Is It? #shorts';
+  items[0].snippet.channelTitle = 'Kids';
+  assert.equal(buildSection(ALL, items, { now: NOW, hours: 24 }).videos.length, 15);
+  assert.equal(buildSection(ALL, items, { now: NOW, hours: 24, koreanOnly: true }).videos.length, 14);
+});

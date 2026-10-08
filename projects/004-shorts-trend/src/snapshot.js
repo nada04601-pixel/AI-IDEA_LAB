@@ -1,5 +1,5 @@
 // 자동 수집 결과(data/latest.json)를 만드는 로직. 수집 스크립트와 테스트가 함께 쓴다.
-import { toVideo, isShort, rankVideos, rankKeywords } from './trend.js';
+import { toVideo, isShort, isKorean, rankVideos, rankKeywords, KOREAN_BROAD_QUERY } from './trend.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP_VIDEOS = 100;
@@ -7,7 +7,7 @@ export const KEEP_VIDEOS = 100;
 // '전체'는 매시간, 분야는 한 시간에 하나씩 돌아가며 갱신한다 (할당량 절약).
 // q의 '|'는 YouTube 검색의 OR 연산자다.
 export const SECTIONS = [
-  { key: 'all', label: '전체', query: '' },
+  { key: 'all', label: '전체', query: KOREAN_BROAD_QUERY },
   { key: 'food', label: '먹방·요리', query: '먹방|요리|레시피' },
   { key: 'game', label: '게임', query: '게임|롤|마인크래프트|배그' },
   { key: 'sports', label: '스포츠', query: '축구|야구|농구|배구' },
@@ -41,8 +41,10 @@ function slim(v) {
 }
 
 // API 응답(videos.list items) → 섹션. 지난 수집에도 있던 영상은 "그 사이 시간당 증가량"을 붙인다.
-export function buildSection(section, items, { prev, now = Date.now(), hours }) {
-  const videos = rankVideos(items.map((it) => toVideo(it, now)).filter(isShort)).slice(0, KEEP_VIDEOS);
+// koreanOnly: 한글 제목·채널만 남긴다 (한국 순위용)
+export function buildSection(section, items, { prev, now = Date.now(), hours, koreanOnly = false }) {
+  const all = items.map((it) => toVideo(it, now)).filter(isShort);
+  const videos = rankVideos(koreanOnly ? all.filter(isKorean) : all).slice(0, KEEP_VIDEOS);
   const prevAt = prev ? Date.parse(prev.updatedAt) : NaN;
   const gapHours = (now - prevAt) / 3_600_000;
   if (gapHours >= 0.5 && gapHours <= 12) {

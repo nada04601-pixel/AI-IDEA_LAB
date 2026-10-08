@@ -45,6 +45,16 @@ export function isShort(video) {
   return video.seconds > 0 && video.seconds <= SHORTS_MAX_SECONDS;
 }
 
+// 제목이나 채널명에 한글이 있으면 한국 영상으로 본다.
+// regionCode=KR은 "한국에서 볼 수 있는 영상"일 뿐이라 해외 영상이 대부분 섞여 나온다.
+export function isKorean(video) {
+  return /[가-힣]/.test(video.title + video.channel);
+}
+
+// 한국 쇼츠 '전체'용 검색어: 분야와 상관없이 제목에 흔한 말을 OR로 묶는다.
+// (검색어 없이 찾으면 한국 영상이 100개 중 6개뿐이었다 — 2026-10-08 실측)
+export const KOREAN_BROAD_QUERY = '진짜|ㅋㅋ|레전드|반응|이유|근황|브이로그';
+
 export function rankVideos(videos) {
   return [...videos].sort((a, b) => b.viewsPerHour - a.viewsPerHour);
 }
@@ -53,9 +63,12 @@ export function rankVideos(videos) {
 
 const STOPWORDS = new Set([
   'shorts', 'short', 'youtube', 'youtubeshorts', 'shortsvideo', 'viral', 'fyp', 'foryou', 'trending',
+  'ytshorts', 'shortsfeed', 'viralshorts', 'trendingshorts', 'shortvideo', 'shortvideos', 'funnyvideo', 'reels', 'explore',
+  'funny', 'comedy', 'relatable', 'entertainment', 'amazing', 'video', 'new', 'one', 'it', 'me', 'we', 'when', 'why', 'not',
   'the', 'and', 'for', 'with', 'you', 'this', 'that', 'my', 'your', 'how', 'what', 'from', 'are', 'is', 'of', 'to', 'in', 'on', 'a',
   '쇼츠', '숏츠', '유튜브', '영상', '오늘', '진짜', '이거', '그냥', '너무', '정말', '완전', '그리고', '하는', '있는', '없는', '이런', '저런',
   '그런', '모든', '우리', '같은', '하기', '해서', '하면', '했다', '합니다', '입니다', '있다', '없다', '근데', '구독', '좋아요', '추천', '반응', '순간', '직접', '처음', '모음', '레전드', '드디어', '결국', '최고',
+  '이유', '근황', '브이로그', '뉴스', '한국', '공감', '공감입니다', '상황', '사람', '방법', '이번', '지금', '하나', '보는', '다시', '되는', '안되는', '못하', '않는', '없이',
 ]);
 
 // 흔한 조사를 떼어 "먹방은", "먹방을"을 "먹방"으로 모은다 (단순 규칙).
@@ -78,6 +91,7 @@ function normalize(word) {
 function usable(word) {
   if (word.length < 2 || word.length > 20) return false;
   if (/^\d+$/.test(word)) return false;
+  if (/^[ㄱ-ㅎㅏ-ㅣ]+$/.test(word)) return false; // ㅋㅋ, ㄷㄷ, ㅠㅠ
   return !STOPWORDS.has(word);
 }
 
