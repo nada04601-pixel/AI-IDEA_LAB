@@ -1,0 +1,66 @@
+name: 떡상 쇼츠 자동 수집
+
+# 1시간마다 최근 쇼츠를 수집해 gh-pages의 shorts/ 폴더(공개 페이지)를 갱신한다.
+# 공개 주소: https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/
+# 필요한 시크릿: YOUTUBE_API_KEY (없으면 수집 없이 페이지 파일만 배포)
+on:
+  schedule:
+    - cron: '17 * * * *' # 매시 17분 (정각은 GitHub 예약 실행이 몰려 늦어진다)
+  push:
+    branches: [main]
+    paths:
+      - 'projects/004-shorts-trend/**'
+      - '.github/workflows/shorts-trend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shorts-trend
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 테스트
+        working-directory: projects/004-shorts-trend
+        run: npm test
+
+      - name: gh-pages 가져오기
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: 쇼츠 수집
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: node projects/004-shorts-trend/scripts/collect.mjs site/shorts/data/latest.json site/shorts/data/latest.json
+
+      - name: 페이지 파일 복사
+        run: |
+          mkdir -p site/shorts
+          rm -rf site/shorts/src
+          cp projects/004-shorts-trend/index.html projects/004-shorts-trend/search.html site/shorts/
+          cp -r projects/004-shorts-trend/src site/shorts/src
+          touch site/.nojekyll
+
+      # gh-pages는 배포용이라 기록이 필요 없다. 매시간 커밋이 쌓이지 않게 마지막 커밋을 고쳐 쓴다.
+      - name: 배포
+        working-directory: site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          BEFORE=$(git rev-parse HEAD)
+          git commit -q --amend -m "deploy: gh-pages $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') KST"
+          git push -q --force-with-lease=gh-pages:"$BEFORE" origin HEAD:gh-pages

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>오늘의 떡상 쇼츠</title>
+  <meta name="description" content="지금 유튜브에서 빠르게 뜨는 쇼츠와 급상승 키워드 순위. 1시간마다 자동 업데이트." />
+  <meta property="og:title" content="오늘의 떡상 쇼츠 — 급상승 쇼츠·키워드 순위" />
+  <meta property="og:description" content="지금 유튜브에서 빠르게 뜨는 쇼츠와 급상승 키워드 순위. 1시간마다 자동 업데이트." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔥</text></svg>" />
+  <link rel="stylesheet" href="src/style.css" />
+</head>
+<body>
+  <header>
+    <h1>🔥 오늘의 떡상 쇼츠</h1>
+    <p class="sub">최근 24시간 안에 올라온 한국 쇼츠를 <b>시간당 조회수</b>로 줄 세우고, 많이 겹치는 <b>키워드</b>를 뽑아요. 1시간마다 자동 업데이트됩니다.</p>
+  </header>
+
+  <main>
+    <nav id="tabs" class="tabs" aria-label="분야"></nav>
+    <p id="status" class="status" hidden></p>
+
+    <section id="results" hidden>
+      <div class="meta" id="meta"></div>
+
+      <h2>📈 급상승 키워드</h2>
+      <p class="hint">여러 떡상 쇼츠에 함께 나온 해시태그·제목 단어 순위입니다. 누르면 해당 영상만 봅니다.</p>
+      <ol id="keywords" class="keywords"></ol>
+
+      <div class="row">
+        <h2 id="videosTitle">🚀 떡상 쇼츠 순위</h2>
+        <button type="button" id="clearFilter" class="ghost small" hidden>필터 해제</button>
+      </div>
+      <p class="hint"><b>평균 시간당</b>은 올라온 뒤 지금까지의 평균 속도, <b>지금 시간당</b>은 지난 수집 이후 늘어난 속도입니다.</p>
+      <ol id="videos" class="videos"></ol>
+    </section>
+
+    <p class="more"><a href="search.html">🔎 내 API 키로 다른 국가·분야 직접 검색하기</a></p>
+  </main>
+
+  <footer>
+    YouTube Data API 기반 · 쇼츠 판별은 영상 길이 3분 이하 기준 · 분야별 순위는 몇 시간 간격으로 돌아가며 갱신됩니다.
+  </footer>
+
+  <script type="module" src="src/public.js"></script>
+</body>
+</html>
