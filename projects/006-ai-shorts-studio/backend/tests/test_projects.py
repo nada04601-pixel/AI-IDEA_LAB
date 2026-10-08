@@ -45,6 +45,7 @@ def test_data_persists_across_restart(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
 
     monkeypatch.setenv("AISS_DATABASE_URL", f"sqlite:///{tmp_path / 'persist.db'}")
+    monkeypatch.setenv("AISS_STORAGE_DIR", str(tmp_path / "storage"))
     from app.main import app
 
     with TestClient(app) as c:

@@ -7,6 +7,8 @@ const TABS = [
   { href: "", label: "설정" },
   { href: "/script", label: "대본" },
   { href: "/storyboard", label: "스토리보드" },
+  { href: "/review", label: "검토" },
+  { href: "/jobs", label: "작업" },
 ];
 
 export default function ProjectLayout({ children }: { children: React.ReactNode }) {
