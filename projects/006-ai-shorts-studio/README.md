@@ -3,8 +3,8 @@
 쇼츠 주제를 입력하면 대본·장면을 만들고, 장면별로 승인한 뒤 세로형 MP4로 내보내는 개인용 웹 애플리케이션.
 
 - 요구사항·작업 지침: [ideas/006-ai-shorts-studio/idea.md](../../ideas/006-ai-shorts-studio/idea.md)
-- 현재 단계: **2단계 완료 — 대본과 스토리보드** (1단계: 기본 뼈대·프로젝트 관리)
-- 외부 AI·유료 API 호출: **없음** — 대본·스토리보드는 mock provider로 만든다
+- 현재 단계: **3단계 완료 — 장면 생성 및 승인** (1단계: 기본 뼈대·프로젝트 관리, 2단계: 대본·스토리보드)
+- 외부 AI·유료 API 호출: **없음** — 대본·스토리보드·장면 이미지·영상 모두 mock provider로 만든다
 
 ## 구성
 
@@ -12,11 +12,11 @@
 |---|---|
 | `backend/` | Python + FastAPI + SQLAlchemy(SQLite). `app/providers/`에 AI 공급자 어댑터 |
 | `frontend/` | Next.js(App Router) + TypeScript |
-| `storage/` | 실행 시 자동 생성. SQLite DB와 생성 자산 (Git 제외) |
+| `storage/` | 실행 시 자동 생성. SQLite DB와 생성 자산 `projects/{프로젝트}/scenes/{장면}/image_v1.png` 등 (Git 제외) |
 
 ## 실행 방법
 
-필요한 도구: Python 3.11 이상, Node.js 20 이상. (FFmpeg는 4단계 렌더링부터 필요)
+필요한 도구: Python 3.11 이상, Node.js 20 이상, FFmpeg (mock 영상 생성과 4단계 렌더링에 사용. 없으면 영상 생성 작업만 실패하고 나머지는 동작)
 
 ### 백엔드 (http://localhost:8000)
 
@@ -43,10 +43,10 @@ npm run dev
 ## 테스트
 
 ```bash
-# 백엔드 (프로젝트·장면 API, mock provider, 입력 검증, 재시작 후 데이터 유지, 1단계 DB 업그레이드)
+# 백엔드 (프로젝트·장면·작업 API, mock 공급자, 승인 규칙, 재시도, 유료 확인, 재시작 후 데이터 유지, 이전 DB 업그레이드)
 cd backend && pytest
 
-# 프런트엔드 (입력 검증·장면 도우미 단위 테스트, 타입 검사, 빌드)
+# 프런트엔드 (입력 검증·장면·작업 도우미 단위 테스트, 타입 검사, 빌드)
 cd frontend && npm test && npm run typecheck && npm run build
 ```
 
@@ -75,6 +75,21 @@ cd frontend && npm test && npm run typecheck && npm run build
 - [ ] ↑/↓로 순서를 바꾸고, ✕로 삭제하고, "+ 장면 추가"로 맨 뒤에 추가할 수 있다
 - [ ] 합계 길이가 목표와 다르면 차이(+/−초)가 표시된다
 
+### 수동 확인 체크리스트 (3단계)
+
+- [ ] "검토" 탭에 승인 진행률(승인 n/전체)과 공급자(mock, 무료)가 보인다
+- [ ] 생성 전에는 "승인"이 꺼져 있다
+- [ ] "이미지 생성"을 누르면 "생성 중…"이 보였다가 MOCK IMAGE 미리보기와 "검토 필요" 상태가 된다
+- [ ] "승인"하면 상태가 "승인"으로 바뀌고 진행률이 올라간다
+- [ ] 이미지 프롬프트에 `[mock-fail-once]`를 넣고 생성하면 실패 메시지와 "재시도" 버튼이 보이고, 재시도하면 성공한다
+- [ ] "반려"는 사유 없이 확정할 수 없고, 사유를 넣으면 반려 사유가 카드에 표시된다
+- [ ] "영상 생성"을 누르면 장면 길이만큼의 MP4가 만들어지고 재생된다 (이미지가 있으면 그 이미지로 만든다)
+- [ ] 재생성하면 이전 버전(v1)이 남고 v2가 추가되며, 승인했던 장면은 다시 "검토 필요"가 된다
+- [ ] 승인한 장면의 대사·프롬프트를 스토리보드에서 고치면 다시 "검토 필요"가 된다
+- [ ] 생성 중인 장면은 다시 생성하거나 삭제할 수 없다
+- [ ] "작업" 탭에 작업별 상태·시도 횟수·예상 비용·오류가 보이고, 실패한 작업은 여기서도 재시도할 수 있다
+- [ ] 생성 도중 백엔드를 껐다 켜면 그 작업은 "실패(서버 재시작)"로 표시되고 재시도할 수 있다
+
 ## API
 
 | 메서드 | 경로 | 설명 |
@@ -84,19 +99,31 @@ cd frontend && npm test && npm run typecheck && npm run build
 | POST | `/api/projects` | 프로젝트 생성 |
 | GET | `/api/projects/{id}` | 프로젝트 상세 |
 | PATCH | `/api/projects/{id}` | 프로젝트 수정 (보낸 필드만) |
-| DELETE | `/api/projects/{id}` | 프로젝트 삭제 (장면도 함께 삭제) |
+| DELETE | `/api/projects/{id}` | 프로젝트 삭제 (장면·작업·자산 파일도 함께 삭제. 생성 중이면 409) |
 | POST | `/api/projects/{id}/generate-script` | 대본 초안 생성·저장. 기존 대본이 있으면 `{"overwrite": true}` 필요 (없으면 409) |
-| POST | `/api/projects/{id}/storyboard` | 저장된 대본을 빈 줄 기준으로 장면 생성. 기존 장면이 있으면 `{"replace": true}` 필요 (없으면 409) |
+| POST | `/api/projects/{id}/storyboard` | 저장된 대본을 빈 줄 기준으로 장면 생성. 기존 장면이 있으면 `{"replace": true}` 필요 (없으면 409). 생성 중이면 409 |
 | GET | `/api/projects/{id}/scenes` | 장면 목록 (순서대로) |
 | POST | `/api/projects/{id}/scenes` | 장면을 맨 뒤에 추가 (프로젝트당 최대 50개) |
 | POST | `/api/projects/{id}/scenes/reorder` | `{"scene_ids": [...]}` 순서로 장면 번호를 다시 매김. 모든 장면을 한 번씩 포함해야 함 |
-| PATCH | `/api/scenes/{scene_id}` | 장면 수정 (대사·화면 설명·이미지/영상 프롬프트·길이) |
-| DELETE | `/api/scenes/{scene_id}` | 장면 삭제 후 번호를 1부터 다시 매김 |
+| PATCH | `/api/scenes/{scene_id}` | 장면 수정 (대사·화면 설명·이미지/영상 프롬프트·길이). 승인된 장면을 바꾸면 `review_required`로 되돌림 |
+| DELETE | `/api/scenes/{scene_id}` | 장면 삭제 후 번호를 1부터 다시 매김 (생성 중이면 409) |
+| GET | `/api/providers` | 대본·이미지·영상 공급자와 유료 여부, 1건 예상 비용 |
+| POST | `/api/scenes/{scene_id}/generate-image` | 이미지 생성 작업 요청 → 202와 작업(Job). 유료 공급자면 `{"confirm_paid": true}` 필요 |
+| POST | `/api/scenes/{scene_id}/generate-video` | 영상 생성 작업 요청 (최신 이미지가 있으면 그것으로 만듦) |
+| POST | `/api/scenes/{scene_id}/approve` | 승인 (`review_required` 상태이고 결과가 있을 때만) |
+| POST | `/api/scenes/{scene_id}/reject` | `{"reason": "..."}`로 반려 (`review_required`·`approved` 상태에서, 사유 필수) |
+| GET | `/api/projects/{id}/jobs` | 작업 목록 (최신순) |
+| GET | `/api/jobs/{job_id}` | 작업 상태 조회 |
+| POST | `/api/jobs/{job_id}/retry` | 실패한 작업을 같은 프롬프트·공급자로 다시 실행 |
+| GET | `/api/projects/{id}/assets` | 생성 자산 목록 (버전·비용·파일 주소) |
+| GET | `/api/assets/{asset_id}/file` | 자산 파일 (Range 요청 지원) |
 
 입력 규칙
 - 프로젝트: 제목 1~200자, 주제 2000자 이하, 목표 길이 5~180초, 화면 비율 `9:16`(기본)·`16:9`·`1:1`, 스타일 200자 이하, 대본 20,000자 이하
 - 장면: 대사·화면 설명 2000자 이하, 이미지·영상 프롬프트 4000자 이하, 길이 0.5~60초
-- 장면 상태는 2단계에서 항상 `draft`. 승인·반려는 3단계에서 추가한다.
+- 장면 상태: `draft`(초안) → `queued`(생성 대기) → `generating`(생성 중) → `review_required`(검토 필요) → `approved`(승인) / `rejected`(반려), 실패 시 `failed`
+- 한 장면에는 동시에 하나의 작업만 실행된다 (중복 클릭으로 같은 작업이 두 번 실행되지 않게 409로 막는다).
+- 재생성해도 이전 결과는 지우지 않고 버전(v1, v2, …)으로 남긴다.
 
 ## AI 공급자 (provider)
 
@@ -106,15 +133,27 @@ mock 공급자 규칙 (외부 호출·비용 없음, 같은 입력이면 항상 
 - 대본: 목표 길이에 맞춰 3~8개 문단(장면당 약 7초)을 만든다. 모든 문단은 `[mock]`으로 시작한다.
 - 스토리보드: 빈 줄로 문단을 나눠 장면으로 만든다(최대 30개). 장면 길이는 글자 수에 비례해 0.5초 단위로 나누고, 합계는 목표 길이와 같다. 화면 설명·프롬프트는 프로젝트 스타일과 문단 요약으로 채운다.
 
-실제 AI 공급자는 비용 표시와 유료 작업 전 확인이 갖춰진 뒤(3단계 이후) 사용자 승인을 받아 추가한다.
+이미지·영상은 `app/providers/media.py`의 `MediaProvider` 인터페이스(`estimate_cost`, `generate`)를 구현한다. `AISS_IMAGE_PROVIDER`, `AISS_VIDEO_PROVIDER`로 고르며 현재는 `mock`만 있다.
+- mock 이미지: Pillow로 프롬프트에 따라 색이 다른 "MOCK IMAGE" 그림을 만든다 (9:16이면 540×960).
+- mock 영상: FFmpeg로 최신 이미지(없으면 단색 화면)를 장면 길이만큼의 H.264 MP4로 만든다. 일반 Chrome·Edge·Safari에서 재생된다. (Playwright 테스트용 Chromium은 H.264를 재생하지 못해 자동 테스트에서는 ffprobe로 파일을 확인한다.)
+- 실패 확인용: 프롬프트에 `[mock-fail]`이 있으면 항상, `[mock-fail-once]`가 있으면 첫 시도만 실패한다.
+
+비용 처리
+- 작업마다 예상 비용(`estimated_cost`)을, 자산마다 실제 비용(`cost_amount`)을 기록하고 "작업" 탭에 합계를 보여준다. mock은 0(무료).
+- 유료 공급자(`is_paid`)는 `confirm_paid: true` 없이 요청하면 작업을 만들지 않고 409와 예상 비용을 돌려준다. 화면에서는 예상 비용을 보여주는 확인창을 거친다.
+- 실제(유료) AI 공급자는 아직 연결하지 않았다. 연결할 때는 사용자 승인을 먼저 받는다.
+
+작업 실행
+- 생성 요청은 작업을 `queued`로 만들고 바로 응답한다. 실제 생성은 같은 서버 프로세스의 백그라운드에서 실행되고, 화면은 작업이 끝날 때까지 1.5초마다 상태를 새로 고친다.
+- 서버가 작업 도중 꺼지면, 다시 켤 때 남은 작업을 실패로 표시해 재시도할 수 있게 한다.
 
 ## 데이터베이스 초기화
 
-MVP 단계에서는 서버 시작 시 테이블이 없으면 자동으로 만든다 (`app/db.py`의 `init_db`). 이전 단계에서 만든 DB를 열면 나중에 추가된 열을 자동으로 붙인다 (`ADDED_COLUMNS`, 예: 2단계의 `projects.script`). 기존 데이터는 그대로 남는다. 열 추가보다 복잡한 변경(이름 변경·삭제·타입 변경)이 필요해지면 Alembic으로 옮긴다. 데이터를 처음부터 다시 시작하려면 서버를 끄고 `storage/app.db`를 지운다.
+MVP 단계에서는 서버 시작 시 테이블이 없으면 자동으로 만든다 (`app/db.py`의 `init_db`). 이전 단계에서 만든 DB를 열면 나중에 추가된 열을 자동으로 붙인다 (`ADDED_COLUMNS`, 예: 2단계의 `projects.script`). 기존 데이터는 그대로 남는다. 3단계의 `jobs`·`assets` 테이블은 없으면 새로 만든다. 열 추가보다 복잡한 변경(이름 변경·삭제·타입 변경)이 필요해지면 Alembic으로 옮긴다. 데이터를 처음부터 다시 시작하려면 서버를 끄고 `storage/app.db`를 지운다.
 
-## 다음 단계 (3단계 — 장면 생성 및 승인)
+## 다음 단계 (4단계 — 음성, 자막, 렌더링)
 
-- 이미지/영상 provider 어댑터 (mock부터)
-- Asset·Job 모델, 장면별 생성 작업과 상태 표시
-- 미리보기, 승인, 반려 사유, 재생성, 실패 작업 재시도
-- 비용 기록 및 유료 작업 전 확인
+- TTS provider 인터페이스 (mock부터)
+- 자막 생성·저장 (장면 대사와 길이 기준 타이밍)
+- FFmpeg 렌더링 파이프라인: 승인된 장면을 이어 붙이고 음성·자막을 결합해 9:16 MP4 출력
+- 렌더링 진행 상태, 오류 처리, 미리보기 및 내보내기

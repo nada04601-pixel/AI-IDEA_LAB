@@ -35,7 +35,7 @@ def init_db(url: str) -> None:
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     engine = create_engine(url, connect_args=connect_args)
     SessionLocal.configure(bind=engine)
-    from app.models import project, scene  # noqa: F401  테이블 등록
+    from app.models import asset, job, project, scene  # noqa: F401  테이블 등록
 
     _add_missing_columns(engine)
     Base.metadata.create_all(engine)

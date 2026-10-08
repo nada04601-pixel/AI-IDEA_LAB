@@ -1,4 +1,5 @@
 import type { Project, ProjectForm, ProjectStatus } from "./project";
+import type { Asset, Job, MediaKind, ProviderInfo } from "./generation";
 import type { Scene, SceneForm } from "./scene";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -30,6 +31,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
+/** 백엔드가 돌려준 상대 경로(/api/...)를 전체 주소로 바꾼다. */
+export const apiUrl = (path: string) => `${API_BASE}${path}`;
+
 const post = <T>(path: string, body?: unknown) =>
   request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
 
@@ -54,4 +58,13 @@ export const api = {
   deleteScene: (sceneId: number) => request<void>(`/api/scenes/${sceneId}`, { method: "DELETE" }),
   reorderScenes: (projectId: number, sceneIds: number[]) =>
     post<Scene[]>(`/api/projects/${projectId}/scenes/reorder`, { scene_ids: sceneIds }),
+
+  listProviders: () => request<ProviderInfo[]>("/api/providers"),
+  generateMedia: (sceneId: number, kind: MediaKind, confirmPaid: boolean) =>
+    post<Job>(`/api/scenes/${sceneId}/generate-${kind}`, { confirm_paid: confirmPaid }),
+  approveScene: (sceneId: number) => post<Scene>(`/api/scenes/${sceneId}/approve`),
+  rejectScene: (sceneId: number, reason: string) => post<Scene>(`/api/scenes/${sceneId}/reject`, { reason }),
+  listJobs: (projectId: number) => request<Job[]>(`/api/projects/${projectId}/jobs`),
+  retryJob: (jobId: number, confirmPaid: boolean) => post<Job>(`/api/jobs/${jobId}/retry`, { confirm_paid: confirmPaid }),
+  listAssets: (projectId: number) => request<Asset[]>(`/api/projects/${projectId}/assets`),
 };

@@ -27,3 +27,5 @@ class Scene(Base):
     )
 
     project: Mapped[Project] = relationship(back_populates="scenes")
+    assets = relationship("Asset", back_populates="scene", cascade="all, delete-orphan", order_by="Asset.id")
+    jobs = relationship("Job", back_populates="scene", cascade="all, delete-orphan", order_by="Job.id")

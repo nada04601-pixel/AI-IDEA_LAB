@@ -16,6 +16,8 @@ from app.schemas.project import (
     StoryboardGenerateRequest,
 )
 from app.schemas.scene import SceneRead
+from app.services import storage
+from app.services.jobs import project_has_active_job
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -69,8 +71,11 @@ def update_project(project_id: int, body: ProjectUpdate, session: Session = Depe
 @router.delete("/{project_id}", status_code=204)
 def delete_project(project_id: int, session: Session = Depends(get_session)):
     project = get_project_or_404(session, project_id)
+    if project_has_active_job(session, project_id):
+        raise HTTPException(status_code=409, detail="생성 중인 작업이 있어 삭제할 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.")
     session.delete(project)
     session.commit()
+    storage.delete_project_dir(project_id)
     return Response(status_code=204)
 
 
@@ -103,7 +108,10 @@ def generate_storyboard(
         raise HTTPException(status_code=422, detail="대본이 비어 있습니다. 먼저 대본을 작성하거나 생성하세요.")
     if project.scenes and not (body and body.replace):
         raise HTTPException(status_code=409, detail="이미 장면이 있습니다. 바꾸려면 replace=true로 요청하세요.")
+    if project_has_active_job(session, project_id):
+        raise HTTPException(status_code=409, detail="생성 중인 작업이 있어 장면을 바꿀 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.")
     drafts = provider.generate_storyboard(project.script, _script_request(project))
+    old_scene_ids = [s.id for s in project.scenes]
     project.scenes.clear()
     session.flush()
     for number, draft in enumerate(drafts, start=1):
@@ -119,4 +127,6 @@ def generate_storyboard(
         )
     project.updated_at = utcnow()
     session.commit()
+    for scene_id in old_scene_ids:
+        storage.delete_scene_dir(project_id, scene_id)
     return project.scenes

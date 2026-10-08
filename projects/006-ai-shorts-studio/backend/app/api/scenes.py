@@ -6,6 +6,8 @@ from app.db import get_session
 from app.models.project import Project, utcnow
 from app.models.scene import Scene
 from app.schemas.scene import SceneCreate, SceneRead, SceneReorder, SceneUpdate
+from app.services import storage
+from app.services.jobs import scene_has_active_job
 
 router = APIRouter(tags=["scenes"])
 
@@ -45,10 +47,17 @@ def create_scene(project_id: int, body: SceneCreate, session: Session = Depends(
 @router.patch("/api/scenes/{scene_id}", response_model=SceneRead)
 def update_scene(scene_id: int, body: SceneUpdate, session: Session = Depends(get_session)):
     scene = _get_scene_or_404(session, scene_id)
+    changed = False
     for key, value in body.model_dump(exclude_unset=True).items():
         if value is None:
             raise HTTPException(status_code=422, detail=f"{key} 값은 비울 수 없습니다.")
-        setattr(scene, key, value)
+        if getattr(scene, key) != value:
+            setattr(scene, key, value)
+            changed = True
+    if changed and scene.status == "approved":
+        # 승인 뒤 내용을 바꾸면 다시 검토해야 한다
+        scene.status = "review_required"
+        scene.approved_at = None
     scene.project.updated_at = utcnow()
     session.commit()
     return scene
@@ -57,11 +66,14 @@ def update_scene(scene_id: int, body: SceneUpdate, session: Session = Depends(ge
 @router.delete("/api/scenes/{scene_id}", status_code=204)
 def delete_scene(scene_id: int, session: Session = Depends(get_session)):
     scene = _get_scene_or_404(session, scene_id)
+    if scene_has_active_job(session, scene_id):
+        raise HTTPException(status_code=409, detail="생성 중인 장면은 삭제할 수 없습니다. 작업이 끝난 뒤 다시 시도하세요.")
     project = scene.project
     project.scenes.remove(scene)
     _renumber(project)
     project.updated_at = utcnow()
     session.commit()
+    storage.delete_scene_dir(project.id, scene_id)
     return Response(status_code=204)
 
 

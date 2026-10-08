@@ -124,6 +124,7 @@ def test_stage1_database_is_upgraded(tmp_path, monkeypatch):
     conn.close()
 
     monkeypatch.setenv("AISS_DATABASE_URL", f"sqlite:///{db}")
+    monkeypatch.setenv("AISS_STORAGE_DIR", str(tmp_path / "storage"))
     from app.main import app
 
     with TestClient(app) as c:
