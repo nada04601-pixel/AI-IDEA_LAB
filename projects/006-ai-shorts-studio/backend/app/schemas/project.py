@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 AspectRatio = Literal["9:16", "16:9", "1:1"]
 ProjectStatus = Literal["draft", "in_progress", "rendering", "done"]
+MAX_SCRIPT_LENGTH = 20000
 
 
 class ProjectCreate(BaseModel):
@@ -21,6 +22,7 @@ class ProjectUpdate(BaseModel):
     target_duration_sec: int | None = Field(default=None, ge=5, le=180)
     aspect_ratio: AspectRatio | None = None
     visual_style: str | None = Field(default=None, max_length=200)
+    script: str | None = Field(default=None, max_length=MAX_SCRIPT_LENGTH)
     status: ProjectStatus | None = None
 
 
@@ -33,6 +35,7 @@ class ProjectRead(BaseModel):
     target_duration_sec: int
     aspect_ratio: str
     visual_style: str
+    script: str
     status: str
     created_at: datetime
     updated_at: datetime
@@ -42,3 +45,11 @@ class ProjectRead(BaseModel):
     def _assume_utc(cls, value: datetime) -> datetime:
         # SQLite는 시간대를 저장하지 않으므로 UTC로 저장한 값임을 응답에 명시한다.
         return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+class ScriptGenerateRequest(BaseModel):
+    overwrite: bool = False
+
+
+class StoryboardGenerateRequest(BaseModel):
+    replace: bool = False

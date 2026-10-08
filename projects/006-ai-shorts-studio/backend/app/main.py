@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
-from app.api import projects
+from app.api import projects, scenes
 from app.db import init_db
 
 
@@ -22,6 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(projects.router)
+app.include_router(scenes.router)
 
 
 @app.get("/api/health")
