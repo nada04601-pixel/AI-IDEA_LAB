@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { EMPTY_FORM, STATUS_LABELS, validateProjectForm, type Project, type ProjectForm } from "@/lib/project";
+import { EMPTY_FORM, STATUS_LABELS, validateProjectForm, type ProjectForm, type ProjectSummary } from "@/lib/project";
 import ProjectFields from "./ProjectFields";
 
 export default function DashboardPage() {
-  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [form, setForm] = useState<ProjectForm>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof ProjectForm, string>>>({});
@@ -71,9 +71,16 @@ export default function DashboardPage() {
           {projects?.map((p) => (
             <li key={p.id}>
               <Link href={`/projects/${p.id}`}>
-                <strong>{p.title}</strong>
+                <span className="title-row">
+                  <strong>{p.title}</strong>
+                  <span className={`status-badge project-${p.status}`}>{STATUS_LABELS[p.status] ?? p.status}</span>
+                  {p.active_job_count > 0 && <span className="status-badge job-running">작업 중 {p.active_job_count}</span>}
+                  {p.failed_job_count > 0 && <span className="status-badge job-failed">실패 {p.failed_job_count}</span>}
+                </span>
                 <span className="muted">
-                  {STATUS_LABELS[p.status] ?? p.status} · {p.target_duration_sec}초 · {p.aspect_ratio}
+                  {p.target_duration_sec}초 · {p.aspect_ratio}
+                  {p.scene_count > 0 ? ` · 장면 ${p.scene_count} · 승인 ${p.approved_count}/${p.scene_count}` : " · 장면 없음"}
+                  {p.latest_render_version ? ` · 렌더 v${p.latest_render_version}` : ""}
                 </span>
               </Link>
             </li>

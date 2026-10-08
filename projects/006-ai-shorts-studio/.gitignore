@@ -14,3 +14,7 @@ storage/
 # 비밀값
 .env
 frontend/.env.local
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCost, latestJob, sceneAssets, summarizeReview, totalCost, type Asset, type Job } from "./generation";
+import { filterJobs, formatCost, jobSeconds, latestJob, sceneAssets, summarizeReview, totalCost, type Asset, type Job } from "./generation";
 
 const asset = (id: number, scene_id: number, asset_type: string, version: number) =>
   ({ id, scene_id, asset_type, version }) as Asset;
@@ -28,5 +28,27 @@ describe("generation helpers", () => {
     expect(formatCost(0.04, "USD")).toBe("0.040 USD");
     expect(formatCost(1.5, "USD")).toBe("1.50 USD");
     expect(totalCost([{ amount: 0.1, currency: "USD" }, { amount: 0.2, currency: "USD" }, { amount: null, currency: "USD" }])).toEqual({ USD: 0.3 });
+  });
+});
+
+describe("job list helpers", () => {
+  const jobs = [
+    { id: 1, job_type: "image", status: "failed" },
+    { id: 2, job_type: "video", status: "running" },
+    { id: 3, job_type: "image", status: "succeeded" },
+    { id: 4, job_type: "audio", status: "queued" },
+  ] as Job[];
+
+  it("filters by status and kind", () => {
+    expect(filterJobs(jobs, "all", "all").map((j) => j.id)).toEqual([1, 2, 3, 4]);
+    expect(filterJobs(jobs, "active", "all").map((j) => j.id)).toEqual([2, 4]);
+    expect(filterJobs(jobs, "failed", "all").map((j) => j.id)).toEqual([1]);
+    expect(filterJobs(jobs, "all", "image").map((j) => j.id)).toEqual([1, 3]);
+    expect(filterJobs(jobs, "succeeded", "video")).toEqual([]);
+  });
+
+  it("measures job time", () => {
+    expect(jobSeconds({ created_at: "2026-10-08T00:00:00Z", finished_at: "2026-10-08T00:00:02.340Z" })).toBe(2.3);
+    expect(jobSeconds({ created_at: "2026-10-08T00:00:00Z", finished_at: null })).toBeNull();
   });
 });

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.models.asset import Asset
-from app.models.job import Job
+from app.models.job import ACTIVE_JOB_STATUSES, Job
 from app.models.project import Project, utcnow
 from app.models.scene import Scene
 from app.providers import ScriptProvider, get_script_provider
@@ -13,6 +13,7 @@ from app.schemas.project import (
     MAX_SCRIPT_LENGTH,
     ProjectCreate,
     ProjectRead,
+    ProjectSummary,
     ProjectUpdate,
     ScriptGenerateRequest,
     StoryboardGenerateRequest,
@@ -41,9 +42,32 @@ def _script_request(project: Project) -> ScriptRequest:
     )
 
 
-@router.get("", response_model=list[ProjectRead])
+@router.get("", response_model=list[ProjectSummary])
 def list_projects(session: Session = Depends(get_session)):
-    return session.scalars(select(Project).order_by(Project.updated_at.desc(), Project.id.desc())).all()
+    projects = session.scalars(select(Project).order_by(Project.updated_at.desc(), Project.id.desc())).all()
+
+    def counts(stmt) -> dict[int, int]:
+        return dict(session.execute(stmt).all())
+
+    scene_count = counts(select(Scene.project_id, func.count()).group_by(Scene.project_id))
+    approved = counts(select(Scene.project_id, func.count()).where(Scene.status == "approved").group_by(Scene.project_id))
+    active = counts(select(Job.project_id, func.count()).where(Job.status.in_(ACTIVE_JOB_STATUSES)).group_by(Job.project_id))
+    failed = counts(select(Job.project_id, func.count()).where(Job.status == "failed").group_by(Job.project_id))
+    renders = counts(
+        select(Asset.project_id, func.max(Asset.version)).where(Asset.asset_type == "render").group_by(Asset.project_id)
+    )
+    return [
+        ProjectSummary.model_validate(p).model_copy(
+            update={
+                "scene_count": scene_count.get(p.id, 0),
+                "approved_count": approved.get(p.id, 0),
+                "active_job_count": active.get(p.id, 0),
+                "failed_job_count": failed.get(p.id, 0),
+                "latest_render_version": renders.get(p.id),
+            }
+        )
+        for p in projects
+    ]
 
 
 @router.post("", response_model=ProjectRead, status_code=201)

@@ -14,6 +14,14 @@ export interface Project {
   updated_at: string;
 }
 
+export interface ProjectSummary extends Project {
+  scene_count: number;
+  approved_count: number;
+  active_job_count: number;
+  failed_job_count: number;
+  latest_render_version: number | null;
+}
+
 export interface ProjectForm {
   title: string;
   topic: string;

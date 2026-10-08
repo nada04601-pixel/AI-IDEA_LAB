@@ -166,3 +166,11 @@ video.final { width: 100%; max-height: 540px; background: #000; border-radius: 1
 a.button { display: inline-block; padding: 9px 14px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 0.95rem; }
 a.button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 .versions-list { list-style: none; padding: 0; margin: 4px 0 0; font-size: 0.85rem; }
+
+/* 5단계: 대시보드 요약, 작업 필터 */
+.title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.status-badge.project-done { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.status-badge.project-rendering { background: color-mix(in srgb, #d97706 18%, transparent); color: #b45309; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0 4px; }
+.filters select { padding: 3px 8px; font-size: 0.8rem; }
+.cost-breakdown { font-size: 0.8rem; }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
+import { confirmLeave } from "@/lib/useUnsavedWarning";
 
 const TABS = [
   { href: "", label: "설정" },
@@ -16,14 +17,19 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   const { id } = useParams<{ id: string }>();
   const pathname = usePathname();
   const base = `/projects/${id}`;
+  const guard = (e: React.MouseEvent) => {
+    if (!confirmLeave()) e.preventDefault();
+  };
 
   return (
     <>
       <nav className="subnav">
-        <Link href="/">← 목록</Link>
+        <Link href="/" onClick={guard}>
+          ← 목록
+        </Link>
         <div className="tabs">
           {TABS.map((t) => (
-            <Link key={t.label} href={base + t.href} className={pathname === base + t.href ? "tab active" : "tab"}>
+            <Link key={t.label} href={base + t.href} onClick={guard} className={pathname === base + t.href ? "tab active" : "tab"}>
               {t.label}
             </Link>
           ))}
