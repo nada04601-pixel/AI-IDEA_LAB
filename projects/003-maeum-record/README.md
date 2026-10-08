@@ -16,8 +16,10 @@ npm run dev       # 개발 서버 (http://localhost:5173)
 npm test          # 단위 테스트 (요약 계산, 날짜, 백업)
 npm run build     # 정적 빌드 → dist/
 npm run preview   # 빌드 결과 확인 (PWA 서비스 워커 포함)
-npm run deploy    # GitHub Pages로 배포 (gh-pages 브랜치 강제 갱신, 005의 shorts/ 폴더는 유지)
+npm run deploy    # GitHub Pages로 수동 배포 (gh-pages 브랜치 강제 갱신, 005의 shorts/ 폴더는 유지)
 ```
+
+`main`에 003 웹 코드가 바뀌어 푸시되면 `.github/workflows/maeum-record-web.yml`이 자동으로 배포합니다. (Actions → 마음기록 웹 배포 → Run workflow로 수동 실행도 가능)
 
 같은 gh-pages에 005 떡상 쇼츠(`/shorts/`)가 함께 올라갑니다. 서비스 워커는 `/shorts/` 접속을 가로채지 않도록 설정되어 있습니다.
 
