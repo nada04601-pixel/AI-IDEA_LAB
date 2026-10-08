@@ -4,7 +4,7 @@
  */
 import ExcelJS from 'exceljs'
 import { PERSON_COLUMNS, RECORD_COLUMNS, ROSTER_COLUMNS, personRows, recordRows, rosters, sheetName, type Row } from './sheet'
-import type { LedgerData } from './types'
+import { EVENT_TYPES, METHODS, RELATIONS, type LedgerData } from './types'
 import { formatDot } from './date'
 
 const MONEY = '#,##0'
@@ -82,4 +82,95 @@ export async function readWorkbook(buf: ArrayBuffer): Promise<unknown[][]> {
     out.push(vals)
   })
   return out
+}
+
+/** 일괄 등록 양식에 미리 넣어 두는 빈 줄 수 (드롭다운·서식이 적용되는 범위) */
+export const TEMPLATE_ROWS = 500
+
+const REQUIRED_FILL: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF6D7B0' } }
+
+/** 열별 고르기 목록 (엑셀 드롭다운). 행사 종류는 목록에 없는 말도 쓸 수 있다 (직접 입력, 예: 칠순) */
+function templateLists() {
+  return new Map<string, string[]>([
+    ['행사 종류', EVENT_TYPES.map((t) => t.label)],
+    ['관계', RELATIONS.map((r) => r.label)],
+    ['받음/보냄', ['받음', '보냄']],
+    ['방식', METHODS.map((m) => m.label)],
+    ['참석', ['참석', '불참']],
+    ['감사 인사', ['완료']],
+  ])
+}
+
+/**
+ * 일괄 등록용 빈 엑셀 양식 (idea.md 3-3, 2026-10-08)
+ * - "전체 내역" 시트: 내보내기와 같은 열. 필수 열(날짜·이름·금액) 강조, 고르기 목록, 날짜·금액 서식
+ * - "작성 방법" 시트: 규칙과 예시 (가져오기는 "전체 내역" 시트만 읽으므로 예시가 등록되지 않는다)
+ */
+export async function buildTemplate(): Promise<Uint8Array> {
+  const wb = new ExcelJS.Workbook()
+  wb.creator = '마음장부'
+  wb.created = new Date()
+
+  const ws = wb.addWorksheet('전체 내역')
+  addTable(ws, RECORD_COLUMNS, [], [12, 18, 10, 10, 8, 14, 10, 12, 10, 8, 9, 20], [8])
+  const required = new Set(['날짜', '이름', '금액'])
+  const lists = templateLists()
+  RECORD_COLUMNS.forEach((name, i) => {
+    const col = i + 1
+    const head = ws.getRow(1).getCell(col)
+    if (required.has(name)) {
+      head.fill = REQUIRED_FILL
+      head.value = `${name} *`
+      head.note = '필수'
+    }
+    if (name === '날짜') ws.getColumn(col).numFmt = 'yyyy-mm-dd'
+    const list = lists.get(name)
+    if (!list) return
+    for (let r = 2; r <= TEMPLATE_ROWS + 1; r++) {
+      ws.getCell(r, col).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: [`"${list.join(',')}"`],
+        // 행사 종류는 목록 밖의 말(칠순, 집들이 등)도 허용
+        showErrorMessage: name !== '행사 종류',
+        errorStyle: 'stop',
+        errorTitle: '목록에서 골라 주세요',
+        error: `${list.join(', ')} 중에서 골라 주세요`,
+      }
+    }
+  })
+
+  const guide = wb.addWorksheet('작성 방법')
+  guide.getColumn(1).width = 100
+  const lines: [string, Partial<ExcelJS.Font>?][] = [
+    ['마음장부 일괄 등록 양식', { bold: true, size: 14 }],
+    [''],
+    ['"전체 내역" 시트에 한 줄에 한 사람씩 적은 뒤, 앱의 [엑셀·CSV로 한꺼번에 등록]에서 이 파일을 올리세요.'],
+    ['이 "작성 방법" 시트는 등록되지 않아요.'],
+    [''],
+    ['필수: 날짜 · 이름 · 금액 (주황색 칸)', { bold: true }],
+    ['· 날짜: 2024-05-18, 2024.05.18, 2024년 5월 18일 모두 돼요'],
+    ['· 금액: 100000, 100,000, 10만, 10만원 모두 돼요. 화환·선물처럼 금액이 없으면 0'],
+    [''],
+    ['비워도 되는 칸', { bold: true }],
+    ['· 받음/보냄: 비우면 "받음". 보낸 돈은 "보냄"을 고르세요 (그 사람의 경조사로 등록돼요)'],
+    ['· 행사: 비우면 행사 종류로 이름을 붙여요 (예: 내 결혼식). 같은 날짜·같은 행사 이름은 한 행사로 묶여요'],
+    ['· 행사 종류: 목록에 없으면 직접 쓰세요 (예: 칠순, 집들이)'],
+    ['· 관계·소속·방식·참석·감사 인사·메모: 비워도 돼요. 소속은 이름이 같은 사람을 구분할 때 써요'],
+    [''],
+    ['예시 (이 시트의 예시는 등록되지 않아요)', { bold: true }],
+  ]
+  for (const [text, font] of lines) {
+    const row = guide.addRow([text])
+    if (font) row.font = font
+  }
+  const exHead = guide.addRow([...RECORD_COLUMNS])
+  exHead.font = { bold: true }
+  exHead.fill = HEADER_FILL
+  guide.addRow(['2024-05-18', '내 결혼식', '결혼', '홍길동', '친구', '대학 동기', '받음', 100000, '현금', '참석', '완료', ''])
+  guide.addRow(['2024-05-18', '내 결혼식', '결혼', '김철수', '직장', '○○회사', '받음', 50000, '계좌이체', '', '', ''])
+  guide.addRow(['2026-09-14', '이영희 부친상', '장례', '이영희', '친구', '', '보냄', 50000, '계좌이체', '참석', '', ''])
+  RECORD_COLUMNS.forEach((_, i) => i > 0 && (guide.getColumn(i + 1).width = 11))
+
+  return new Uint8Array(await wb.xlsx.writeBuffer())
 }

@@ -150,3 +150,6 @@ export function parseCsv(text: string): string[][] {
   if (cell !== '' || row.length) { row.push(cell); rows.push(row) }
   return rows.filter((r) => r.some((v) => v.trim() !== ''))
 }
+
+/** 일괄 등록용 빈 CSV 양식 (머리글만). 작성 방법은 앱 화면에서 안내한다 */
+export const templateCsv = () => toCsv(RECORD_COLUMNS, [])

@@ -63,6 +63,7 @@ async function replayWelcome() {
     <div class="card flush">
       <ul class="list">
         <li><RouterLink to="/backup" class="list-row">내보내기·백업 <span aria-hidden="true">›</span></RouterLink></li>
+        <li><RouterLink to="/bulk" class="list-row">엑셀·CSV로 한꺼번에 등록 <span aria-hidden="true">›</span></RouterLink></li>
         <li><RouterLink to="/restore" class="list-row">가져오기·복원 <span aria-hidden="true">›</span></RouterLink></li>
         <li><RouterLink to="/move" class="list-row">새 휴대폰으로 옮기기 <span aria-hidden="true">›</span></RouterLink></li>
         <li class="list-row">

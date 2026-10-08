@@ -11,7 +11,7 @@ const items = [
   { icon: '✉', label: '상대 경조사 등록', desc: '청첩장·부고를 받았을 때', to: '/record?mode=theirs' },
   { icon: '💍', label: '내 행사 명단 빠르게 입력', desc: '방명록을 보며 연달아 입력해요', to: '/quick' },
   { icon: '📷', label: '사진으로 등록', desc: '이체 내역·장부 사진을 글자로', to: '/ocr' },
-  { icon: '📄', label: '엑셀·CSV에서 가져오기', desc: '정리해 둔 파일이 있다면', to: '/restore' },
+  { icon: '📄', label: '엑셀·CSV로 한꺼번에 등록', desc: '빈 양식을 받아 채운 뒤 올려요', to: '/bulk' },
 ]
 
 function go(to: string) {

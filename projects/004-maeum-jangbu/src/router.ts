@@ -25,6 +25,7 @@ export const router = createRouter({
     { path: '/export', name: 'export', component: () => import('./pages/ExportView.vue'), meta: { title: '엑셀·CSV·PDF 내보내기' } },
     { path: '/events/:id/print', name: 'event-print', component: () => import('./pages/PrintRosterView.vue'), meta: { title: '명단 PDF' } },
     { path: '/backup', name: 'backup', component: () => import('./pages/BackupView.vue'), meta: { title: '내보내기·백업' } },
+    { path: '/bulk', name: 'bulk', component: () => import('./pages/BulkImportView.vue'), meta: { title: '엑셀·CSV로 한꺼번에 등록' } },
     { path: '/restore', name: 'restore', component: () => import('./pages/RestoreView.vue'), meta: { title: '가져오기·복원' } },
     { path: '/privacy', name: 'privacy', component: () => import('./pages/PrivacyView.vue'), meta: { title: '개인정보처리방침' } },
     { path: '/move', name: 'move', component: () => import('./pages/MoveGuideView.vue'), meta: { title: '새 휴대폰으로 옮기기' } },

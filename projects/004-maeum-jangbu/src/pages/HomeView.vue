@@ -83,6 +83,7 @@ const lastBackupText = computed(() => {
           <RouterLink to="/quick" class="btn">내 행사 명단 입력하기</RouterLink>
           <RouterLink to="/record?mode=theirs" class="btn secondary">받은 청첩장·부고 등록</RouterLink>
           <RouterLink to="/ocr" class="btn outline">사진으로 지난 기록 등록</RouterLink>
+          <RouterLink to="/bulk" class="btn outline">엑셀·CSV로 한꺼번에 등록</RouterLink>
         </div>
       </div>
     </template>

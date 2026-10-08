@@ -47,7 +47,8 @@ export function mapHeader(header: unknown[]): { fields: (Field | null)[]; unknow
   const used = new Set<Field>()
   const unknown: string[] = []
   const fields = header.map((h) => {
-    const n = norm(h)
+    // 필수 표시(*, ※, (필수))는 빼고 비교한다 — 일괄 등록 양식의 "날짜 *"
+    const n = norm(h).replace(/[*※]|\(필수\)/g, '')
     const f = (Object.keys(ALIASES) as Field[]).find((k) => !used.has(k) && ALIASES[k].includes(n)) ?? null
     if (f) used.add(f)
     else if (n) unknown.push(String(h))

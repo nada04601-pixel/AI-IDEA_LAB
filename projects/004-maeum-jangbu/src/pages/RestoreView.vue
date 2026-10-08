@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, shallowRef } from 'vue'
+import { computed, onMounted, ref, shallowRef } from 'vue'
 import { ledger } from '../lib/store'
 import { loadAll, replaceAll, setSetting, getSetting } from '../lib/db'
 import { matchPeople, mergeData, openBackup, previewOf, readBackupFile, type BackupFile, type NameConflict } from '../lib/backup'
-import { parseCsv } from '../lib/sheet'
-import { tableToData, type ImportIssue } from '../lib/importData'
-import { shareFile } from '../lib/share'
+import { type ImportIssue, type ImportResult } from '../lib/importData'
+import { isSheetFile, readSheetFile } from '../lib/sheetFile'
+import { takePendingImport } from '../lib/pendingImport'
 import { WrongPasswordError } from '../lib/crypto'
 import { confirmAsk } from '../lib/dialog'
 import { formatDot } from '../lib/date'
@@ -69,11 +69,19 @@ function answerAll(v: 'same' | 'diff') {
   sameAs.value = Object.fromEntries(conflicts.value.map((c) => [c.incoming.id, v]))
 }
 
-async function downloadTemplate() {
-  const { buildWorkbook } = await import('../lib/excel')
-  const bytes = await buildWorkbook({ people: [], events: [], records: [] }, '가져오기 양식')
-  await shareFile('마음장부_가져오기_양식.xlsx', bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '마음장부 엑셀 양식')
+function useSheetResult(name: string, res: ImportResult) {
+  fileName.value = name
+  sheetFile.value = true
+  issues.value = res.issues
+  unknownColumns.value = res.unknownColumns
+  setIncoming(res.data)
 }
+
+// 일괄 등록 화면에서 넘어온 파일 (이미 읽은 결과)
+onMounted(() => {
+  const p = takePendingImport()
+  if (p) useSheetResult(p.fileName, p.result)
+})
 
 async function onFile(ev: Event) {
   const f = (ev.target as HTMLInputElement).files?.[0]
@@ -81,21 +89,10 @@ async function onFile(ev: Event) {
   if (!f) return
   reset()
   fileName.value = f.name
-  if (/\.(xlsx|xls|csv)$/i.test(f.name)) {
+  if (isSheetFile(f.name)) {
     busy.value = true
     try {
-      let table: unknown[][]
-      if (/\.csv$/i.test(f.name)) table = parseCsv(await f.text())
-      else {
-        const { readWorkbook } = await import('../lib/excel')
-        table = await readWorkbook(await f.arrayBuffer())
-      }
-      const res = tableToData(table)
-      if (!res.data.records.length) throw new Error(res.issues.length ? `읽을 수 있는 줄이 없어요. (${res.issues[0].line}번째 줄: ${res.issues[0].reason})` : '가져올 내용이 없어요.')
-      sheetFile.value = true
-      issues.value = res.issues
-      unknownColumns.value = res.unknownColumns
-      setIncoming(res.data)
+      useSheetResult(f.name, await readSheetFile(f))
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -190,7 +187,7 @@ async function undo() {
       </div>
       <div class="card tpl">
         <p class="small"><strong>엑셀로 직접 정리하려면</strong><br /><span class="muted">날짜, 행사, 이름, 금액 열만 있으면 돼요. "축의금", "성명", "일자" 같은 열 이름도 알아봐요.</span></p>
-        <button class="btn sm secondary" @click="downloadTemplate">엑셀 양식 받기</button>
+        <RouterLink to="/bulk" class="btn sm secondary">엑셀·CSV 양식 받기 · 작성 방법</RouterLink>
       </div>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
     </template>
