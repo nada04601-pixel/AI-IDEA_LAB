@@ -33,7 +33,7 @@ async function makeBackup() {
   } else {
     // 비밀번호 없이 공유할 때는 매번 안내 (2026-10-07 결정)
     const choice = await ask('비밀번호 없이 백업할까요?', '이 파일에는 이름과 금액이 그대로 들어 있어요.\n카카오톡·이메일로 보내면 파일을 받은 사람도 볼 수 있어요.', [
-      { label: '비밀번호 걸기', value: 'pw' },
+      { label: '비밀번호 걸기', value: 'pw', cancel: true },
       { label: '그대로 백업하기', value: 'go', primary: true },
     ])
     if (choice === 'pw') {

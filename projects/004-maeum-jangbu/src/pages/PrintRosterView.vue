@@ -24,7 +24,7 @@ const roster = computed(() => {
 async function print() {
   // PDF는 비밀번호를 걸 수 없어 매번 안내 (screens.md S-11)
   const ok = await ask('PDF로 저장할까요?', '이 명단에는 이름과 금액이 그대로 들어 있어요.\n카카오톡·이메일로 보내면 파일을 받은 사람도 볼 수 있어요.', [
-    { label: '취소', value: false },
+    { label: '취소', value: false, cancel: true },
     { label: '계속', value: true, primary: true },
   ])
   if (!ok) return

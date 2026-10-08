@@ -102,6 +102,21 @@ export async function deletePerson(id: string) {
   await changed()
 }
 
+/** 여러 사람 한꺼번에 삭제 (사람 목록 → 선택). 각자의 기록과 그 사람의 경조사도 함께 지운다. 지운 사람 수를 돌려준다 */
+export async function deletePeople(ids: string[]): Promise<number> {
+  if (!ids.length) return 0
+  let n = 0
+  await db.transaction('rw', db.people, db.events, db.records, async () => {
+    const theirEvents = await db.events.where('personId').anyOf(ids).primaryKeys()
+    await db.records.where('personId').anyOf(ids).delete()
+    await db.records.where('eventId').anyOf(theirEvents).delete()
+    await db.events.bulkDelete(theirEvents)
+    n = await db.people.where('id').anyOf(ids).delete()
+  })
+  await changed(n || 1)
+  return n
+}
+
 /** 여러 사람의 관계를 한꺼번에 바꾸기 (사람 목록 → 선택). 바꾼 사람 수를 돌려준다 */
 export async function setRelation(ids: string[], relation: Person['relation']): Promise<number> {
   if (!ids.length) return 0

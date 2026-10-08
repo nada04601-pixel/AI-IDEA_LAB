@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { ledger } from '../lib/store'
-import { setRelation } from '../lib/db'
+import { deletePeople, setRelation } from '../lib/db'
 import { showToast } from '../lib/toast'
+import { confirmAsk } from '../lib/dialog'
+import { onBack } from '../lib/back'
 import { diffShort, totalsByPerson } from '../lib/ledger'
 import { formatShort } from '../lib/money'
 import { RELATIONS, relationLabel, type Relation } from '../lib/types'
@@ -12,7 +14,7 @@ const q = ref('')
 const relation = ref<Relation | 'all'>('all')
 const sort = ref<'recent' | 'name' | 'received' | 'diff'>('recent')
 
-// 여러 명 골라 관계 한꺼번에 바꾸기 (사진·연락처로 들어온 사람은 관계가 "기타")
+// 여러 명 골라 관계 한꺼번에 바꾸기·삭제 (사진·연락처로 들어온 사람은 관계가 "기타")
 const selecting = ref(false)
 const picked = ref(new Set<string>())
 const newRelation = ref<Relation>('friend')
@@ -50,6 +52,36 @@ async function applyRelation() {
     saving.value = false
   }
 }
+
+async function removePicked() {
+  if (!picked.value.size || saving.value) return
+  const ids = picked.value
+  const recordCount = ledger.value.records.filter((r) => ids.has(r.personId)).length
+  const eventCount = ledger.value.events.filter((e) => e.owner === 'theirs' && e.personId && ids.has(e.personId)).length
+  const detail = [recordCount && `기록 ${recordCount}건`, eventCount && `경조사 ${eventCount}개`].filter(Boolean).join(', ')
+  const ok = await confirmAsk(
+    `${ids.size}명을 삭제할까요?`,
+    `${detail ? `이 사람들의 ${detail}도 함께 지워져요. ` : ''}삭제하면 되돌릴 수 없어요.`,
+    '삭제',
+  )
+  if (!ok) return
+  saving.value = true
+  try {
+    const n = await deletePeople([...ids])
+    showToast(`${n}명을 삭제했어요`)
+    stopSelect()
+  } finally {
+    saving.value = false
+  }
+}
+
+// 선택 중에 뒤로가기 → 선택만 끝낸다
+const offBack = onBack(() => {
+  if (!selecting.value) return false
+  stopSelect()
+  return true
+})
+onBeforeUnmount(offBack)
 
 const totals = computed(() => totalsByPerson(ledger.value.records))
 const lastActivity = computed(() => {
@@ -132,6 +164,9 @@ const rows = computed(() => {
       <button class="btn" :disabled="!picked.size || saving" @click="applyRelation">
         {{ picked.size ? `${picked.size}명을 "${relationLabel(newRelation)}"(으)로 바꾸기` : '바꿀 사람을 골라 주세요' }}
       </button>
+      <button class="btn outline" :disabled="!picked.size || saving" @click="removePicked">
+        {{ picked.size ? `${picked.size}명 삭제` : '선택한 사람 삭제' }}
+      </button>
     </div>
 
     <div v-if="!selecting" class="btn-row add">
@@ -144,7 +179,7 @@ const rows = computed(() => {
 <style scoped>
 .filters { margin: 12px 0 8px; }
 .sortbar { margin: 4px 2px 10px; }
-.selecting { padding-bottom: calc(var(--tab-h) + 230px + env(safe-area-inset-bottom)); }
+.selecting { padding-bottom: calc(var(--tab-h) + 290px + env(safe-area-inset-bottom)); }
 .sel-btn { padding: 5px 12px; font-size: 0.85rem; }
 .pick { cursor: pointer; }
 .pick input { width: 20px; height: 20px; flex: none; }

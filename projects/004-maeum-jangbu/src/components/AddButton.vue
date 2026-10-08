@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { onBack } from '../lib/back'
 
 /** [+ 기록] 버튼과 등록 방법 시트 (screens.md 3. 화면 이동 흐름) */
 const open = ref(false)
 const router = useRouter()
+const off = onBack(() => {
+  if (!open.value) return false
+  open.value = false
+  return true
+})
+onBeforeUnmount(off)
 
 const items = [
   { icon: '✍', label: '받은 돈 / 보낸 돈 1건', desc: '한 사람의 기록을 남겨요', to: '/record' },

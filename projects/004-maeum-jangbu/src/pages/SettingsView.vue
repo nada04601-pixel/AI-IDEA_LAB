@@ -36,7 +36,7 @@ async function changeFont(f: FontSize) {
 
 async function wipe() {
   const choice = await ask('모든 기록을 삭제할까요?', '삭제하면 되돌릴 수 없어요. 먼저 백업해 두는 것을 권해요.', [
-    { label: '취소', value: 'cancel' },
+    { label: '취소', value: 'cancel', cancel: true },
     { label: '백업하고 삭제', value: 'backup', primary: true },
     { label: '그냥 삭제', value: 'wipe' },
   ])

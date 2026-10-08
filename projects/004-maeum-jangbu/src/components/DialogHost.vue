@@ -1,5 +1,17 @@
 <script setup lang="ts">
+import { onBeforeUnmount } from 'vue'
 import { dialog } from '../lib/dialog'
+import { onBack } from '../lib/back'
+
+// 확인 창이 열려 있으면 뒤로가기는 "취소"(취소 버튼이 없는 질문은 그대로 둠)
+const off = onBack(() => {
+  const d = dialog.value
+  if (!d) return false
+  const cancel = d.buttons.find((b) => b.cancel)
+  if (cancel) d.resolve(cancel.value)
+  return true
+})
+onBeforeUnmount(off)
 </script>
 
 <template>

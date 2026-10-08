@@ -4,6 +4,8 @@ export interface DialogButton<T> {
   label: string
   value: T
   primary?: boolean
+  /** 뒤로가기를 누르면 이 버튼을 고른 것으로 본다. 없으면 뒤로가기로 닫히지 않는다 (꼭 답해야 하는 질문) */
+  cancel?: boolean
 }
 
 export interface DialogState {
@@ -32,6 +34,6 @@ export function ask<T>(title: string, message: string, buttons: DialogButton<T>[
 
 export const confirmAsk = (title: string, message: string, ok = '확인', cancel = '취소') =>
   ask(title, message, [
-    { label: cancel, value: false },
+    { label: cancel, value: false, cancel: true },
     { label: ok, value: true, primary: true },
   ])

@@ -63,7 +63,7 @@ async function run() {
   if (format.value === 'pdf') return router.push(`/events/${eventId.value}/print`)
   // 비밀번호를 걸 수 없는 형식이라 매번 안내 (screens.md S-11, 2026-10-07 결정)
   const ok = await ask('내보낼까요?', '이 파일에는 이름과 금액이 그대로 들어 있어요.\n카카오톡·이메일로 보내면 파일을 받은 사람도 볼 수 있어요.', [
-    { label: '취소', value: false },
+    { label: '취소', value: false, cancel: true },
     { label: '내보내기', value: true, primary: true },
   ])
   if (!ok) return

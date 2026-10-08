@@ -119,7 +119,7 @@ async function finish() {
   const count = added.value.length
   if (count >= 20) {
     const go = await ask('백업해 둘까요?', `방금 ${count}명을 입력했어요.\n휴대폰을 바꾸거나 앱을 지우면 기록이 사라지니 지금 백업해 두면 안전해요.`, [
-      { label: '나중에', value: false },
+      { label: '나중에', value: false, cancel: true },
       { label: '지금 백업하기', value: true, primary: true },
     ])
     if (go) return router.replace('/backup')
