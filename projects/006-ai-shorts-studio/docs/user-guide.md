@@ -25,7 +25,17 @@ cd projects/006-ai-shorts-studio
 
 처음에는 필요한 패키지를 설치하느라 몇 분 걸립니다. "브라우저에서 http://localhost:3000 을 여세요"가 보이면 브라우저로 접속합니다. 끝낼 때는 터미널에서 `Ctrl+C`를 누릅니다.
 
-### Windows
+### Windows (한 번에 실행)
+
+탐색기에서 `projects\006-ai-shorts-studio` 폴더를 열고 **`start-windows.bat`을 더블클릭**합니다.
+
+- 필요한 프로그램(Python, Node.js, FFmpeg)이 있는지 확인하고, 처음에는 패키지를 설치합니다 (몇 분 걸림).
+- 백엔드와 화면 서버가 **새 창 두 개**로 열리고, 준비되면 브라우저가 http://localhost:3000 을 엽니다.
+- 끝낼 때는 새로 열린 두 창을 닫습니다.
+- 영상 자막 글꼴은 자동으로 맑은 고딕(`Malgun Gothic`)을 씁니다.
+- "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누릅니다 (인터넷에서 받은 파일이라 뜨는 확인창).
+
+### Windows (수동 실행)
 
 PowerShell 창 두 개를 열어 각각 실행합니다.
 
@@ -44,7 +54,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 http://localhost:3000 을 엽니다. (Git Bash나 WSL이 있다면 `./start.sh`도 쓸 수 있습니다.)
+브라우저에서 http://localhost:3000 을 엽니다. 영상 자막의 한글이 네모로 보이면 창 1에서 uvicorn 실행 전에 `$env:AISS_SUBTITLE_FONT = "Malgun Gothic"`을 먼저 실행합니다.
 
 ## 2. 쇼츠 만들기
 

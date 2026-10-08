@@ -22,7 +22,7 @@ cd projects/006-ai-shorts-studio
 ./start.sh        # 처음 한 번은 패키지 설치 후 실행. 브라우저에서 http://localhost:3000
 ```
 
-macOS·Linux용 스크립트입니다 (Windows는 Git Bash·WSL, 또는 아래 수동 실행). 사용 순서와 문제 해결은 [사용 가이드](docs/user-guide.md)를 보세요.
+Windows는 탐색기에서 **`start-windows.bat`을 더블클릭**합니다 (필요한 프로그램 확인 → 처음 한 번 패키지 설치 → 서버 두 개를 새 창으로 실행 → 브라우저 열기). 사용 순서와 문제 해결은 [사용 가이드](docs/user-guide.md)를 보세요.
 
 ## 실행 방법 (수동)
 
