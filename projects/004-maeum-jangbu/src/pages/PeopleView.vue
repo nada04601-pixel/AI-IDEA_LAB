@@ -20,9 +20,52 @@ const picked = ref(new Set<string>())
 const newRelation = ref<Relation>('friend')
 const saving = ref(false)
 
-function startSelect() {
+function startSelect(firstId?: string) {
   selecting.value = true
-  picked.value = new Set()
+  picked.value = new Set(firstId ? [firstId] : [])
+}
+
+// 이름을 길게 누르면 선택 모드로 바뀌고 그 사람이 체크된다 (안드로이드 앱의 흔한 방식)
+const LONG_PRESS_MS = 500
+let pressTimer: ReturnType<typeof setTimeout> | undefined
+let pressStart: { x: number; y: number } | null = null
+function pressDown(e: PointerEvent, id: string) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  pressStart = { x: e.clientX, y: e.clientY }
+  clearTimeout(pressTimer)
+  pressTimer = setTimeout(() => {
+    pressStart = null
+    swallowNextClick()
+    startSelect(id)
+  }, LONG_PRESS_MS)
+}
+function pressMove(e: PointerEvent) {
+  // 스크롤하려고 손가락을 움직이면 길게 누르기가 아니다
+  if (pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y) > 10) pressCancel()
+}
+function pressCancel() {
+  clearTimeout(pressTimer)
+  pressStart = null
+}
+/**
+ * 길게 누른 뒤 손을 떼면 클릭이 한 번 생긴다. 그 자리에 이미 체크박스가 그려져 있어서
+ * 그대로 두면 방금 고른 사람이 다시 풀리거나 사람 상세로 넘어간다 → 그 클릭 한 번만 버린다
+ */
+function swallowNextClick() {
+  const swallow = (e: Event) => {
+    e.preventDefault()
+    e.stopPropagation()
+    done()
+  }
+  // 손을 뗀 직후의 클릭만 버린다. 클릭이 안 생기는 경우도 있어서, 뗀 뒤 잠시 후엔 풀어 둔다
+  const release = () => setTimeout(done, 150)
+  const done = () => {
+    window.removeEventListener('click', swallow, true)
+    window.removeEventListener('pointerup', release, true)
+  }
+  window.addEventListener('click', swallow, true)
+  window.addEventListener('pointerup', release, true)
+  setTimeout(done, 1500)
 }
 function stopSelect() {
   selecting.value = false
@@ -81,7 +124,10 @@ const offBack = onBack(() => {
   stopSelect()
   return true
 })
-onBeforeUnmount(offBack)
+onBeforeUnmount(() => {
+  offBack()
+  clearTimeout(pressTimer)
+})
 
 const totals = computed(() => totalsByPerson(ledger.value.records))
 const lastActivity = computed(() => {
@@ -118,7 +164,7 @@ const rows = computed(() => {
     </div>
     <div class="between sortbar">
       <span class="muted small">총 {{ rows.length }}명</span>
-      <button v-if="!selecting && rows.length" class="chip sel-btn" @click="startSelect">선택</button>
+      <button v-if="!selecting && rows.length" class="chip sel-btn" @click="startSelect()">선택</button>
       <button v-else-if="selecting" class="chip sel-btn" @click="toggleAllShown">{{ allShownPicked ? '선택 해제' : '모두 선택' }}</button>
       <select v-model="sort" class="sort" aria-label="정렬">
         <option value="recent">최근 기록순</option>
@@ -135,7 +181,17 @@ const rows = computed(() => {
             <input type="checkbox" :checked="picked.has(x.p.id)" @change="togglePick(x.p.id)" />
             <span class="grow"><strong>{{ x.p.name }}</strong><span class="muted small rel">{{ relationLabel(x.p.relation) }}<template v-if="x.p.group"> · {{ x.p.group }}</template></span></span>
           </label>
-          <RouterLink v-else :to="`/people/${x.p.id}`" class="list-row">
+          <RouterLink
+            v-else
+            :to="`/people/${x.p.id}`"
+            class="list-row press"
+            @pointerdown="pressDown($event, x.p.id)"
+            @pointermove="pressMove"
+            @pointerup="pressCancel"
+            @pointercancel="pressCancel"
+            @pointerleave="pressCancel"
+            @contextmenu.prevent
+          >
             <span class="grow">
               <strong>{{ x.p.name }}</strong>
               <span class="muted small rel">{{ relationLabel(x.p.relation) }}<template v-if="x.p.group"> · {{ x.p.group }}</template></span><br />
@@ -182,6 +238,8 @@ const rows = computed(() => {
 .selecting { padding-bottom: calc(var(--tab-h) + 290px + env(safe-area-inset-bottom)); }
 .sel-btn { padding: 5px 12px; font-size: 0.85rem; }
 .pick { cursor: pointer; }
+/* 길게 누를 때 글자 선택·링크 메뉴가 뜨지 않게 */
+.press { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .pick input { width: 20px; height: 20px; flex: none; }
 .relbar {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--tab-h) + env(safe-area-inset-bottom));
