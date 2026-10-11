@@ -121,17 +121,21 @@ def test_render_full_pipeline(client):
     kinds = {s["codec_type"]: s for s in info["streams"]}
     assert kinds["video"]["codec_name"] == "h264" and kinds["video"]["width"] == 1080 and kinds["video"]["height"] == 1920
     assert kinds["audio"]["codec_name"] == "aac"
-    assert kinds["subtitle"]["codec_name"] == "mov_text"
+    assert "subtitle" not in kinds  # 영상에 입혔으면 자막 트랙은 넣지 않는다 (플레이어에서 두 번 보이지 않게)
     assert client.get(srt["url"]).text.startswith("1\n00:00:00,000")
 
     dl = client.get(render["url"] + "?download=true")
     assert "attachment" in dl.headers["content-disposition"]
     assert "_v1.mp4" in dl.headers["content-disposition"]
 
-    # 다시 렌더링하면 v2가 생기고 v1은 남는다
+    # 다시 렌더링하면 v2가 생기고 v1은 남는다. 자막을 입히지 않으면 켜고 끌 수 있는 자막 트랙으로 들어간다
     client.post(f"/api/projects/{pid}/render", json={"include_audio": False, "burn_subtitles": False})
-    versions = sorted(a["version"] for a in client.get(f"/api/projects/{pid}/assets").json() if a["asset_type"] == "render")
-    assert versions == [1, 2]
+    renders = sorted((a for a in client.get(f"/api/projects/{pid}/assets").json() if a["asset_type"] == "render"),
+                     key=lambda a: a["version"])
+    assert [a["version"] for a in renders] == [1, 2]
+    out.write_bytes(client.get(renders[1]["url"]).content)
+    kinds = {s["codec_type"]: s for s in probe(out)["streams"]}
+    assert kinds["subtitle"]["codec_name"] == "mov_text"
 
 
 @needs_ffmpeg
