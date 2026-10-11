@@ -2,7 +2,8 @@
 
 1) 장면마다 같은 크기·프레임·오디오 형식의 조각(segment)을 만든다. 영상이 있으면 영상, 없으면 이미지를 쓴다.
 2) 조각을 이어 붙인다.
-3) 자막(SRT)을 영상에 입히고(선택), 켜고 끌 수 있는 자막 트랙도 함께 넣는다.
+3) 자막(SRT)을 영상에 입히거나, 입히지 않으면 켜고 끌 수 있는 자막 트랙으로 넣는다.
+   둘을 함께 넣으면 자막 트랙을 자동으로 켜는 플레이어(Windows 등)에서 자막이 두 번 보인다.
 """
 
 import json
@@ -128,16 +129,16 @@ def render(
     srt.write_text(srt_text, encoding="utf-8")
     has_subs = bool(srt_text.strip())
     cmd = [ffmpeg, "-y", "-loglevel", "error", "-i", "joined.mp4"]
-    if has_subs:
-        cmd += ["-i", "subtitles.srt", "-map", "0:v", "-map", "0:a", "-map", "1:s",
-                "-c:s", "mov_text", "-metadata:s:s:0", "language=kor"]
-    else:
-        cmd += ["-map", "0:v", "-map", "0:a"]
     if has_subs and settings.burn_subtitles:
-        # 작업 폴더 안의 상대 경로를 써서 Windows 경로 이스케이프 문제를 피한다
-        cmd += ["-vf", f"subtitles=subtitles.srt:charenc=UTF-8:force_style='{_subtitle_style()}'", *VIDEO_ARGS]
+        # 영상에 입힌다. 작업 폴더 안의 상대 경로를 써서 Windows 경로 이스케이프 문제를 피한다
+        cmd += ["-map", "0:v", "-map", "0:a",
+                "-vf", f"subtitles=subtitles.srt:charenc=UTF-8:force_style='{_subtitle_style()}'", *VIDEO_ARGS]
+    elif has_subs:
+        # 켜고 끌 수 있는 자막 트랙으로만 넣는다
+        cmd += ["-i", "subtitles.srt", "-map", "0:v", "-map", "0:a", "-map", "1:s",
+                "-c:s", "mov_text", "-metadata:s:s:0", "language=kor", "-c:v", "copy"]
     else:
-        cmd += ["-c:v", "copy"]
+        cmd += ["-map", "0:v", "-map", "0:a", "-c:v", "copy"]
     cmd += ["-c:a", "copy", "-movflags", "+faststart", "shorts.mp4"]
     _run(cmd, work_dir, "자막 입히기·최종 파일 만들기")
 

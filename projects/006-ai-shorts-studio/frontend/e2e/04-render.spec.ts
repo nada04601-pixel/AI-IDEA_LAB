@@ -49,7 +49,7 @@ test("음성·자막·MP4 렌더링과 내려받기 (4단계)", async ({ page, r
     const kinds = Object.fromEntries(info.streams.map((s) => [s.codec_type, s]));
     expect([kinds.video.codec_name, kinds.video.width, kinds.video.height]).toEqual(["h264", 1080, 1920]);
     expect(kinds.audio.codec_name).toBe("aac");
-    expect(kinds.subtitle.codec_name).toBe("mov_text");
+    expect(kinds.subtitle).toBeUndefined(); // 자막을 입혔으면 자막 트랙은 넣지 않는다
     expect(Math.abs(Number(info.format.duration) - 6)).toBeLessThan(0.15);
   }
 

@@ -77,4 +77,5 @@ def test_topic_to_mp4(tmp_path, monkeypatch):
     video = next(s for s in probe["streams"] if s["codec_type"] == "video")
     assert (video["width"], video["height"]) == (1080, 1920)
     assert abs(float(probe["format"]["duration"]) - 12) < 0.15
-    assert {s["codec_type"] for s in probe["streams"]} == {"video", "audio", "subtitle"}
+    # 기본값은 자막을 영상에 입히므로 자막 트랙은 따로 없다
+    assert {s["codec_type"] for s in probe["streams"]} == {"video", "audio"}

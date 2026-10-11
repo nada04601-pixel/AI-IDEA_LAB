@@ -186,7 +186,7 @@ export default function RenderPage() {
             <input type="checkbox" checked={burnSubtitles} onChange={(e) => setBurnSubtitles(e.target.checked)} /> 자막을 영상에 입히기
           </label>
         </div>
-        <p className="muted small">켜고 끌 수 있는 자막 트랙은 항상 함께 들어갑니다. 출력: H.264 MP4, {project.aspect_ratio === "9:16" ? "1080×1920" : project.aspect_ratio === "16:9" ? "1920×1080" : "1080×1080"}, 30fps.</p>
+        <p className="muted small">자막을 입히지 않으면 대신 플레이어에서 켜고 끌 수 있는 자막 트랙으로 넣습니다. 출력: H.264 MP4, {project.aspect_ratio === "9:16" ? "1080×1920" : project.aspect_ratio === "16:9" ? "1920×1080" : "1080×1080"}, 30fps.</p>
         {activeRender ? (
           <div data-testid="render-progress">
             <p className="muted">렌더링 중… {activeRender.progress}%</p>
