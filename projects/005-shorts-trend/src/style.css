@@ -95,12 +95,11 @@ ol { list-style: none; margin: 0; padding: 0; }
 .kw .num { font-size: 12px; color: var(--muted); }
 
 .videos { display: flex; flex-direction: column; gap: 8px; }
-.video {
-  display: flex; gap: 12px; align-items: center;
-  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
-  padding: 10px; text-decoration: none;
-}
-a.video:hover { border-color: var(--accent); }
+.video-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.video-card:hover { border-color: var(--accent); }
+.video { display: flex; gap: 12px; align-items: center; padding: 10px; text-decoration: none; }
+.card-actions { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 10px 10px 46px; }
+.card-actions button { font-size: 12px; padding: 3px 9px; }
 .video .rank { width: 24px; text-align: center; font-weight: 700; color: var(--accent); flex: none; }
 .thumb {
   width: 64px; height: 64px; flex: none; border-radius: 8px; overflow: hidden;
@@ -124,3 +123,17 @@ a.video:hover { border-color: var(--accent); }
   background: var(--card); border: 1px solid var(--line);
 }
 .tabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs + .sub-tabs { margin-top: 8px; }
+.sub-tabs a { font-size: 13px; padding: 5px 12px; }
+.platforms { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.platforms a {
+  display: flex; flex-direction: column; gap: 2px; text-decoration: none;
+  padding: 12px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--line);
+}
+.platforms span { font-size: 13px; color: var(--muted); }
+.tabs[hidden] { display: none; }
+
+.saver { display: flex; gap: 8px; }
+.saver input { flex: 1; min-width: 0; font: inherit; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+.saver-result { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.saver-result img { max-width: 100%; border-radius: 10px; border: 1px solid var(--line); }

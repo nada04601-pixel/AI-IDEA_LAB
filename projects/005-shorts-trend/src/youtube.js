@@ -43,9 +43,9 @@ export async function searchRecentShortIds(
       videoDuration: 'short',
       order: 'viewCount',
       maxResults: '50',
-      regionCode,
       publishedAfter,
     };
+    if (regionCode) params.regionCode = regionCode; // 비우면 국가 제한 없이 (전세계)
     if (lang) params.relevanceLanguage = lang;
     if (query) params.q = query;
     if (pageToken) params.pageToken = pageToken;
