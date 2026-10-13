@@ -8,15 +8,36 @@
 """
 from __future__ import annotations
 
-import colorsys
+import logging
 import random
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 from .props import C, PATTERNS, SWAP_COLORS, VARIANTS, Prop, color_distance, render_prop, rgb
 from .scenes import COLOR_ATTR, Scene, render_scene
+
+log = logging.getLogger(__name__)
+
+# 인페인터: (전체 그림, 전체 크기 마스크 L(255=다시 그림), 프롬프트, seed) → 다시 그린 전체 그림
+Inpainter = Callable[[Image.Image, Image.Image, str, int], Image.Image]
+
+# 인페인팅으로 새로 그려 넣을 옛 생활 소품 (영어 프롬프트, 한글 이름)
+INPAINT_OBJECTS = [
+    ("a single brown onggi earthenware jar", "장독"),
+    ("a woven bamboo basket full of orange persimmons", "감 바구니"),
+    ("a yellow aluminum cooking pot with a lid", "양은 냄비"),
+    ("a red rubber washbasin", "빨간 대야"),
+    ("a pair of white rubber shoes gomusin", "고무신"),
+    ("a straw broom leaning", "빗자루"),
+    ("a white hen chicken", "닭"),
+    ("a yellow aluminum kettle", "양은 주전자"),
+    ("a clay flower pot with red flowers", "화분"),
+    ("a wooden bucket", "나무 양동이"),
+]
+REMOVE_PROMPT = "empty plain ground and background, nothing there, seamless continuation of surroundings"
 
 TYPE_LABELS = {
     "object_added": "추가",
@@ -201,8 +222,8 @@ def _hue_shift(region: Image.Image, shift: float) -> Image.Image:
     return Image.fromarray(hsv.astype(np.uint8), "HSV").convert("RGB")
 
 
-def make_raster_differences(base: Image.Image, count: int, rng: random.Random,
-                            font_path: str | None = None) -> tuple[Image.Image, Image.Image, list[Difference]]:
+def make_raster_differences(base: Image.Image, count: int, rng: random.Random, font_path: str | None = None,
+                            inpainter: Inpainter | None = None) -> tuple[Image.Image, Image.Image, list[Difference]]:
     img = base.convert("RGB")
     w, h = img.size
     cell = max(24, min(w, h) // 14)
@@ -217,9 +238,15 @@ def make_raster_differences(base: Image.Image, count: int, rng: random.Random,
     calm = [(int(c * cell + cell / 2), int(r * cell + cell / 2)) for r, c in order[-len(order) // 3:]]
     rng.shuffle(busy)
     rng.shuffle(calm)
+    # 물건은 바닥에 놓여야 자연스러우므로 아래쪽(땅) 빈 곳을 먼저 쓴다
+    calm.sort(key=lambda p: 0 if p[1] > h * 0.45 else 1, reverse=True)
 
-    ops_cycle = ["color_changed", "direction_changed", "object_added", "pattern_changed", "object_removed",
-                 "color_changed", "object_added"]
+    if inpainter:  # 인페인팅이 있으면 '진짜 물건'이 생기고 사라지는 차이를 더 많이
+        ops_cycle = ["object_added", "object_removed", "color_changed", "object_added", "direction_changed",
+                     "object_removed", "pattern_changed"]
+    else:
+        ops_cycle = ["color_changed", "direction_changed", "object_added", "pattern_changed", "object_removed",
+                     "color_changed", "object_added"]
     rng.shuffle(ops_cycle)
     edited = img.copy()
     diffs: list[Difference] = []
@@ -251,6 +278,18 @@ def make_raster_differences(base: Image.Image, count: int, rng: random.Random,
             tex = pattern_tile(region.size, (255, 255, 255), "stripes", accent=(120, 70, 50)).convert("RGB")
             new = Image.blend(region, tex, 0.35)
             label = "무늬가 생긴 부분"
+        elif op in ("object_removed", "object_added") and inpainter is not None:
+            obj = rng.choice(INPAINT_OBJECTS) if op == "object_added" else None
+            prompt = obj[0] if obj else REMOVE_PROMPT
+            full_mask = Image.new("L", edited.size, 0)
+            full_mask.paste(mask, box[:2])
+            try:
+                painted = inpainter(edited, full_mask, prompt, rng.randint(1, 2**31 - 1))
+                new = painted.crop(box)
+                label = obj[1] if obj else "사라진 물건"
+            except Exception as e:  # noqa: BLE001 — 인페인팅 실패 시 내장 방식으로 대신한다
+                log.warning("인페인팅 실패, 내장 방식으로 대신합니다: %s", e)
+                new, label, mask = _fallback_edit(op, edited, region, box, size, rng, h)
         elif op == "object_removed":
             # 바로 옆(위쪽) 칸을 복사해 덮는다. 단순한 방식이라 결과를 사람이 확인해야 한다.
             sy = max(0, y0 - size) if y0 - size >= 0 else min(h - size, y0 + size)
@@ -274,3 +313,19 @@ def make_raster_differences(base: Image.Image, count: int, rng: random.Random,
     for i, d in enumerate(diffs, start=1):
         d.id = i
     return img, edited, diffs
+
+
+def _fallback_edit(op, edited, region, box, size, rng, h):
+    x0, y0 = box[:2]
+    if op == "object_removed":
+        sy = max(0, y0 - size) if y0 - size >= 0 else min(h - size, y0 + size)
+        return edited.crop((x0, sy, x0 + size, sy + size)), "사라진 부분", _ellipse_mask(region.size)
+    kind = rng.choice(["jar", "basket", "pot", "kettle", "flowerpot", "bucket"])
+    pr = Prop(id="added", kind=kind, label="", box=(0, 0, int(size * 0.8), int(size * 0.8)),
+              color=rng.choice(["red", "blue", "yellow", "onggi"]), color2="persimmon")
+    tile = render_prop(pr)
+    new = region.copy()
+    new.paste(tile, (int(size * 0.1), int(size * 0.1)), tile)
+    label = {"jar": "장독", "basket": "바구니", "pot": "냄비", "kettle": "주전자", "flowerpot": "화분",
+             "bucket": "양동이"}[kind]
+    return new, label, Image.new("L", region.size, 255)

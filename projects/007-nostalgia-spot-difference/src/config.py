@@ -53,6 +53,15 @@ class Settings:
     comfyui_workflow: str = "workflows/comfyui_workflow.json"
     comfyui_checkpoint: str = "sd_xl_base_1.0.safetensors"
     comfyui_timeout: int = 300
+    # SDXL 기본 해상도 중 10:7에 가장 가까운 크기 (RTX 3060 12GB에서 무난)
+    comfyui_width: int = 1216
+    comfyui_height: int = 832
+    # 추가/제거 차이를 ComfyUI 인페인팅으로 그릴지 (끄면 내장 소품 붙이기·복사 지우기)
+    comfyui_inpaint: bool = True
+    comfyui_inpaint_workflow: str = "workflows/comfyui_inpaint.json"
+    comfyui_inpaint_checkpoint: str = ""  # 비우면 COMFYUI_CHECKPOINT 사용
+    # ComfyUI가 꺼져 있을 때 자동으로 켤 명령 (예약 실행용, 예: C:\ComfyUI_windows_portable\run_nvidia_gpu.bat)
+    comfyui_start_cmd: str = ""
     # 업로드 (기본: 꺼짐, 비공개)
     upload_enabled: bool = False
     upload_privacy: str = "private"
@@ -93,6 +102,12 @@ def load_settings(env_file: Path | None = None, root: Path | None = None) -> Set
     s.comfyui_workflow = get("COMFYUI_WORKFLOW", s.comfyui_workflow)
     s.comfyui_checkpoint = get("COMFYUI_CHECKPOINT", s.comfyui_checkpoint)
     s.comfyui_timeout = _int(get("COMFYUI_TIMEOUT"), s.comfyui_timeout)
+    s.comfyui_width = _int(get("COMFYUI_WIDTH"), s.comfyui_width)
+    s.comfyui_height = _int(get("COMFYUI_HEIGHT"), s.comfyui_height)
+    s.comfyui_inpaint = _bool(get("COMFYUI_INPAINT"), True)
+    s.comfyui_inpaint_workflow = get("COMFYUI_INPAINT_WORKFLOW", s.comfyui_inpaint_workflow)
+    s.comfyui_inpaint_checkpoint = get("COMFYUI_INPAINT_CHECKPOINT", "")
+    s.comfyui_start_cmd = get("COMFYUI_START_CMD", "")
     s.upload_enabled = _bool(get("UPLOAD_ENABLED"), False)
     s.upload_privacy = get("UPLOAD_PRIVACY", "private").lower()
     s.allow_public_upload = _bool(get("ALLOW_PUBLIC_UPLOAD"), False)

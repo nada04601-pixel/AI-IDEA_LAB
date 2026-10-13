@@ -1,6 +1,6 @@
 # 007. 그리운 옛날 풍경 · 다른 그림 찾기 Shorts
 
-- 상태: **1·2단계 완료 (MVP + 안정성 검사)** — 3~5단계(ComfyUI·비공개 업로드·예약 실행)는 코드 준비, 사용자 환경에서 연결 확인 필요
+- 상태: **1·2단계 완료, 3단계(ComfyUI + 인페인팅) 구현** — 사용자 환경: Windows, Python 3.12, RTX 3060 12GB. 4~5단계는 코드 준비
 - 프로젝트 코드: [projects/007-nostalgia-spot-difference](../../projects/007-nostalgia-spot-difference)
 - 작성일: 2026-10-13
 - 원본: 「그리운 옛날 풍경 다른 그림 찾기 Shorts」 AI 자동화 프로젝트 제작 요청서(.docx)를 요약해 옮김
@@ -62,11 +62,11 @@
 |---|---|---|
 | Phase 1 | 샘플 이미지 1장으로 차이 5개, 정답 JSON, 9:16 MP4 (업로드 꺼짐) | ✅ 완료 |
 | Phase 2 | 샘플 10개로 정답 개수·좌표·가독성·렌더링 검사, 실패 로그 확인 | ✅ 완료 (10개 중 10개 ready) |
-| Phase 3 | ComfyUI 워크플로 호출, 주제별 원본 생성, 모델 라이선스·GPU 요구사항 기록 | 🟡 코드·문서 준비, GPU 환경에서 확인 필요 |
+| Phase 3 | ComfyUI 워크플로 호출, 주제별 원본 생성, 모델 라이선스·GPU 요구사항 기록 | ✅ 구현 (SDXL 1.0 + 인페인팅, 가짜 서버 테스트) — 사용자 PC에서 `comfyui-test` 실측 필요 |
 | Phase 4 | OAuth 비공개 업로드, video ID 기록, 재시도·중복 방지 | 🟡 코드 준비, 실제 계정 연결 확인 필요 |
 | Phase 5 | 하루 1개부터 예약 실행, 1주일 확인 후 증량 | 🟡 스크립트 준비 (Windows 작업 스케줄러 / cron) |
 
 ## 9. 사용자에게 확인할 사항
 
-- 운영체제, Python 설치 상태, GPU 모델과 VRAM
+- ~~운영체제, Python 설치 상태, GPU 모델과 VRAM~~ → Windows, Python 3.12, RTX 3060 12GB (2026-10-13 확인)
 - (업로드 시) Google Cloud 프로젝트·OAuth 클라이언트 준비 여부

@@ -10,6 +10,7 @@
   python main.py upload JOB_ID          작업 하나 업로드 (비공개 기본)
   python main.py status                 업로드 상태·조회수 갱신
   python main.py export                 작업·성과 기록을 CSV로 내보내기
+  python main.py comfyui-test           ComfyUI 원본 생성·인페인팅을 1번씩 시험
 """
 from __future__ import annotations
 
@@ -61,8 +62,15 @@ def cmd_doctor(settings, args) -> int:
     print(f"GPU           : {gpu}")
     print(f"이미지 원본   : {settings.image_source}")
     if settings.image_source == "comfyui":
-        alive = ComfyUIClient(settings).ping()
+        client = ComfyUIClient(settings)
+        alive = client.ping()
         print(f"ComfyUI       : {settings.comfyui_url} {'연결됨' if alive else '연결 안 됨 ← ComfyUI 실행 필요'}")
+        if alive:
+            for dev in client.system_info().get("devices", []):
+                vram = dev.get("vram_total", 0) / 1024**3
+                print(f"  장치        : {dev.get('name')} ({vram:.1f}GB)")
+        print(f"  모델        : {settings.comfyui_checkpoint} / 인페인팅: "
+              f"{'켜짐' if settings.comfyui_inpaint else '꺼짐'}")
         ok &= alive
     print(f"업로드        : {'켜짐' if settings.upload_enabled else '꺼짐'} (공개 상태: {settings.upload_privacy}, "
           f"공개 허용: {settings.allow_public_upload})")
@@ -184,6 +192,36 @@ def cmd_status(settings, args) -> int:
     return 0
 
 
+def cmd_comfyui_test(settings, args) -> int:
+    """ComfyUI로 원본 1장 + 인페인팅 1번을 실제로 돌려 보고 시간을 잰다."""
+    import random
+    import time
+    from PIL import Image, ImageDraw
+    from src.image_generator import ComfyUIClient, fit_canvas
+    from src.topic_picker import load_topics
+    client = ComfyUIClient(settings)
+    if not client.ping():
+        print(f"ComfyUI 서버에 연결할 수 없습니다: {settings.comfyui_url}")
+        return 1
+    topics = load_topics(settings.path("topics"))
+    topic = next((t for t in topics if t["id"] == args.topic), topics[0])
+    seed = args.seed or random.randint(1, 10**9)
+    out = settings.path("images")
+    t0 = time.time()
+    img = fit_canvas(client.generate(topic, seed))
+    img.save(out / "comfyui_test_base.png")
+    print(f"원본 생성 {time.time() - t0:.1f}초 → {out / 'comfyui_test_base.png'}")
+    if settings.comfyui_inpaint:
+        w, h = img.size
+        mask = Image.new("L", img.size, 0)
+        ImageDraw.Draw(mask).ellipse([w * 0.4, h * 0.6, w * 0.6, h * 0.9], fill=255)
+        t1 = time.time()
+        painted = client.inpaint(img, mask, "a single brown onggi earthenware jar", seed + 1)
+        Image.composite(painted, img, mask).save(out / "comfyui_test_inpaint.png")
+        print(f"인페인팅 {time.time() - t1:.1f}초 → {out / 'comfyui_test_inpaint.png'} (아래 가운데에 장독이 생겼는지 확인)")
+    return 0
+
+
 def cmd_export(settings, args) -> int:
     db = JobDB(settings.path("db"))
     out = settings.root / args.out
@@ -220,6 +258,9 @@ def main(argv: list[str] | None = None) -> int:
     u.add_argument("job_id")
     u.add_argument("--force-review", action="store_true", help="검수 대상도 업로드 (직접 확인한 경우)")
     sub.add_parser("status")
+    ct = sub.add_parser("comfyui-test")
+    ct.add_argument("--topic", default="hometown_village")
+    ct.add_argument("--seed", type=int)
     e = sub.add_parser("export")
     e.add_argument("--out", default="output/report.csv")
     args = p.parse_args(argv)
@@ -229,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging(settings, args.verbose)
     handlers = {"doctor": cmd_doctor, "make": cmd_make, "batch": cmd_batch, "daily": cmd_daily, "jobs": cmd_jobs,
                 "approve": cmd_approve, "auth": cmd_auth, "upload": cmd_upload, "status": cmd_status,
-                "export": cmd_export}
+                "export": cmd_export, "comfyui-test": cmd_comfyui_test}
     try:
         return handlers[args.cmd](settings, args)
     except KeyboardInterrupt:

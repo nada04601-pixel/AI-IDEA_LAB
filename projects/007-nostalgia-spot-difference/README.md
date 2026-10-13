@@ -3,7 +3,7 @@
 한국 1960~80년대 생활 풍경을 동화책풍 그림으로 그리고, **다른 그림 찾기 문제 → 정답 JSON → 자동 검사 → 1080×1920 Shorts 영상 → (선택) 비공개 업로드**까지 한 번에 만드는 저비용 자동화 도구입니다.
 
 - 요청서(기획·기술 명세): [ideas/007-nostalgia-spot-difference/idea.md](../../ideas/007-nostalgia-spot-difference/idea.md)
-- 현재 단계: **1·2단계 완료 (MVP + 안정성 검사)**, 3단계(ComfyUI)·4단계(업로드)·5단계(예약 실행) **코드 준비됨 — 실제 연결은 사용자 환경에서 확인 필요**
+- 현재 단계: **1·2단계 완료**, **3단계(ComfyUI + 인페인팅) 구현 완료 — 사용자 PC(Windows, RTX 3060 12GB)에서 실측 필요**, 4단계(업로드)·5단계(예약 실행) 코드 준비됨
 - 비용: 기본 경로는 **무료** (GPU·인터넷·유료 API 불필요). YouTube Data API도 무료(일일 할당량 내).
 
 ## 어떻게 동작하나요
@@ -74,6 +74,7 @@ cd projects/007-nostalgia-spot-difference
 .venv/bin/python main.py make --topic old_kitchen --difficulty hard --seed 7
 .venv/bin/python main.py batch --count 10       # 2단계 안정성 점검: 10개 만들고 요약
 .venv/bin/python main.py jobs                   # 최근 작업 목록과 상태
+.venv/bin/python main.py comfyui-test           # (3단계) ComfyUI 원본·인페인팅 1번씩 시험
 ```
 
 Windows에서는 `make-video-windows.bat`을 더블클릭해도 영상 1개가 만들어집니다.
@@ -91,14 +92,19 @@ Windows에서는 `make-video-windows.bat`을 더블클릭해도 영상 1개가 �
 
 ## 3단계 — ComfyUI 연결 (GPU가 있을 때)
 
-1. ComfyUI 설치: https://github.com/comfyanonymous/ComfyUI (GPL-3.0). 실행하면 기본 주소 `http://127.0.0.1:8188`.
-2. 체크포인트(모델)를 `ComfyUI/models/checkpoints/`에 넣습니다. **라이선스를 반드시 확인하세요** → [docs/LICENSES.md](docs/LICENSES.md)
-3. `.env`에서 `IMAGE_SOURCE=comfyui`, `COMFYUI_CHECKPOINT=<파일명>`을 설정하고 `main.py doctor`로 연결을 확인합니다.
-4. 기본 워크플로는 `workflows/comfyui_workflow.json`(SDXL txt2img, API 형식)입니다. 본인 워크플로를 ComfyUI의 **Save (API Format)**으로 저장해 교체할 수 있고, 문자열 `%PROMPT% %NEGATIVE% %SEED% %CKPT% %WIDTH% %HEIGHT%`가 실행 시 바뀝니다.
+**Windows + RTX 3060 12GB 기준 설치·설정 안내: [docs/comfyui-windows.md](docs/comfyui-windows.md)**
 
-권장 사양(대략): SDXL은 VRAM 8GB 이상(12GB 권장), SD 1.5 계열은 4~6GB. GPU가 없거나 VRAM이 부족하면 기본값 `procedural`을 그대로 쓰면 됩니다.
+요약:
+1. ComfyUI 휴대용(`ComfyUI_windows_portable_nvidia.7z`) 설치 → `run_nvidia_gpu.bat` 실행
+2. `sd_xl_base_1.0.safetensors`(SDXL 1.0, OpenRAIL++-M, 상업적 이용 가능)를 `ComfyUI\models\checkpoints\`에
+3. `.env`: `IMAGE_SOURCE=comfyui` → `main.py doctor` → `main.py comfyui-test`로 원본·인페인팅 시험
 
-> **알려진 한계**: AI가 만든 그림은 소품 데이터가 없어서, 차이는 디테일이 많은 영역을 골라 자동 편집(색 바꾸기·좌우 반전·무늬·소품 붙이기·옆 영역 복사로 지우기)합니다. 의미 있는 물체를 골랐다는 보장이 약하므로 **항상 `needs_review`**가 되고, 사람이 미리보기를 보고 승인해야 업로드됩니다. 지우기 품질을 높이려면 ComfyUI 인페인팅 워크플로를 추가하는 것이 다음 개선 과제입니다.
+- 원본: `workflows/comfyui_workflow.json` (SDXL txt2img, 1216×832)
+- 차이: 생긴/사라진 물건은 `workflows/comfyui_inpaint.json`(인페인팅)으로 그리고, **마스크 안쪽만** 합성해 정답 밖은 원본과 똑같이 유지합니다. 색·방향·무늬는 영역 편집입니다.
+- 두 워크플로 모두 ComfyUI의 **Save (API Format)** JSON으로 교체할 수 있습니다. 문자열 `%PROMPT% %NEGATIVE% %SEED% %CKPT% %WIDTH% %HEIGHT% %IMAGE%`가 실행 시 바뀝니다.
+- `COMFYUI_START_CMD`를 적어 두면 예약 실행 때 ComfyUI가 꺼져 있어도 자동으로 켭니다.
+
+> **알려진 한계**: AI 그림은 소품 데이터가 없어서 "어디가 물건인지"를 그림의 복잡도로 추정합니다. 그래서 AI 그림 기반 문제는 **항상 `needs_review`**이고, 정답 미리보기를 보고 `approve`해야 업로드됩니다. 사람 확인 없이 매일 자동으로 돌리려면 `procedural`(내장 그림)을 쓰거나 두 방식을 섞으세요.
 
 ## 4단계 — YouTube 비공개 업로드
 
@@ -148,6 +154,7 @@ crontab -e
 - 검사기가 개수 불일치·정답 밖 변화·크기 불일치·변화 없는 정답을 잡아내는지
 - 공개 설정 가드(기본 private), 중복 업로드 거부, 검수 대상 업로드 거부, 업로드 기본 꺼짐
 - 짧은 타임라인으로 **실제 FFmpeg 렌더링까지 전체 흐름** 실행 후 ffprobe로 1080×1920·오디오 확인
+- 가짜 ComfyUI 서버로 원본 생성·인페인팅·실패 시 대체·comfyui 원본 전체 흐름 확인
 
 ## 다양성 (반복 콘텐츠 방지)
 
@@ -159,5 +166,6 @@ crontab -e
 
 - 내장 장면은 소품 조합이라 그림체가 단순한 편입니다. 더 풍부한 그림은 3단계(ComfyUI)나 직접 그린 샘플 그림으로 보완합니다.
 - 렌더링은 4코어 기준 영상 1개에 약 1분입니다(대부분 FFmpeg 인코딩). 하루 1~3개에는 충분합니다.
-- 업로드·ComfyUI 코드는 이 저장소의 자동 테스트에서 실제 Google·ComfyUI 서버에 연결해 보지 않았습니다(가짜 객체로 안전장치만 검증). 처음 연결할 때 `doctor`와 비공개 업로드 1건으로 확인하세요.
+- ComfyUI 연동은 같은 HTTP API를 흉내 내는 가짜 서버로 테스트했습니다(업로드·프롬프트·결과 조회·인페인팅·실패 시 대체). 실제 GPU에서의 그림 품질과 속도는 `comfyui-test`로 확인하세요.
+- YouTube 업로드 코드는 실제 Google 서버에 연결해 보지 않았습니다(가짜 객체로 안전장치만 검증). 처음 연결할 때 비공개 업로드 1건으로 확인하세요.
 - Shorts 화면 아래쪽은 YouTube 앱의 제목·버튼에 일부 가려질 수 있어, 중요한 안내는 위쪽에 둡니다.

@@ -20,7 +20,8 @@
 |---|---|---|---|
 | YouTube Data API v3 | Google API 서비스 약관 | 무료 (일일 할당량) | 할당량, OAuth 앱 검증 상태 |
 | google-api-python-client, google-auth-oauthlib | Apache-2.0 | 무료 | |
-| ComfyUI | GPL-3.0 | 무료 | 로컬 실행. 생성 이미지 자체에는 GPL이 적용되지 않음 |
+| ComfyUI | GPL-3.0 | 무료 | 로컬 실행. 생성 이미지 자체에는 GPL이 적용되지 않음. 설치: [comfyui-windows.md](comfyui-windows.md) |
+| **선택한 구성 (RTX 3060 12GB)** | SDXL 1.0 base + 같은 모델로 인페인팅 | 무료 | 추가 모델·LoRA 없이 동작 |
 | SDXL 1.0 base (stabilityai) | CreativeML Open RAIL++-M | 무료 | 상업적 이용 가능, 사용 제한 조항(유해 용도 금지) 준수 |
 | SD 1.5 계열 파생 모델 | CreativeML Open RAIL-M (+ 제작자 추가 조건) | 무료 | Civitai 등에서 받은 모델은 **모델 페이지의 상업적 이용 허용 여부**를 개별 확인 |
 | FLUX.1 [schnell] | Apache-2.0 | 무료 | 상업적 이용 가능. VRAM 요구량 높음(12GB+ 권장) |

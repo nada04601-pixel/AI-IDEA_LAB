@@ -107,7 +107,11 @@ def make_one(settings: Settings, db: JobDB, *, topic_id: str | None = None, diff
             if base.is_scene:
                 original, modified, diffs, _ = make_scene_differences(base.scene, count, arng)
             else:
-                original, modified, diffs = make_raster_differences(base.image, count, arng, font)
+                inpainter = None
+                if source == "comfyui" and settings.comfyui_inpaint:
+                    from .image_generator import ComfyUIClient
+                    inpainter = ComfyUIClient(settings).inpaint
+                original, modified, diffs = make_raster_differences(base.image, count, arng, font, inpainter)
         except (ImageSourceError, RuntimeError) as e:
             log.warning("[%s] 시도 %d 실패: %s", job_id, attempt, e)
             if attempt == settings.max_retries:

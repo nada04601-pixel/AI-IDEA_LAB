@@ -82,11 +82,13 @@ def _from_samples(folder: Path, topic: dict, seed: int) -> BaseImage:
 
 
 class ComfyUIClient:
-    """ComfyUI HTTP API 클라이언트 (/prompt, /history, /view).
+    """ComfyUI HTTP API 클라이언트 (/system_stats, /upload/image, /prompt, /history, /view).
 
     워크플로 파일은 ComfyUI에서 'Save (API Format)'으로 저장한 JSON이어야 한다.
-    문자열 값 중 %PROMPT% %NEGATIVE% %SEED% %CKPT% %WIDTH% %HEIGHT% 를 바꿔 넣는다.
+    문자열 값 %PROMPT% %NEGATIVE% %SEED% %CKPT% %WIDTH% %HEIGHT% %IMAGE% 를 실행 시 바꿔 넣는다.
     """
+
+    poll_interval = 1.5
 
     def __init__(self, settings: Settings):
         self.s = settings
@@ -100,14 +102,20 @@ class ComfyUIClient:
         except requests.RequestException:
             return False
 
-    def _workflow(self, prompt: str, seed: int) -> dict:
-        path = self.s.resolve(self.s.comfyui_workflow)
+    def system_info(self) -> dict:
+        """GPU 이름·VRAM 등 (doctor 표시용). 실패하면 빈 dict."""
+        import requests
+        try:
+            return requests.get(f"{self.base}/system_stats", timeout=5).json()
+        except Exception:  # noqa: BLE001
+            return {}
+
+    def _load_workflow(self, rel_path: str, values: dict) -> dict:
+        path = self.s.resolve(rel_path)
         if not path.exists():
             raise ImageSourceError(f"ComfyUI 워크플로 파일이 없습니다: {path}")
         wf = json.loads(path.read_text(encoding="utf-8"))
         wf.pop("_comment", None)
-        values = {"%PROMPT%": prompt, "%NEGATIVE%": NEGATIVE_PROMPT, "%SEED%": seed,
-                  "%CKPT%": self.s.comfyui_checkpoint, "%WIDTH%": 1344, "%HEIGHT%": 944}
 
         def walk(node):
             if isinstance(node, dict):
@@ -115,7 +123,7 @@ class ComfyUIClient:
             if isinstance(node, list):
                 return [walk(v) for v in node]
             if isinstance(node, str) and node in values:
-                return values[node]
+                return values[node]  # 숫자 자리(%SEED% 등)는 숫자로 바꾼다
             if isinstance(node, str):
                 for k, v in values.items():
                     if isinstance(v, str):
@@ -124,16 +132,53 @@ class ComfyUIClient:
 
         return walk(copy.deepcopy(wf))
 
-    def generate(self, topic: dict, seed: int) -> Image.Image:
-        import requests
+    _started = False
+
+    def _ensure_up(self) -> None:
+        if not self.ping() and self.s.comfyui_start_cmd and not ComfyUIClient._started:
+            self._start_server()
         if not self.ping():
-            raise ImageSourceError(f"ComfyUI 서버에 연결할 수 없습니다: {self.base} (ComfyUI를 먼저 실행하세요)")
-        prompt = f"{topic.get('prompt', topic['title'])}, {STYLE_PROMPT}"
-        wf = self._workflow(prompt, seed % (2**31))
-        client_id = uuid.uuid4().hex
-        r = requests.post(f"{self.base}/prompt", json={"prompt": wf, "client_id": client_id}, timeout=30)
+            raise ImageSourceError(f"ComfyUI 서버에 연결할 수 없습니다: {self.base} "
+                                   "(ComfyUI의 run_nvidia_gpu.bat을 먼저 실행하세요)")
+
+    def _start_server(self, wait: int = 180) -> None:
+        """COMFYUI_START_CMD로 ComfyUI를 켜고 응답할 때까지 기다린다 (한 번만 시도)."""
+        import subprocess
+        ComfyUIClient._started = True
+        cmd = self.s.comfyui_start_cmd
+        log.info("ComfyUI가 꺼져 있어 실행합니다: %s", cmd)
+        kwargs: dict = {"cwd": str(Path(cmd.strip('"')).parent) if Path(cmd.strip('"')).exists() else None,
+                        "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+        if hasattr(subprocess, "CREATE_NEW_CONSOLE"):
+            kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE  # Windows: 별도 창
+        subprocess.Popen(cmd, shell=True, **kwargs)  # noqa: S602 — 사용자가 .env에 직접 적은 명령
+        deadline = time.time() + wait
+        while time.time() < deadline:
+            if self.ping():
+                log.info("ComfyUI 응답 확인")
+                return
+            time.sleep(3)
+        log.error("ComfyUI가 %d초 안에 응답하지 않았습니다", wait)
+
+    def upload_image(self, img: Image.Image, name: str) -> str:
+        import requests
+        from io import BytesIO
+        buf = BytesIO()
+        img.save(buf, format="PNG")
+        r = requests.post(f"{self.base}/upload/image", files={"image": (name, buf.getvalue(), "image/png")},
+                          data={"overwrite": "true", "type": "input"}, timeout=60)
         if not r.ok:
-            raise ImageSourceError(f"ComfyUI /prompt 오류 {r.status_code}: {r.text[:300]}")
+            raise ImageSourceError(f"ComfyUI 이미지 업로드 오류 {r.status_code}: {r.text[:300]}")
+        info = r.json()
+        return f"{info['subfolder']}/{info['name']}" if info.get("subfolder") else info["name"]
+
+    def _run(self, wf: dict) -> tuple[Image.Image, str]:
+        import requests
+        from io import BytesIO
+        r = requests.post(f"{self.base}/prompt", json={"prompt": wf, "client_id": uuid.uuid4().hex}, timeout=30)
+        if not r.ok:
+            # 노드 이름·모델 파일명 오류는 여기서 400으로 돌아온다
+            raise ImageSourceError(f"ComfyUI /prompt 오류 {r.status_code}: {r.text[:500]}")
         prompt_id = r.json()["prompt_id"]
         deadline = time.time() + self.s.comfyui_timeout
         while time.time() < deadline:
@@ -142,16 +187,45 @@ class ComfyUIClient:
                 entry = h.json()[prompt_id]
                 status = entry.get("status", {})
                 if status.get("status_str") == "error":
-                    raise ImageSourceError(f"ComfyUI 실행 오류: {json.dumps(status)[:300]}")
+                    raise ImageSourceError(f"ComfyUI 실행 오류: {json.dumps(status, ensure_ascii=False)[:500]}")
                 for out in entry.get("outputs", {}).values():
                     for im in out.get("images", []):
                         v = requests.get(f"{self.base}/view", params={"filename": im["filename"],
                                          "subfolder": im.get("subfolder", ""), "type": im.get("type", "output")},
                                          timeout=60)
                         v.raise_for_status()
-                        from io import BytesIO
-                        self.last_meta = {"generator": "comfyui", "prompt": prompt, "seed": seed,
-                                          "checkpoint": self.s.comfyui_checkpoint, "file": im["filename"]}
-                        return Image.open(BytesIO(v.content)).convert("RGB")
-            time.sleep(2)
+                        return Image.open(BytesIO(v.content)).convert("RGB"), im["filename"]
+                if status.get("completed"):
+                    raise ImageSourceError("ComfyUI가 끝났지만 출력 이미지가 없습니다 (SaveImage 노드 확인)")
+            time.sleep(self.poll_interval)
         raise ImageSourceError(f"ComfyUI 생성이 {self.s.comfyui_timeout}초 안에 끝나지 않았습니다")
+
+    def generate(self, topic: dict, seed: int) -> Image.Image:
+        self._ensure_up()
+        prompt = f"{topic.get('prompt', topic['title'])}, {STYLE_PROMPT}"
+        wf = self._load_workflow(self.s.comfyui_workflow, {
+            "%PROMPT%": prompt, "%NEGATIVE%": NEGATIVE_PROMPT, "%SEED%": seed % (2**31),
+            "%CKPT%": self.s.comfyui_checkpoint, "%WIDTH%": self.s.comfyui_width, "%HEIGHT%": self.s.comfyui_height})
+        t0 = time.time()
+        img, fname = self._run(wf)
+        self.last_meta = {"generator": "comfyui", "prompt": prompt, "seed": seed,
+                          "checkpoint": self.s.comfyui_checkpoint, "file": fname,
+                          "size": [self.s.comfyui_width, self.s.comfyui_height], "seconds": round(time.time() - t0, 1)}
+        log.info("ComfyUI 원본 생성 %.1f초 (%s)", time.time() - t0, fname)
+        return img
+
+    def inpaint(self, image: Image.Image, mask: Image.Image, prompt: str, seed: int) -> Image.Image:
+        """mask(L, 255=다시 그릴 곳) 영역을 prompt대로 다시 그린 전체 그림을 돌려준다."""
+        self._ensure_up()
+        rgba = image.convert("RGBA")
+        # ComfyUI LoadImage는 투명한 곳을 MASK=1(다시 그릴 곳)로 읽는다
+        rgba.putalpha(Image.eval(mask.convert("L"), lambda v: 255 - v))
+        name = self.upload_image(rgba, f"nostalgia_inpaint_{uuid.uuid4().hex[:8]}.png")
+        ckpt = self.s.comfyui_inpaint_checkpoint or self.s.comfyui_checkpoint
+        wf = self._load_workflow(self.s.comfyui_inpaint_workflow, {
+            "%PROMPT%": f"{prompt}, {STYLE_PROMPT}", "%NEGATIVE%": NEGATIVE_PROMPT, "%SEED%": seed % (2**31),
+            "%CKPT%": ckpt, "%IMAGE%": name})
+        out, _ = self._run(wf)
+        if out.size != image.size:
+            out = out.resize(image.size, Image.LANCZOS)
+        return out
