@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import config
+
+config.load_env_file()  # 공급자·API 키 설정을 .env에서 읽는다 (다른 모듈보다 먼저)
 from app.api import generation, projects, render, scenes
 from app.db import init_db
 from app.errors import install_error_handlers
