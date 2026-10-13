@@ -1,5 +1,6 @@
 // 키워드 순위 + 쇼츠 순위 화면 (공개 페이지와 직접 검색 페이지 공용)
 import { formatCount, formatAgo, hoursSince } from './trend.js';
+import { copyText, downloadImage, bestYoutubeThumbnail, flash } from './media.js';
 
 // els: { keywords, videos, title, clear } — 각각 DOM 요소
 export function mountResults(els) {
@@ -80,6 +81,35 @@ function videoItem(v, rank) {
   a.querySelector('.title').textContent = v.title;
   a.querySelector('.channel').textContent = v.channel + (demo ? ' (샘플)' : '');
   if (v.views == null) a.querySelector('.q').textContent = v.query || '';
+  li.className = 'video-card';
   li.append(a);
+  if (!demo) li.append(cardActions(v, a.href));
   return li;
+}
+
+// 카드 아래 버튼: 주소 복사, 썸네일 저장
+function cardActions(v, url) {
+  const box = document.createElement('div');
+  box.className = 'card-actions';
+  const copy = smallButton('🔗 URL 복사', async () => flash(copy, (await copyText(url)) ? '✅ 복사됨' : '복사 실패'));
+  box.append(copy);
+  const youtube = !v.url;
+  if (youtube || /^https:\/\//.test(v.thumbnail || '')) {
+    const save = smallButton('🖼️ 썸네일 저장', async () => {
+      const src = youtube ? await bestYoutubeThumbnail(v.id) : v.thumbnail;
+      const result = await downloadImage(src, `${youtube ? v.id : v.id.replace(/^th_/, 'threads_')}.jpg`);
+      flash(save, result === 'saved' ? '✅ 저장됨' : '새 탭에서 길게 눌러 저장', 2500);
+    });
+    box.append(save);
+  }
+  return box;
+}
+
+function smallButton(label, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'ghost small';
+  b.textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
 }

@@ -2,6 +2,7 @@
 import { formatAgo, hoursSince } from './trend.js';
 import { mountResults } from './view.js';
 import { GROUPS } from './snapshot.js';
+import { mountSaver } from './media.js';
 
 const $ = (id) => document.getElementById(id);
 const view = mountResults({ keywords: $('keywords'), videos: $('videos'), title: $('videosTitle'), clear: $('clearFilter') });
@@ -88,5 +89,6 @@ async function load() {
   render();
 }
 
+mountSaver({ form: $('saverForm'), input: $('saverInput'), result: $('saverResult') });
 window.addEventListener('hashchange', () => snapshot && render());
 load();

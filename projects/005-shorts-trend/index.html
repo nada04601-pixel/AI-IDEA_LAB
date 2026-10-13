@@ -55,6 +55,16 @@
       </ul>
     </section>
 
+    <section id="saver">
+      <h2>🖼️ URL로 썸네일·이미지 저장</h2>
+      <p class="hint">유튜브 영상 주소를 넣으면 가장 큰 썸네일을, 이미지 주소를 넣으면 그 이미지를 저장해요. 영상 파일 다운로드는 YouTube 약관상 제공하지 않아요. 썸네일도 만든 사람의 저작물이니 참고용으로만 써 주세요.</p>
+      <form id="saverForm" class="saver">
+        <input id="saverInput" type="text" inputmode="url" placeholder="https://youtube.com/shorts/..." aria-label="영상 또는 이미지 주소" />
+        <button type="submit">불러오기</button>
+      </form>
+      <div id="saverResult" class="saver-result"></div>
+    </section>
+
     <p class="more"><a href="search.html">🔎 내 API 키로 다른 국가·분야 직접 검색하기</a></p>
   </main>
 

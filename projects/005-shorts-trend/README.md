@@ -61,6 +61,13 @@ YOUTUBE_API_KEY=... node scripts/collect.mjs data/latest.json data/latest.json  
 
 > 공개 저장소에서 60일 동안 저장소 활동이 없으면 GitHub가 예약 실행을 자동으로 끕니다. 그러면 Actions 탭에서 다시 켭니다.
 
+## URL 복사·썸네일 저장
+
+- 순위의 영상마다 **🔗 URL 복사**(유튜브 쇼츠·스레드 게시물 주소)와 **🖼️ 썸네일 저장** 버튼이 있습니다.
+- 공개 페이지 아래 **URL로 썸네일·이미지 저장**: 유튜브 주소(쇼츠·watch·youtu.be·embed·live)를 넣으면 가장 큰 썸네일(maxres → hq)을, https 이미지 주소를 넣으면 그 이미지를 저장합니다.
+- 다른 사이트 이미지라 브라우저가 파일 저장을 막으면(CORS) 새 탭으로 열어 길게 눌러/우클릭으로 저장하게 합니다.
+- **영상 파일 다운로드는 넣지 않았습니다.** YouTube 서비스 약관은 YouTube가 직접 다운로드 링크를 주는 경우 외의 다운로드를 금지하고, 애드센스 정책도 YouTube 다운로드 기능이 있는 사이트를 허용하지 않아 수익화 계획과 충돌합니다.
+
 ## 직접 검색 사용법
 
 1. [Google Cloud 콘솔](https://console.cloud.google.com/apis/library/youtube.googleapis.com)에서 프로젝트를 만들고 **YouTube Data API v3**를 사용 설정합니다.
@@ -97,6 +104,7 @@ YOUTUBE_API_KEY=... node scripts/collect.mjs data/latest.json data/latest.json  
 - `src/youtube.js` — API 호출, 페이지 넘기기, 할당량 계산, 한국어 오류 안내
 - `src/snapshot.js` — 자동 수집 결과(latest.json) 만들기: 탭 묶음(한국·해외·다른 플랫폼), 섹션 순환, 지금 시간당 증가량, 병합
 - `src/view.js` — 키워드·쇼츠 순위 화면 (두 페이지 공용)
+- `src/media.js` — URL 복사, 유튜브 주소 해석, 썸네일·이미지 저장
 - `src/public.js` — 공개 페이지, `src/search.js` — 직접 검색 페이지
 - `src/demo.js` — 샘플 데이터 (실제 영상 아님)
 - `scripts/collect.mjs` — 수집 스크립트 (Actions에서 실행)
