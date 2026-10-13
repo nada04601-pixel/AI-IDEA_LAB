@@ -1,0 +1,22 @@
+# 생성물 (영상·이미지·로그·작업 DB)
+output/
+data/jobs.sqlite
+data/puzzles/*.json
+
+# 비밀값 — 절대 커밋 금지
+.env
+credentials.json
+client_secret*.json
+token.json
+
+# 사용자 자산 (라이선스 확인 후 각자 넣는 파일)
+assets/music/*
+!assets/music/README.md
+assets/fonts/*
+!assets/fonts/README.md
+assets/sample_images/*
+!assets/sample_images/README.md
+
+.venv/
+__pycache__/
+.pytest_cache/

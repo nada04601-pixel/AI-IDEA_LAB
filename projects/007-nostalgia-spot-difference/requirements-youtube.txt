@@ -1,0 +1,5 @@
+# YouTube 업로드(4단계)용 — 업로드를 켤 때만 설치
+-r requirements.txt
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.1
+google-auth-httplib2>=0.1

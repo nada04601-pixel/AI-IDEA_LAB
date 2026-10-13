@@ -1,0 +1,72 @@
+{
+  "_comment": "scene은 내장 손그림 장면 템플릿 이름(village, kitchen, market, rainy_road, corner_store). prompt는 ComfyUI로 원본을 생성할 때 쓰는 영어 프롬프트.",
+  "topics": [
+    {
+      "id": "hometown_village",
+      "title": "고향 마을",
+      "scene": "village",
+      "series": "고향 마을",
+      "keywords": ["기와집", "돌담", "감나무", "장독대", "우물"],
+      "prompt": "1970s rural Korean village, giwa tile-roof hanok house, stone wall, persimmon tree, onggi jars on a jangdokdae, old stone well, warm afternoon"
+    },
+    {
+      "id": "old_kitchen",
+      "title": "옛날 부엌",
+      "scene": "kitchen",
+      "series": "옛날 부엌",
+      "keywords": ["아궁이", "가마솥", "양은 냄비", "놋그릇", "찬장"],
+      "prompt": "1970s traditional Korean kitchen interior, earthen floor, agungi fireplace with iron cauldrons, yellow aluminum pots, brass bowls, wooden cupboard, lattice window"
+    },
+    {
+      "id": "country_market",
+      "title": "시골 장터",
+      "scene": "market",
+      "series": "시골 장터",
+      "keywords": ["천막", "저울", "바구니", "쌀가마니", "배추"],
+      "prompt": "1970s Korean countryside five-day market, striped canvas tents, baskets of fruit, napa cabbages, rice sacks, old balance scale, bicycle"
+    },
+    {
+      "id": "rainy_dirt_road",
+      "title": "비 오는 흙길",
+      "scene": "rainy_road",
+      "series": "비 오는 흙길",
+      "keywords": ["초가집", "전봇대", "우산", "고무신", "웅덩이"],
+      "prompt": "rainy day on a 1970s Korean dirt road, thatched-roof choga houses, wooden utility poles, puddles, paper umbrella, rubber shoes"
+    },
+    {
+      "id": "corner_store",
+      "title": "동네 구멍가게",
+      "scene": "corner_store",
+      "series": "동네 구멍가게",
+      "keywords": ["구멍가게", "평상", "빨간 우체통", "자전거", "방패연"],
+      "prompt": "1980s Korean neighborhood corner store with hand-painted sign, wooden pyeongsang bench in front, red mailbox, old bicycle, kite in the sky"
+    },
+    {
+      "id": "village_laundry",
+      "title": "빨래 너는 날",
+      "scene": "village",
+      "series": "고향 마을",
+      "keywords": ["빨랫줄", "장독대", "닭"],
+      "variant": "laundry",
+      "prompt": "sunny 1970s Korean village yard, laundry hanging on a clothesline, onggi jars, chickens, giwa house"
+    },
+    {
+      "id": "kitchen_morning",
+      "title": "아침 밥 짓는 부엌",
+      "scene": "kitchen",
+      "series": "옛날 부엌",
+      "keywords": ["가마솥", "주전자", "바구니"],
+      "variant": "morning",
+      "prompt": "early morning in a 1970s Korean kitchen, steam rising from an iron cauldron, kettle, bamboo basket, soft light from a lattice window"
+    },
+    {
+      "id": "market_fruit",
+      "title": "장날 과일 가게",
+      "scene": "market",
+      "series": "시골 장터",
+      "keywords": ["과일 바구니", "저울", "파라솔"],
+      "variant": "fruit",
+      "prompt": "1970s Korean market fruit stall, baskets of apples and persimmons, old scale, parasol, warm light"
+    }
+  ]
+}
