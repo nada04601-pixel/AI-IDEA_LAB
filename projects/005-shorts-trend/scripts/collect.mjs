@@ -16,7 +16,6 @@ if (!prevPath || !outPath) {
 }
 
 const apiKey = process.env.YOUTUBE_API_KEY;
-const regionCode = process.env.REGION || 'KR';
 const hours = Number(process.env.HOURS || 24);
 const allPages = Number(process.env.ALL_PAGES || 2);
 
@@ -40,14 +39,13 @@ let quota = 0;
 for (const section of sectionsForRun(now)) {
   try {
     const pages = section.key === 'all' ? allPages : 1;
-    const found = await searchRecentShortIds({ apiKey, regionCode, hours, pages, query: section.query });
+    const found = await searchRecentShortIds({ apiKey, regionCode: section.regionCode, hours, pages, query: section.query });
     const details = await fetchVideoDetails({ apiKey, ids: found.ids });
     quota += found.quota + details.quota;
     updated[section.key] = buildSection(section, details.items, {
       prev: prev?.sections?.[section.key],
       now: now.getTime(),
       hours,
-      koreanOnly: regionCode === 'KR',
     });
     const s = updated[section.key];
     console.log(`${section.label}: 쇼츠 ${s.videos.length}개, 키워드 ${s.keywords.length}개`);
@@ -58,7 +56,7 @@ for (const section of sectionsForRun(now)) {
   }
 }
 
-const snapshot = mergeSnapshot(prev, updated, { now: now.getTime(), regionCode, errors });
+const snapshot = mergeSnapshot(prev, updated, { now: now.getTime(), regionCode: 'KR', errors });
 await mkdir(dirname(outPath), { recursive: true });
 await writeFile(outPath, JSON.stringify(snapshot));
 console.log(`저장: ${outPath} (할당량 약 ${quota}단위 사용)`);

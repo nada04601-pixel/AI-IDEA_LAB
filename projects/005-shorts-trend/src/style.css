@@ -124,3 +124,12 @@ a.video:hover { border-color: var(--accent); }
   background: var(--card); border: 1px solid var(--line);
 }
 .tabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tabs + .sub-tabs { margin-top: 8px; }
+.sub-tabs a { font-size: 13px; padding: 5px 12px; }
+.platforms { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.platforms a {
+  display: flex; flex-direction: column; gap: 2px; text-decoration: none;
+  padding: 12px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--line);
+}
+.platforms span { font-size: 13px; color: var(--muted); }
+.tabs[hidden] { display: none; }

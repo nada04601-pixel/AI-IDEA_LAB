@@ -51,6 +51,11 @@ export function isKorean(video) {
   return /[가-힣]/.test(video.title + video.channel);
 }
 
+// 제목이나 채널명에 히라가나·가타카나가 있으면 일본 영상으로 본다 (한자만으로는 중국어와 구분이 안 된다).
+export function isJapanese(video) {
+  return /[\u3040-\u30ff]/.test(video.title + video.channel);
+}
+
 // 한국 쇼츠 '전체'용 검색어: 분야와 상관없이 제목에 흔한 말을 OR로 묶는다.
 // (검색어 없이 찾으면 한국 영상이 100개 중 6개뿐이었다 — 2026-10-08 실측)
 export const KOREAN_BROAD_QUERY = '진짜|ㅋㅋ|레전드|반응|이유|근황|브이로그';

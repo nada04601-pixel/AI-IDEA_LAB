@@ -94,6 +94,20 @@ test('youtube: 검색 페이지를 넘기고 할당량을 센다', async () => {
   assert.equal(calls[1].searchParams.get('pageToken'), 't');
 });
 
+test('youtube: regionCode를 비우면 국가·언어 제한 없이 검색한다', async () => {
+  const calls = [];
+  const fake = async (url) => {
+    calls.push(new URL(url));
+    return { ok: true, json: async () => ({ items: [] }) };
+  };
+  await searchRecentShortIds({ apiKey: 'k', regionCode: '' }, fake);
+  assert.equal(calls[0].searchParams.has('regionCode'), false);
+  assert.equal(calls[0].searchParams.has('relevanceLanguage'), false);
+  await searchRecentShortIds({ apiKey: 'k', regionCode: 'JP' }, fake);
+  assert.equal(calls[1].searchParams.get('regionCode'), 'JP');
+  assert.equal(calls[1].searchParams.get('relevanceLanguage'), 'ja');
+});
+
 test('youtube: 상세 조회는 50개씩 끊는다', async () => {
   const sizes = [];
   const fake = async (url) => {

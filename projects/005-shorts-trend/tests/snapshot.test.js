@@ -10,7 +10,7 @@ import { demoItems } from '../src/demo.js';
 const NOW = Date.parse('2026-10-08T12:00:00Z');
 const ALL = SECTIONS[0];
 
-test('매시간 전체 + 분야 하나, 분야는 돌아가며 모두 갱신된다', () => {
+test('매시간 한국 전체 + 하나, 분야·해외는 돌아가며 모두 갱신된다', () => {
   const seen = new Set();
   for (let h = 0; h < SECTIONS.length - 1; h++) {
     const run = sectionsForRun(new Date(NOW + h * 3_600_000));
@@ -93,10 +93,31 @@ test('collect.mjs: 할당량 초과면 지난 데이터를 유지하고 오류�
   assert.match(stdout, /FAKE_CALLS=1\b/); // 첫 실패 후 바로 멈춘다
 });
 
-test('buildSection: koreanOnly면 한글 영상만 남긴다', () => {
+test('buildSection: 한국 섹션은 한글 영상만 남긴다', () => {
   const items = demoItems(NOW);
   items[0].snippet.title = 'Which Baby Is It? #shorts';
   items[0].snippet.channelTitle = 'Kids';
-  assert.equal(buildSection(ALL, items, { now: NOW, hours: 24 }).videos.length, 15);
-  assert.equal(buildSection(ALL, items, { now: NOW, hours: 24, koreanOnly: true }).videos.length, 14);
+  assert.equal(buildSection({ ...ALL, only: undefined }, items, { now: NOW, hours: 24 }).videos.length, 15);
+  assert.equal(buildSection(ALL, items, { now: NOW, hours: 24 }).videos.length, 14);
+});
+
+test('해외 섹션: 일본은 가나가 있는 영상만, 미국은 거르지 않는다', () => {
+  const jp = SECTIONS.find((s) => s.key === 'jp');
+  const us = SECTIONS.find((s) => s.key === 'us');
+  const items = demoItems(NOW);
+  items[0].snippet.title = '猫が初めて雪を見た #shorts';
+  items[0].snippet.channelTitle = 'ねこ日記';
+  const s = buildSection(jp, items, { now: NOW, hours: 24 });
+  assert.deepEqual(s.videos.map((v) => v.id), ['demo0']);
+  assert.equal(s.group, 'world');
+  assert.equal(s.regionCode, 'JP');
+  assert.equal(buildSection(us, items, { now: NOW, hours: 24 }).videos.length, 15);
+});
+
+test('해외 섹션도 돌아가며 갱신되고, 전세계는 국가 제한 없이 검색한다', () => {
+  const rotating = SECTIONS.filter((s) => s.key !== 'all');
+  const keys = new Set();
+  for (let h = 0; h < rotating.length; h++) keys.add(sectionsForRun(new Date(NOW + h * 3_600_000))[1].key);
+  for (const key of ['us', 'jp', 'global']) assert.ok(keys.has(key));
+  assert.equal(SECTIONS.find((s) => s.key === 'global').regionCode, '');
 });
