@@ -13,7 +13,7 @@
 <body>
   <header>
     <h1>🔥 오늘의 떡상 쇼츠</h1>
-    <p class="sub">최근 24시간 안에 올라온 한국·해외 쇼츠를 <b>시간당 조회수</b>로 줄 세우고, 많이 겹치는 <b>키워드</b>를 뽑아요. 1시간마다 자동 업데이트됩니다.</p>
+    <p class="sub">최근 24시간 안에 올라온 한국·해외 쇼츠를 <b>시간당 조회수</b>로 줄 세우고, 많이 겹치는 <b>키워드</b>를 뽑아요. 스레드 인기 영상도 함께 모아요. 1시간마다 자동 업데이트됩니다.</p>
   </header>
 
   <main>
@@ -32,13 +32,13 @@
         <h2 id="videosTitle">🚀 떡상 쇼츠 순위</h2>
         <button type="button" id="clearFilter" class="ghost small" hidden>필터 해제</button>
       </div>
-      <p class="hint"><b>평균 시간당</b>은 올라온 뒤 지금까지의 평균 속도, <b>지금 시간당</b>은 지난 수집 이후 늘어난 속도입니다.</p>
+      <p class="hint" id="videosHint"><b>평균 시간당</b>은 올라온 뒤 지금까지의 평균 속도, <b>지금 시간당</b>은 지난 수집 이후 늘어난 속도입니다.</p>
       <ol id="videos" class="videos"></ol>
     </section>
 
     <section id="platforms" hidden>
-      <h2>📱 다른 플랫폼 급상승</h2>
-      <p class="hint">틱톡·인스타그램은 일반 개발자가 쓸 수 있는 인기 영상 API가 없어 이 페이지에서 직접 수집하지 않아요. 공식 트렌드 화면으로 바로 이동할 수 있게 모아 두었습니다.</p>
+      <h2>🔗 틱톡·인스타그램 트렌드</h2>
+      <p class="hint">틱톡·인스타그램은 일반 개발자가 쓸 수 있는 인기 영상 API가 없어 직접 수집하지 않아요. 공식 트렌드 화면으로 바로 이동할 수 있게 모아 두었습니다.</p>
       <ul class="platforms">
         <li>
           <a href="https://ads.tiktok.com/business/creativecenter/inspiration/popular/hashtag/pc/en" target="_blank" rel="noopener">

@@ -11,7 +11,7 @@
 
 | 페이지 | 파일 | 내용 |
 |---|---|---|
-| 공개 페이지 | `index.html` | 자동 수집된 `data/latest.json`을 보여준다. 키 필요 없음. 🇰🇷 한국(전체 + 분야) · 🌏 해외(미국·일본·전세계) · 📱 다른 플랫폼 탭 |
+| 공개 페이지 | `index.html` | 자동 수집된 `data/latest.json`을 보여준다. 키 필요 없음. 🇰🇷 한국(전체 + 분야) · 🌏 해외(미국·일본·전세계) · 📱 다른 플랫폼(스레드 + 틱톡·인스타 링크) 탭 |
 | 직접 검색 | `search.html` | 내 API 키로 국가·기간·분야를 골라 바로 분석. 샘플 데이터 모드 |
 
 ## 실행
@@ -35,6 +35,7 @@ YOUTUBE_API_KEY=... node scripts/collect.mjs data/latest.json data/latest.json  
 
 - **한국 쇼츠만:** 검색어 없이 찾으면 `regionCode=KR`이어도 해외 영상이 100개 중 94개였습니다(2026-10-08 실측). 그래서 '전체'는 흔한 한국어 단어(`진짜|ㅋㅋ|레전드|반응|이유|근황|브이로그`)로 검색하고, 제목·채널명에 한글이 있는 영상만 남깁니다. 이 검색어들은 키워드 순위에서 뺍니다.
 - **해외:** 미국(`regionCode=US`), 일본(`JP`, 히라가나·가타카나가 있는 영상만), 전세계(국가 제한 없음)를 검색어 없이 수집합니다. 해외 섹션이 순환에 들어가도 1회 수집량은 같아 할당량은 늘지 않고, 대신 분야별 갱신 간격이 7시간 → 10시간이 됩니다. 일본어 제목은 띄어쓰기가 없어 키워드는 주로 해시태그에서 나옵니다.
+- **스레드:** `THREADS_ACCESS_TOKEN`이 있으면 매시간 Threads API 키워드 검색(`search_type=TOP`, `media_type=VIDEO`, 최근 24시간)으로 흔한 한국어 검색어 6개(`진짜, ㅋㅋ, 레전드, 근황, 반응, 영상`)를 찾아, 여러 검색어에서 높은 순위로 나온 한글 영상 게시물부터 보여줍니다. 공개 게시물의 조회수·좋아요는 API가 주지 않아 '시간당 조회수' 대신 스레드 인기순을 씁니다. 하루 144회 검색 (한도 2,200회).
 - **다른 플랫폼:** 틱톡·인스타그램은 일반 개발자가 쓸 수 있는 인기 영상 API가 없어(틱톡 Research API는 연구기관 전용, 인스타그램 Graph API에는 인기 순위가 없음) 수집하지 않고, 공식 트렌드 화면(틱톡 크리에이티브 센터 등) 링크를 모아 보여줍니다. 스크래핑은 약관 위반이라 쓰지 않습니다.
 - **할당량:** 1회 약 303단위 × 24회 ≈ 하루 7,300단위 (무료 10,000단위 안). 남는 여유는 수동 실행용.
 - **지금 시간당:** 지난 수집에도 있던 영상은 그 사이 늘어난 조회수를 시간당으로 환산해 함께 보여줍니다.
@@ -47,6 +48,16 @@ YOUTUBE_API_KEY=... node scripts/collect.mjs data/latest.json data/latest.json  
 2. 저장소 **Settings → Secrets and variables → Actions → New repository secret** — 이름 `YOUTUBE_API_KEY`, 값에 키.
 3. 이 브랜치를 `main`에 병합. 예약 실행은 기본 브랜치에서만 돕니다.
 4. **Actions → 떡상 쇼츠 자동 수집 → Run workflow**로 첫 수집을 바로 실행해도 됩니다.
+
+5. (선택) 스레드 수집: 아래 "스레드 토큰 만들기"를 따라 `THREADS_ACCESS_TOKEN` 시크릿 추가. 없으면 스레드 탭 없이 YouTube만 수집합니다.
+
+### 스레드 토큰 만들기
+
+1. [Meta for Developers](https://developers.facebook.com/apps/)에서 앱을 만들고 사용 사례로 **Threads API 액세스**를 고릅니다.
+2. 권한 `threads_basic`, `threads_keyword_search`를 추가합니다.
+3. **앱 검수(App Review)에서 `threads_keyword_search` 승인**을 받아야 남의 공개 게시물이 검색됩니다. 승인 전에는 내 게시물만 나와서 스레드 탭이 비어 있습니다.
+4. 앱 설정에서 내 스레드 계정을 테스터로 추가해 액세스 토큰을 발급하고, **장기 토큰(60일)**으로 바꿔 `THREADS_ACCESS_TOKEN` 시크릿에 넣습니다.
+5. 장기 토큰은 60일 뒤 만료됩니다. 만료 전에 `GET https://graph.threads.net/refresh_access_token?grant_type=th_refresh_token&access_token=<토큰>`으로 새 토큰을 받아 시크릿을 바꿔 주세요. 만료되면 Actions에 "스레드 액세스 토큰이 만료됐거나…" 경고가 뜨고 지난 데이터가 그대로 보입니다.
 
 > 공개 저장소에서 60일 동안 저장소 활동이 없으면 GitHub가 예약 실행을 자동으로 끕니다. 그러면 Actions 탭에서 다시 켭니다.
 
@@ -82,6 +93,7 @@ YOUTUBE_API_KEY=... node scripts/collect.mjs data/latest.json data/latest.json  
 ## 파일
 
 - `src/trend.js` — 길이 파싱, 쇼츠 판별, 떡상 점수, 키워드 추출 (순수 함수)
+- `src/threads.js` — Threads API 키워드 검색 (인기 영상 게시물)
 - `src/youtube.js` — API 호출, 페이지 넘기기, 할당량 계산, 한국어 오류 안내
 - `src/snapshot.js` — 자동 수집 결과(latest.json) 만들기: 탭 묶음(한국·해외·다른 플랫폼), 섹션 순환, 지금 시간당 증가량, 병합
 - `src/view.js` — 키워드·쇼츠 순위 화면 (두 페이지 공용)

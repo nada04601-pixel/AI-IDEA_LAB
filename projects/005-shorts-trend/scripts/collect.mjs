@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 // 매시간 GitHub Actions에서 실행: 최근 쇼츠를 수집해 data/latest.json을 갱신한다.
 //
-//   YOUTUBE_API_KEY=... node scripts/collect.mjs <이전 latest.json> <저장할 latest.json>
+//   YOUTUBE_API_KEY=... THREADS_ACCESS_TOKEN=... node scripts/collect.mjs <이전 latest.json> <저장할 latest.json>
+//
+// 두 키 중 있는 것만 수집한다.
 //
 // 오류가 나도 지난 데이터는 그대로 두고 errors에 기록한다 (페이지가 비지 않도록).
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { searchRecentShortIds, fetchVideoDetails } from '../src/youtube.js';
-import { sectionsForRun, buildSection, mergeSnapshot } from '../src/snapshot.js';
+import { searchThreadsVideos } from '../src/threads.js';
+import { sectionsForRun, buildSection, buildThreadsSection, mergeSnapshot, THREADS_SECTION } from '../src/snapshot.js';
 
 const [prevPath, outPath] = process.argv.slice(2);
 if (!prevPath || !outPath) {
@@ -16,6 +19,7 @@ if (!prevPath || !outPath) {
 }
 
 const apiKey = process.env.YOUTUBE_API_KEY;
+const threadsToken = process.env.THREADS_ACCESS_TOKEN;
 const hours = Number(process.env.HOURS || 24);
 const allPages = Number(process.env.ALL_PAGES || 2);
 
@@ -26,17 +30,18 @@ try {
   console.log('이전 데이터 없음 — 새로 만듭니다.');
 }
 
-if (!apiKey) {
-  console.log('::warning::YOUTUBE_API_KEY 시크릿이 없어 수집을 건너뜁니다.');
+if (!apiKey && !threadsToken) {
+  console.log('::warning::YOUTUBE_API_KEY·THREADS_ACCESS_TOKEN 시크릿이 없어 수집을 건너뜁니다.');
   process.exit(0);
 }
+if (!apiKey) console.log('::warning::YOUTUBE_API_KEY 시크릿이 없어 YouTube 수집을 건너뜁니다.');
 
 const now = new Date();
 const updated = {};
 const errors = [];
 let quota = 0;
 
-for (const section of sectionsForRun(now)) {
+for (const section of apiKey ? sectionsForRun(now) : []) {
   try {
     const pages = section.key === 'all' ? allPages : 1;
     const found = await searchRecentShortIds({ apiKey, regionCode: section.regionCode, hours, pages, query: section.query });
@@ -53,6 +58,18 @@ for (const section of sectionsForRun(now)) {
     errors.push({ section: section.key, message: err.message, at: now.toISOString() });
     console.log(`::warning::${section.label} 수집 실패: ${err.message}`);
     if (err.reason === 'quotaExceeded' || err.reason === 'keyInvalid') break;
+  }
+}
+
+if (threadsToken) {
+  const section = THREADS_SECTION;
+  try {
+    const posts = await searchThreadsVideos({ accessToken: threadsToken, queries: section.queries, hours, now: now.getTime() });
+    updated[section.key] = buildThreadsSection(section, posts, { now: now.getTime(), hours });
+    console.log(`${section.label}: 영상 게시물 ${updated[section.key].videos.length}개 (검색 ${section.queries.length}회)`);
+  } catch (err) {
+    errors.push({ section: section.key, message: err.message, at: now.toISOString() });
+    console.log(`::warning::${section.label} 수집 실패: ${err.message}`);
   }
 }
 

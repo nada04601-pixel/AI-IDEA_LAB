@@ -3,7 +3,7 @@ import { formatCount, formatAgo, hoursSince } from './trend.js';
 
 // els: { keywords, videos, title, clear } — 각각 DOM 요소
 export function mountResults(els) {
-  const state = { videos: [], keywords: [], filter: null };
+  const state = { videos: [], keywords: [], filter: null, noun: '쇼츠' };
 
   function render() {
     els.keywords.replaceChildren(...state.keywords.map(keywordItem));
@@ -13,7 +13,7 @@ export function mountResults(els) {
 
     const kw = state.keywords.find((k) => k.keyword === state.filter);
     const shown = kw ? state.videos.filter((v) => kw.videoIds.includes(v.id)) : state.videos;
-    els.title.textContent = kw ? `🚀 "${kw.keyword}" 떡상 쇼츠` : '🚀 떡상 쇼츠 순위';
+    els.title.textContent = kw ? `🚀 "${kw.keyword}" 떡상 ${state.noun}` : `🚀 떡상 ${state.noun} 순위`;
     els.clear.hidden = !kw;
 
     els.videos.replaceChildren(...shown.map((v, i) => videoItem(v, i + 1)));
@@ -25,7 +25,8 @@ export function mountResults(els) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = state.filter === k.keyword ? 'kw active' : 'kw';
-    btn.innerHTML = `<span class="rank">${i + 1}</span><span class="word"></span><span class="num">${k.count}개 · 시간당 ${formatCount(k.viewsPerHour)}</span>`;
+    const speed = k.viewsPerHour != null ? ` · 시간당 ${formatCount(k.viewsPerHour)}` : ''; // 스레드는 조회수가 없다
+    btn.innerHTML = `<span class="rank">${i + 1}</span><span class="word"></span><span class="num">${k.count}개${speed}</span>`;
     btn.querySelector('.word').textContent = k.keyword;
     btn.addEventListener('click', () => {
       state.filter = state.filter === k.keyword ? null : k.keyword;
@@ -41,8 +42,9 @@ export function mountResults(els) {
   });
 
   return {
-    show(videos, keywords) {
-      Object.assign(state, { videos, keywords, filter: null });
+    // noun: 순위 제목에 쓸 이름 (쇼츠·스레드)
+    show(videos, keywords, { noun = '쇼츠' } = {}) {
+      Object.assign(state, { videos, keywords, filter: null, noun });
       render();
     },
   };
@@ -50,30 +52,34 @@ export function mountResults(els) {
 
 function videoItem(v, rank) {
   const li = document.createElement('li');
-  const demo = v.id.startsWith('demo');
+  // 외부 데이터의 링크는 https만 쓴다 (javascript: 같은 주소 차단)
+  const demo = v.id.startsWith('demo') || (v.url != null && !/^https:\/\//.test(v.url));
   const a = document.createElement(demo ? 'div' : 'a');
   a.className = 'video';
   if (!demo) {
-    a.href = `https://www.youtube.com/shorts/${v.id}`;
+    a.href = v.url || `https://www.youtube.com/shorts/${v.id}`;
     a.target = '_blank';
     a.rel = 'noopener';
   }
   const recent = v.recentPerHour != null ? ` · <span class="recent">지금 시간당 +${formatCount(v.recentPerHour)}</span>` : '';
+  // 스레드 게시물: 조회수·길이가 없어 업로드 시각과 찾은 검색어만 보여준다
+  const stats = v.views == null
+    ? `${formatAgo(hoursSince(v.publishedAt))} · '<span class="q"></span>' 인기 검색`
+    : `<b>평균 시간당 ${formatCount(v.viewsPerHour)}회</b>${recent}
+        · 조회 ${formatCount(v.views)} · 좋아요 ${formatCount(v.likes)}
+        · ${formatAgo(hoursSince(v.publishedAt))} · ${v.seconds}초`;
   a.innerHTML = `
     <span class="rank">${rank}</span>
     <span class="thumb">${v.thumbnail ? '<img alt="" loading="lazy" />' : '▶'}</span>
     <span class="info">
       <span class="title"></span>
       <span class="channel"></span>
-      <span class="stats">
-        <b>평균 시간당 ${formatCount(v.viewsPerHour)}회</b>${recent}
-        · 조회 ${formatCount(v.views)} · 좋아요 ${formatCount(v.likes)}
-        · ${formatAgo(hoursSince(v.publishedAt))} · ${v.seconds}초
-      </span>
+      <span class="stats">${stats}</span>
     </span>`;
   if (v.thumbnail) a.querySelector('img').src = v.thumbnail;
   a.querySelector('.title').textContent = v.title;
   a.querySelector('.channel').textContent = v.channel + (demo ? ' (샘플)' : '');
+  if (v.views == null) a.querySelector('.q').textContent = v.query || '';
   li.append(a);
   return li;
 }

@@ -1,10 +1,10 @@
 // 자동 수집 결과(data/latest.json)를 만드는 로직. 수집 스크립트와 테스트가 함께 쓴다.
-import { toVideo, isShort, isKorean, isJapanese, rankVideos, rankKeywords, KOREAN_BROAD_QUERY } from './trend.js';
+import { toVideo, isShort, isKorean, isJapanese, rankVideos, rankKeywords, hoursSince, KOREAN_BROAD_QUERY } from './trend.js';
 
 export const SNAPSHOT_VERSION = 1;
 export const KEEP_VIDEOS = 100;
 
-// 탭 묶음. 'platforms'는 수집 데이터가 없는 안내 탭이다 (public.js에서 그린다).
+// 탭 묶음. 'platforms'에는 스레드(수집) + 틱톡·인스타 링크 안내(public.js에서 그림)가 들어간다.
 export const GROUPS = [
   { key: 'kr', label: '🇰🇷 한국' },
   { key: 'world', label: '🌏 해외' },
@@ -27,13 +27,18 @@ export const SECTIONS = [
   { key: 'us', label: '🇺🇸 미국', query: '', group: 'world', regionCode: 'US' },
   { key: 'jp', label: '🇯🇵 일본', query: '', group: 'world', regionCode: 'JP', only: 'ja' },
   { key: 'global', label: '🌍 전세계', query: '', group: 'world', regionCode: '' },
+  // 스레드: YouTube 할당량과 별개라 매시간 수집. 검색어마다 1회 호출 (OR 검색이 없어 나눠서 찾는다)
+  { key: 'threads', label: '🧵 스레드', source: 'threads', group: 'platforms', queries: ['진짜', 'ㅋㅋ', '레전드', '근황', '반응', '영상'] },
 ];
+
+export const YOUTUBE_SECTIONS = SECTIONS.filter((s) => s.source !== 'threads');
+export const THREADS_SECTION = SECTIONS.find((s) => s.source === 'threads');
 
 const ONLY = { ko: isKorean, ja: isJapanese };
 
-// 이번 시간에 갱신할 섹션: 한국 전체 + 나머지 중 하나
+// 이번 시간에 갱신할 YouTube 섹션: 한국 전체 + 나머지 중 하나
 export function sectionsForRun(date = new Date()) {
-  const rotating = SECTIONS.filter((s) => s.key !== 'all');
+  const rotating = YOUTUBE_SECTIONS.filter((s) => s.key !== 'all');
   const hourIndex = Math.floor(date.getTime() / 3_600_000);
   return [SECTIONS[0], rotating[hourIndex % rotating.length]];
 }
@@ -83,6 +88,38 @@ export function buildSection(section, items, { prev, now = Date.now(), hours }) 
     hours,
     updatedAt: new Date(now).toISOString(),
     videos: videos.map(slim),
+    keywords,
+  };
+}
+
+// 스레드 검색 결과(searchThreadsVideos) → 섹션. 조회수가 없어 인기순 그대로, 한글 게시물만 남긴다.
+export function buildThreadsSection(section, posts, { now = Date.now(), hours }) {
+  const videos = posts
+    .map((p) => ({
+      id: `th_${p.id}`,
+      url: p.permalink,
+      title: (p.text || '').replace(/\s+/g, ' ').trim().slice(0, 200) || '(내용 없음)',
+      description: '',
+      channel: `@${p.username || ''}`,
+      tags: [],
+      thumbnail: p.thumbnail_url || '',
+      publishedAt: p.timestamp,
+      query: p.query,
+      score: p.score,
+    }))
+    .filter((v) => isKorean(v) && hoursSince(v.publishedAt, now) <= hours)
+    .slice(0, KEEP_VIDEOS);
+  // 키워드 점수는 조회수 대신 인기 점수(검색어별 1/순위 합)로 매긴다
+  const keywords = rankKeywords(videos.map((v) => ({ ...v, views: 0, viewsPerHour: v.score })), {
+    minCount: videos.length >= 40 ? 3 : 2,
+  }).map((k) => ({ keyword: k.keyword, count: k.count, videoIds: k.videoIds }));
+  return {
+    label: section.label,
+    group: section.group,
+    source: 'threads',
+    hours,
+    updatedAt: new Date(now).toISOString(),
+    videos: videos.map(({ description, tags, score, ...v }) => v),
     keywords,
   };
 }

@@ -22,6 +22,13 @@ function sectionsIn(group) {
   return Object.entries(snapshot.sections).filter(([, s]) => groupOf(s) === group);
 }
 
+// 틱톡·인스타 링크 안내는 수집 데이터가 없는 고정 탭이다
+const LINKS = ['platforms', { label: '🔗 틱톡·인스타', group: 'platforms' }];
+
+function tabsIn(group) {
+  return group === 'platforms' ? [...sectionsIn(group), LINKS] : sectionsIn(group);
+}
+
 function currentKey() {
   const key = location.hash.slice(1);
   if (key === 'platforms' || snapshot.sections[key]) return key;
@@ -41,23 +48,28 @@ function render() {
   const group = key === 'platforms' ? 'platforms' : groupOf(snapshot.sections[key]);
   $('groups').replaceChildren(
     ...GROUPS.map((g) => {
-      if (g.key === 'platforms') return tab('#platforms', g.label, group === g.key);
-      const first = sectionsIn(g.key)[0];
+      const first = tabsIn(g.key)[0];
       return first ? tab(`#${first[0]}`, g.label, group === g.key) : null;
     }).filter(Boolean),
   );
-  const subs = group === 'platforms' ? [] : sectionsIn(group);
+  const subs = tabsIn(group);
   $('tabs').hidden = subs.length < 2;
   $('tabs').replaceChildren(...subs.map(([k, s]) => tab(`#${k}`, s.label, k === key)));
 
-  $('platforms').hidden = group !== 'platforms';
-  $('results').hidden = group === 'platforms';
-  if (group === 'platforms') return;
+  $('platforms').hidden = key !== 'platforms';
+  $('results').hidden = key === 'platforms';
+  if (key === 'platforms') return;
 
   const s = snapshot.sections[key];
+  const threads = s.source === 'threads';
   const age = hoursSince(s.updatedAt);
-  $('meta').textContent = `${formatAgo(age)} 업데이트 · 최근 ${s.hours}시간 업로드 · 쇼츠 ${s.videos.length}개 분석`;
-  view.show(s.videos, s.keywords);
+  $('meta').textContent = threads
+    ? `${formatAgo(age)} 업데이트 · 최근 ${s.hours}시간 · 스레드 인기 영상 게시물 ${s.videos.length}개`
+    : `${formatAgo(age)} 업데이트 · 최근 ${s.hours}시간 업로드 · 쇼츠 ${s.videos.length}개 분석`;
+  $('videosHint').innerHTML = threads
+    ? '스레드가 인기순으로 보여주는 영상 게시물입니다. 스레드 API는 다른 사람 게시물의 조회수를 주지 않아, 여러 검색어에서 높은 순위로 나온 게시물을 앞에 놓았어요.'
+    : '<b>평균 시간당</b>은 올라온 뒤 지금까지의 평균 속도, <b>지금 시간당</b>은 지난 수집 이후 늘어난 속도입니다.';
+  view.show(s.videos, s.keywords, { noun: threads ? '스레드' : '쇼츠' });
 }
 
 async function load() {
