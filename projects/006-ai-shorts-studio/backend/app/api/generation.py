@@ -56,7 +56,9 @@ def list_providers(script: ScriptProvider = Depends(get_script_provider)):
     infos = [ProviderInfo(kind="script", name=script.name, is_paid=script.is_paid, estimated_cost_per_job=0.0, currency="USD")]
     for kind in MEDIA_PROVIDERS:
         p = get_media_provider(kind, media_provider_name(kind))
-        infos.append(ProviderInfo(kind=kind, name=p.name, is_paid=p.is_paid, estimated_cost_per_job=p.estimate_cost(5.0), currency=p.currency))
+        # 영상은 길이에 따라 비싸지므로 가장 긴 경우(8초)로 안내한다
+        sample_sec = 8.0 if kind == "video" else 5.0
+        infos.append(ProviderInfo(kind=kind, name=p.name, is_paid=p.is_paid, estimated_cost_per_job=p.estimate_cost(sample_sec), currency=p.currency))
     return infos
 
 
