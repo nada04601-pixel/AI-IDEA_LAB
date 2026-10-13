@@ -1,6 +1,7 @@
 import os
 
 from app.providers.base import ScriptProvider
+from app.providers.gemini_image import GeminiImageProvider
 from app.providers.media import MediaProvider
 from app.providers.mock import MockScriptProvider
 from app.providers.mock_media import MockImageProvider, MockVideoProvider
@@ -8,7 +9,7 @@ from app.providers.mock_tts import MockTTSProvider
 
 _SCRIPT_PROVIDERS: dict[str, type] = {"mock": MockScriptProvider}
 MEDIA_PROVIDERS: dict[str, dict[str, type]] = {
-    "image": {"mock": MockImageProvider},
+    "image": {"mock": MockImageProvider, "gemini": GeminiImageProvider},
     "video": {"mock": MockVideoProvider},
     "audio": {"mock": MockTTSProvider},  # 음성(TTS): prompt에 읽을 대사를 넣는다
 }

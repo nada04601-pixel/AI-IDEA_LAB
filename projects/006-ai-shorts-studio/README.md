@@ -181,10 +181,18 @@ mock 공급자 규칙 (외부 호출·비용 없음, 같은 입력이면 항상 
 - mock 영상: FFmpeg로 최신 이미지(없으면 단색 화면)를 장면 길이만큼의 H.264 MP4로 만든다. 일반 Chrome·Edge·Safari에서 재생된다. (Playwright 테스트용 Chromium은 H.264를 재생하지 못해 자동 테스트에서는 ffprobe로 파일을 확인한다.)
 - 실패 확인용: 프롬프트에 `[mock-fail]`이 있으면 항상, `[mock-fail-once]`가 있으면 첫 시도만 실패한다.
 
+실제 이미지 공급자: Google Gemini (`app/providers/gemini_image.py`)
+- `.env`에 `AISS_IMAGE_PROVIDER=gemini`와 `GEMINI_API_KEY`를 넣으면 사용한다. 키는 요청 헤더로만 보내고 주소·로그·DB에 남기지 않는다.
+- Gemini API `generateContent`로 이미지를 요청하고, 프로젝트 화면 비율(9:16 등)을 `imageConfig.aspectRatio`로 보낸다. 프롬프트의 Midjourney 옵션(`--ar 9:16`, `--style raw` 등)은 지우고 보낸다.
+- 기본 모델은 `gemini-3.1-flash-image`이고 `AISS_GEMINI_IMAGE_MODEL`로 바꾼다. (Imagen 4는 2026년 8월 Gemini API에서 종료되어 지원하지 않는다.)
+- 1장 비용은 모델별 참고값(예: gemini-3.1-flash-image 1K 약 $0.067)으로 기록하며 `"estimated": true`로 표시한다. 실제 청구액은 Google Cloud 결제 화면에서 확인한다.
+- 키가 없거나, 키·권한·결제 문제(401/403), 모델 이름 오류(404), 사용량 초과(429), 안전 필터 차단, 네트워크 오류는 작업 실패로 기록되고 한국어 안내와 함께 재시도할 수 있다.
+- 설정 방법은 [사용 가이드](docs/user-guide.md)의 "실제 이미지 생성 (Gemini)"을 본다.
+
 비용 처리
 - 작업마다 예상 비용(`estimated_cost`)을, 자산마다 실제 비용(`cost_amount`)을 기록하고 "작업" 탭에 합계를 보여준다. mock은 0(무료).
 - 유료 공급자(`is_paid`)는 `confirm_paid: true` 없이 요청하면 작업을 만들지 않고 409와 예상 비용을 돌려준다. 화면에서는 예상 비용을 보여주는 확인창을 거친다.
-- 실제(유료) AI 공급자는 아직 연결하지 않았다. 연결할 때는 사용자 승인을 먼저 받는다.
+- 실제(유료) 공급자는 이미지용 Gemini만 연결했다 (기본값은 여전히 mock). 다른 공급자를 연결할 때는 사용자 승인을 먼저 받는다.
 
 음성(TTS)도 같은 `MediaProvider` 인터페이스를 쓰며(`AISS_AUDIO_PROVIDER`, 프롬프트 자리에 읽을 대사를 넣는다), 결과 메타데이터에 대사 해시를 남겨 대사가 바뀌면 "대사 바뀜"으로 표시한다.
 - mock 음성: 실제 목소리 대신 자막이 바뀌는 시점마다 짧은 소리가 나는, 장면 길이만큼의 WAV를 만든다.
