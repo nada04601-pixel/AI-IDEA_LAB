@@ -5,9 +5,9 @@ Claude Code 안에서 대화하며 쓰도록 설계했다 (대본은 Claude가 �
 
 - 요구사항: [ideas/007-shopping-shorts-maker/idea.md](../../ideas/007-shopping-shorts-maker/idea.md) (v1.0)
 - Claude Code 작업 지침: [CLAUDE.md](CLAUDE.md)
-- 현재 단계: **M5 완료** — 샤오홍슈·도우인 링크 → 같은 상품 영상 수집·국내 콘텐츠 필터 (`ssm collect`) → 영상 분석 →
+- 현재 단계: **M6 완료 (v1 전 단계)** — 샤오홍슈·도우인 링크 → 같은 상품 영상 수집·국내 콘텐츠 필터 (`ssm collect`) → 영상 분석 →
   대본 프리셋 4종·레퍼런스 화법·금지 표현 검사 (`ssm script`, 대본은 Claude가 작성) → TTS · 다중 컷 편집 · 자막 · 광고 표시 · 오디오 →
-  썸네일 3안 · 플랫폼별 캡션 (`ssm meta`). 전부 `ssm run`으로
+  썸네일 3안 · 플랫폼별 캡션 (`ssm meta`). 전부 `ssm run`으로. 수정 요청은 바뀐 단계만 다시 실행하고, 결과는 버전으로 보관
 
 ## 설치
 
@@ -30,7 +30,9 @@ ssm.bat new <URL|키워드> [--local 파일...] [--duration 30] [--fps 30] [--ad
 ssm.bat list                        # 프로젝트 목록
 ssm.bat status [ID]                 # 단계별 진행 상황 (ID 생략 시 최근 프로젝트)
 ssm.bat set subtitle.size 90        # 이 프로젝트의 설정 변경 → 영향받는 단계만 다시 실행 대상
-ssm.bat versions / rollback 2       # 결과물 버전 보관·되돌리기
+ssm.bat versions / rollback 2       # 결과물 버전 (실행이 성공할 때마다 자동 보관) · 되돌리기
+ssm.bat cuts [3]                    # 컷 목록 (3이면 3번 컷 대신 쓸 장면 후보도)
+ssm.bat cut 3 [--shot 02-004]       # 3번 컷만 다른 장면으로 → ssm run (편집만 다시)
 ssm.bat collect [--keyword 검색어] [--url 링크]   # 같은 상품 영상 수집·필터 → raw_videos/ (candidates.json에 후보별 사유)
 ssm.bat add 영상.mp4 ...             # 같은 상품 영상 추가 (analyze부터 다시)
 ssm.bat presets                     # 대본 프리셋 4종

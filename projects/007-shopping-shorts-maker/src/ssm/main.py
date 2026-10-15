@@ -215,10 +215,21 @@ def set_cmd(
 
 @app.command("versions")
 def versions_cmd(project_id: Optional[str] = ProjectArg) -> None:
-    """보관된 결과물 버전 목록."""
+    """보관된 결과물 버전 목록 (만들 때마다 직전 결과를 자동 보관)."""
     ws = open_ws(project_id)
     versions = ws.versions()
-    console.print(", ".join(f"v{v}" for v in versions) if versions else "보관된 버전이 없습니다.")
+    if not versions:
+        console.print("보관된 버전이 없습니다.")
+        return
+    table = Table()
+    for col in ("버전", "보관 시각", "메모", "영상"):
+        table.add_column(col)
+    for v in versions:
+        info = ws.version_info(v)
+        has_video = (ws.path / "versions" / f"v{v}" / "final_output.mp4").is_file()
+        table.add_row(f"v{v}", info.get("created_at", "").replace("T", " "), info.get("note", ""), "있음" if has_video else "")
+    console.print(table)
+    console.print("되돌리기: `ssm rollback 번호` (지금 상태도 버전으로 남는다)")
 
 
 @app.command("rollback")
@@ -227,13 +238,22 @@ def rollback_cmd(version: int = typer.Argument(..., help="되돌릴 버전 번�
     """결과물을 이전 버전으로 되돌린다 (지금 상태도 새 버전으로 남긴다)."""
     ws = open_ws(project_id)
     try:
-        ws.rollback(version)
+        kept = ws.rollback(version)
     except WorkspaceError as e:
         fail(str(e))
-    console.print(f"v{version}으로 되돌렸습니다. 되돌리기 전 상태는 v{ws.versions()[-1]}에 있습니다.")
+    console.print(f"v{version}으로 되돌렸습니다." + (f" 되돌리기 전 상태는 v{kept}에 있습니다." if kept else ""))
 
 
 # ---- 제작 단계 ---------------------------------------------------------------------
+
+
+PRODUCTION = ("script", "tts", "edit", "meta")  # 결과물을 바꾸는 단계
+
+
+def _keep_version(ws: Workspace, stages: list[str]) -> None:
+    """실행이 성공한 뒤 결과를 버전으로 보관한다 (입력과 결과물이 서로 맞는 상태만 남는다)."""
+    if any(s in PRODUCTION for s in stages) and (n := ws.snapshot(f"{' → '.join(stages)} 실행 후")):
+        console.print(f"[dim]이 결과를 v{n}로 보관했습니다 (`ssm versions`, `ssm rollback 번호`).[/]")
 
 
 def _run_stage(stage: str, ws: Workspace, **options) -> None:
@@ -356,6 +376,112 @@ def meta_cmd(project_id: Optional[str] = ProjectArg,
             for note in result.notes:
                 console.print(f"[참고] {note}", markup=False)
     _run_stage("meta", ws)
+    _keep_version(ws, ["meta"])
+
+
+@app.command("cuts")
+def cuts_cmd(number: Optional[int] = typer.Argument(None, help="이 번호 컷 대신 쓸 수 있는 장면도 보여준다"),
+             project_id: Optional[str] = typer.Option(None, "--project", "-p", help="프로젝트 ID (생략하면 최근 프로젝트)")) -> None:
+    """마지막으로 렌더링한 영상의 컷 목록 (번호·시간·구간·자막·장면)."""
+    from ssm.cutplan import replacement_candidates
+
+    ws = open_ws(project_id)
+    timeline, analysis = _load_timeline(ws)
+    overrides = {round(o.position, 2) for o in _load_overrides(ws).cuts}
+    sentences = _sentences(ws)
+    table = Table()
+    for col in ("번호", "시간", "구간", "그때 자막", "장면", "원본"):
+        table.add_column(col)
+    for i, c in enumerate(timeline.cuts, start=1):
+        mark = " (교체)" if round(c.position, 2) in overrides else ""
+        table.add_row(str(i), f"{c.position:.1f}~{c.position + c.length:.1f}초", c.section or "",
+                      _text_at(sentences, c.position), f"{c.shot_id}{mark}", c.source.split("/")[-1])
+    console.print(table, markup=False)
+    if number is not None:
+        if not 1 <= number <= len(timeline.cuts):
+            fail(f"컷 번호는 1~{len(timeline.cuts)}입니다.")
+        options = replacement_candidates(timeline, analysis, number - 1)
+        console.print(f"{number}번 컷 대신 쓸 수 있는 장면 (점수 순): " +
+                      (", ".join(f"{s.id}({s.duration:.1f}초, 점수 {s.score:.2f})" for _, s in options[:8]) or "없음"),
+                      markup=False)
+
+
+@app.command("cut")
+def cut_cmd(number: int = typer.Argument(..., help="바꿀 컷 번호 (`ssm cuts`로 확인)"),
+            shot: Optional[str] = typer.Option(None, "--shot", help="대신 쓸 장면 ID (생략하면 점수가 가장 높은 다른 장면)"),
+            reset: bool = typer.Option(False, "--reset", help="이 컷의 교체를 취소하고 원래 장면으로"),
+            project_id: Optional[str] = typer.Option(None, "--project", "-p")) -> None:
+    """컷 하나만 다른 장면으로 바꾼다 (overrides.json). 다음 `ssm run`에서 편집 단계만 다시 실행된다."""
+    from ssm.cutplan import POSITION_TOLERANCE, PlanError, check_replacement, replacement_candidates
+    from ssm.schemas import CutOverride
+
+    ws = open_ws(project_id)
+    timeline, analysis = _load_timeline(ws)
+    if not 1 <= number <= len(timeline.cuts):
+        fail(f"컷 번호는 1~{len(timeline.cuts)}입니다 (`ssm cuts`).")
+    cut = timeline.cuts[number - 1]
+    overrides = _load_overrides(ws)
+    existing = next((o for o in overrides.cuts if abs(o.position - cut.position) <= POSITION_TOLERANCE), None)
+    if reset:
+        if existing is None:
+            fail(f"{number}번 컷은 바꾼 적이 없습니다.")
+        overrides.cuts.remove(existing)
+        message = f"{number}번 컷을 원래 장면({existing.was})으로 되돌립니다."
+    else:
+        try:
+            if shot is None:
+                options = replacement_candidates(timeline, analysis, number - 1)
+                if not options:
+                    raise PlanError("바꿔 넣을 수 있는 장면이 없습니다 (모두 쓰는 중이거나 짧음) → 같은 상품 영상을 `ssm add`로 추가하세요.")
+                shot = options[0][1].id
+            else:
+                check_replacement(timeline, analysis, number - 1, shot)
+        except PlanError as e:
+            fail(str(e))
+        if existing:
+            existing.shot = shot
+        else:
+            overrides.cuts.append(CutOverride(position=cut.position, was=cut.shot_id, shot=shot))
+        message = f"{number}번 컷 ({cut.position:.1f}초~): {cut.shot_id} → {shot}"
+    (ws.path / "overrides.json").write_text(overrides.model_dump_json(indent=2), encoding="utf-8")
+    console.print(message + " · `ssm run`으로 다시 렌더링합니다 (편집 단계만).", markup=False)
+
+
+def _load_timeline(ws: Workspace):
+    from ssm.schemas import Analysis, Timeline
+
+    files = [ws.path / "timeline.json", ws.path / "analysis.json"]
+    if not all(f.is_file() for f in files):
+        fail("아직 렌더링한 영상이 없습니다 → 먼저 `ssm run`")
+    return (Timeline.model_validate_json(files[0].read_text(encoding="utf-8")),
+            Analysis.model_validate_json(files[1].read_text(encoding="utf-8")))
+
+
+def _load_overrides(ws: Workspace):
+    from ssm.video_editor import EditError, load_overrides
+
+    try:
+        return load_overrides(ws)
+    except EditError as e:
+        fail(str(e))
+
+
+def _sentences(ws: Workspace) -> list[tuple[float, str]]:
+    from ssm.schemas import WordTimings
+
+    path = ws.path / "word_timings.json"
+    if not path.is_file():
+        return []
+    timings = WordTimings.model_validate_json(path.read_text(encoding="utf-8"))
+    return [(s.words[0].start if s.words else s.start, s.text) for s in timings.sentences]
+
+
+def _text_at(sentences: list[tuple[float, str]], t: float) -> str:
+    text = sentences[0][1] if sentences else ""  # 첫 문장 앞 짧은 무음 구간도 첫 문장으로
+    for start, sentence in sentences:
+        if start <= t + 0.05:
+            text = sentence
+    return text if len(text) <= 18 else text[:17] + "…"
 
 
 @app.command("analyze")
@@ -379,14 +505,19 @@ def add_cmd(files: list[Path] = typer.Argument(..., help="추가할 영상 파�
 @app.command("tts")
 def tts_cmd(project_id: Optional[str] = ProjectArg) -> None:
     """script.json을 읽어 음성(tts.mp3)과 단어별 시간(word_timings.json)을 만든다."""
-    _run_stage("tts", open_ws(project_id))
+    ws = open_ws(project_id)
+    _run_stage("tts", ws)
+    _keep_version(ws, ["tts"])
 
 
 @app.command("edit")
 def edit_cmd(project_id: Optional[str] = ProjectArg,
              preview: bool = typer.Option(False, "--preview", help="540x960으로 빠르게 미리보기 (preview.mp4)")) -> None:
     """원본 영상에 음성·한국어 자막·광고 표시를 얹어 final_output.mp4를 만든다."""
-    _run_stage("edit", open_ws(project_id), preview=preview)
+    ws = open_ws(project_id)
+    _run_stage("edit", ws, preview=preview)
+    if not preview:
+        _keep_version(ws, ["edit"])
 
 
 @app.command("run")
@@ -398,9 +529,12 @@ def run_cmd(project_id: Optional[str] = ProjectArg) -> None:
         console.print("모든 단계가 완료되어 있습니다.")
         return
     console.print(f"실행할 단계: {' → '.join(todo)}")
+    executed = []
     for stage in ORDER:  # 앞 단계를 돌린 뒤 상태를 다시 보므로, 앞 단계 결과가 그대로면 뒤 단계는 건너뛴다
         if ws.status(stage) != "done":
-            _run_stage(stage, ws)
+            _run_stage(stage, ws)  # 실패하면 여기서 끝난다 (그 결과는 보관하지 않는다)
+            executed.append(stage)
+    _keep_version(ws, executed)
 
 
 @app.callback(invoke_without_command=True)

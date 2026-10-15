@@ -20,7 +20,7 @@ from ssm.analyzer import source_videos
 from ssm.config import AppConfig
 from ssm.downloader import (SEARCH, Downloader, DownloadError, Fetched, PlaywrightDownloader, PlaywrightSearcher,
                             Searcher, YtDlpDownloader, fetch_any, platform_of)
-from ssm.filters import (CLIP_FRAMES, OCR_FRAMES, SPEECH_SECONDS, Inspectors, cosine, grade_for, korean_meta_reason,
+from ssm.filters import (CLIP_FRAMES, OCR_FRAMES, OCR_WIDTH, SPEECH_SECONDS, Inspectors, cosine, grade_for, korean_meta_reason,
                          korean_speech_reason, korean_text_reason, load_inspectors)
 from ssm.media import Media, MediaError
 from ssm.schemas import Candidate, Candidates, Selected, SelectedVideo
@@ -106,18 +106,26 @@ class _Run:
         return cand
 
     def korean_reasons(self, cand: Candidate) -> list[str]:
-        """국내 콘텐츠 판별. 검사하지 못한 항목은 notes에 남긴다."""
+        """국내 콘텐츠 판별 (전부). 검사하지 못한 항목은 notes에 남긴다."""
+        return self.quick_reasons(cand) or self.ocr_reasons(cand)
+
+    def ocr_reasons(self, cand: Candidate) -> list[str]:
+        """한글 자막 (OCR) — 가장 느린 검사라 다른 검사를 통과한 후보에만 한다."""
+        ins = self.inspectors
+        if not ins.ocr:
+            cand.notes.append("한글 자막 검사 못함")
+            return []
+        frames = self.media.sample_frames(self.ws.path / cand.file, OCR_FRAMES, width=OCR_WIDTH)
+        reason = korean_text_reason([ins.ocr.read(f) for f in frames])
+        return [reason] if reason else []
+
+    def quick_reasons(self, cand: Candidate) -> list[str]:
+        """메타데이터·한국어 음성 (빠른 검사)."""
         path = self.ws.path / cand.file
         reasons = []
         if reason := korean_meta_reason(cand.title, cand.description, cand.author, cand.location):
             reasons.append(reason)
         ins = self.inspectors
-        if ins.ocr:
-            frames = self.media.sample_frames(path, OCR_FRAMES, width=720)
-            if reason := korean_text_reason([ins.ocr.read(f) for f in frames]):
-                reasons.append(reason)
-        else:
-            cand.notes.append("한글 자막 검사 못함")
         audio = self.media.audio_pcm16k(path, SPEECH_SECONDS)
         if audio.size < 16000:
             cand.notes.append("소리 없음 → 음성 검사 생략")
@@ -285,16 +293,31 @@ def _collect_online(run: _Run, kind: str, value: str | None, searcher: Searcher)
         attempts += 1
         cands.append(run.download(f"c{len(cands) + 1:02d}", url))
 
+    # 검사 순서: 메타데이터·음성(빠름) → 유사도 → 한글 자막 OCR(느림). 앞에서 제외된 후보는 OCR을 하지 않는다.
     ref_emb = None
     for cand in cands:
         if not cand.file:
             cand.grade = "excluded"
             continue
-        cand.reasons = run.korean_reasons(cand)
+        cand.reasons = run.quick_reasons(cand)
         if cand.reasons:
             cand.grade = "excluded"
             continue
-        if reference is None or reference.grade == "excluded":  # 키워드 프로젝트: 통과한 첫 영상을 기준으로
+        becomes_reference = not cand.reference and (reference is None or reference.grade == "excluded")
+        if not cand.reference and not becomes_reference:
+            emb = run.embedding(cand) if ref_emb is not None else None
+            cand.similarity = round(cosine(ref_emb, emb), 4) if emb is not None else None
+            cand.grade, reason = grade_for(cand.similarity, col.same_product_threshold, col.mood_threshold)
+            if reason:
+                cand.reasons.append(reason)
+                continue
+            if cand.similarity is None:
+                cand.notes.append("유사도 검사 못함 → 안전하게 분위기 영상(mood)으로 분류 (상품 구간에는 쓰지 않음)")
+        cand.reasons = run.ocr_reasons(cand)
+        if cand.reasons:
+            cand.grade = "excluded"
+            continue
+        if becomes_reference:  # 키워드 프로젝트: 국내 콘텐츠가 아닌 첫 영상을 기준으로
             if reference is not None:
                 reference.reference = False
             reference, cand.reference = cand, True
@@ -302,14 +325,6 @@ def _collect_online(run: _Run, kind: str, value: str | None, searcher: Searcher)
         if cand.reference:
             cand.grade, cand.similarity = "same_product", 1.0
             ref_emb = run.embedding(cand)
-            continue
-        emb = run.embedding(cand) if ref_emb is not None else None
-        cand.similarity = round(cosine(ref_emb, emb), 4) if emb is not None else None
-        cand.grade, reason = grade_for(cand.similarity, col.same_product_threshold, col.mood_threshold)
-        if reason:
-            cand.reasons.append(reason)
-        if cand.similarity is None:
-            cand.notes.append("유사도 검사 못함 → 안전하게 분위기 영상(mood)으로 분류 (상품 구간에는 쓰지 않음)")
     if reference is not None and reference.grade == "excluded" and kind == "url":
         run.log(f"[주의] 기준 영상이 국내 콘텐츠로 보여 제외했습니다 ({', '.join(reference.reasons)}).")
     return cands

@@ -72,13 +72,13 @@ def test_done_and_invalidation_by_upstream_file(home):
     fake_outputs(ws, "collect", "analyze", "script", "tts", "edit", "meta")
     assert ws.pending_stages() == []
 
-    # Claude가 대본을 고치면: 대본은 그대로 완료, tts → edit 와 캡션(meta)이 다시 실행 대상
+    # Claude가 대본을 고치면: 대본 검사(script) → tts → edit 와 캡션(meta)이 다시 실행 대상
     (ws.path / "script.json").write_text("새 대본", encoding="utf-8")
     statuses = ws.statuses()
-    assert statuses["script"] == "done"
+    assert statuses["script"] == "stale"
     assert statuses["tts"] == "stale" and statuses["meta"] == "stale"
     assert statuses["edit"] == "done"  # edit 자체 입력(tts 결과)은 아직 그대로
-    assert ws.pending_stages() == ["tts", "edit", "meta"]  # 하지만 tts가 다시 돌면 edit도 다시
+    assert ws.pending_stages() == ["script", "tts", "edit", "meta"]  # 하지만 tts가 다시 돌면 edit도 다시
 
 
 def test_subtitle_style_change_only_reruns_edit(home):
@@ -116,14 +116,17 @@ def test_snapshot_and_rollback(home):
     ws = make(home)
     fake_outputs(ws, "collect", "analyze", "script")
     (ws.path / "final_output.mp4").write_text("v1 영상", encoding="utf-8")
-    assert ws.snapshot() == 1
+    assert ws.snapshot("첫 결과") == 1
+    assert ws.snapshot() == 1  # 내용이 같으면 새 버전을 만들지 않는다
+    assert ws.version_info(1)["note"] == "첫 결과" and "final_output.mp4" in ws.version_info(1)["files"]
 
     (ws.path / "script.json").write_text("v2 대본", encoding="utf-8")
     (ws.path / "final_output.mp4").write_text("v2 영상", encoding="utf-8")
     (ws.path / "caption.txt").write_text("v2에서 처음 생긴 캡션", encoding="utf-8")
     ws.set_override("subtitle.size", 100)
 
-    ws.rollback(1)
+    assert ws.rollback(1) == 2
+    assert not (ws.path / "version.json").exists()  # 버전 정보 파일은 작업 폴더로 복사하지 않는다
     assert (ws.path / "final_output.mp4").read_text(encoding="utf-8") == "v1 영상"
     assert (ws.path / "script.json").read_text(encoding="utf-8") == "script:script.json"
     assert not (ws.path / "caption.txt").exists()
@@ -145,3 +148,19 @@ def test_import_local_videos(home, tmp_path):
     assert [p.name for p in copied] == ["01.mp4", "02.mov"]
     with pytest.raises(WorkspaceError):
         import_local_videos(ws, [tmp_path / "없음.mp4"])
+
+
+def test_snapshot_without_results(home):
+    assert make(home).snapshot() is None
+
+
+def test_script_file_change_needs_recheck(home):
+    ws = make(home)
+    fake_outputs(ws, "collect", "analyze", "script", "tts", "edit", "meta")
+    (ws.path / "script.json").write_text("고친 대본", encoding="utf-8")
+    assert ws.statuses()["script"] == "stale"  # 고친 대본은 다시 검사
+    assert ws.pending_stages() == ["script", "tts", "edit", "meta"]
+    (ws.path / "overrides.json").write_text("{}", encoding="utf-8")
+    fake_outputs(ws, "script", "tts", "edit", "meta")
+    (ws.path / "overrides.json").write_text('{"cuts": []}', encoding="utf-8")
+    assert ws.pending_stages() == ["edit"]  # 컷 교체 설정은 편집만

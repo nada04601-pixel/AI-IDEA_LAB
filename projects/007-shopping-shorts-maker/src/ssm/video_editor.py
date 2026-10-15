@@ -12,9 +12,9 @@ from pathlib import Path
 from ssm import subtitle
 from ssm.audio_mix import AudioError, mix_audio
 from ssm.config import AppConfig
-from ssm.cutplan import PlanError, plan_timeline
+from ssm.cutplan import PlanError, apply_overrides, plan_timeline
 from ssm.media import Media
-from ssm.schemas import Analysis, Cut, TextBox, WordTimings
+from ssm.schemas import Analysis, Cut, Overrides, TextBox, WordTimings
 from ssm.workspace import Workspace
 
 TAIL_SEC = 0.5  # 마지막 문장 뒤 여유
@@ -94,6 +94,16 @@ def frame_counts(cuts: list[Cut], total: float, fps: int) -> list[int]:
     return [max(1, b - a) for a, b in zip(marks, marks[1:])]
 
 
+def load_overrides(ws: Workspace) -> Overrides:
+    path = ws.path / "overrides.json"
+    if not path.is_file():
+        return Overrides()
+    try:
+        return Overrides.model_validate_json(path.read_text(encoding="utf-8"))
+    except ValueError as e:
+        raise EditError(f"overrides.json 형식이 올바르지 않습니다 ({e.__class__.__name__}) → 지우거나 `ssm cut --reset`") from e
+
+
 def _encoder_args(media: Media, cfg: AppConfig, preview: bool) -> list[str]:
     if preview:
         return ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "28"]
@@ -136,6 +146,12 @@ def run_edit(ws: Workspace, cfg: AppConfig | None = None, preview: bool = False,
         raise EditError(str(e)) from e
     for msg in warnings:
         log(f"[주의] {msg}")
+    overrides = load_overrides(ws)
+    if overrides.cuts:  # 사용자가 바꾼 컷 (`ssm cut`) — 컷 배치는 매번 같게 나오므로 같은 자리에 다시 적용된다
+        timeline, applied, dropped = apply_overrides(timeline, analysis, overrides)
+        log(f"  컷 교체 {applied}개 적용")
+        if dropped:
+            log(f"[주의] 대본·영상이 바뀌어 컷 교체 설정 {len(dropped)}개를 적용하지 못했습니다 → `ssm cuts`로 확인 후 다시 `ssm cut`.")
 
     mode = cfg.foreign_sub_removal
     if mode == "inpaint" and any(v.text_boxes for v in analysis.videos):
@@ -147,9 +163,6 @@ def run_edit(ws: Workspace, cfg: AppConfig | None = None, preview: bool = False,
     cues = subtitle.build_cues(timings, cfg.subtitle.max_chars_per_line, total)
 
     out_name = "preview.mp4" if preview else "final_output.mp4"
-    if not preview and (ws.path / "final_output.mp4").is_file():
-        n = ws.snapshot()
-        log(f"이전 결과를 versions/v{n}에 보관했습니다.")
 
     render_dir = ws.path / "render"
     shutil.rmtree(render_dir, ignore_errors=True)
