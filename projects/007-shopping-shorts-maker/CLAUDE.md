@@ -12,15 +12,14 @@
 - 설치가 안 되어 있으면 사용자에게 `setup.bat`(Windows) 또는 `./setup.sh` 실행을 안내한다.
 - 문제가 생기면 먼저 `ssm doctor`로 점검한다.
 
-## 현재 구현 상태 (M4 완료)
+## 현재 구현 상태 (M5 완료)
 
 | 명령 | 상태 |
 |---|---|
 | `doctor`, `fonts`, `new`, `list`, `status`, `set`, `versions`, `rollback` | 동작 |
-| `collect`, `add`, `analyze`, `presets`, `script [--preset --reference --check]`, `tts`, `edit [--preview]`, `run` | 동작 (M1~M4) |
-| `meta`(M5: 썸네일·캡션) | **아직 구현 전** — 종료 코드 2. `run`은 건너뛴다 |
+| `collect`, `add`, `analyze`, `presets`, `script [--preset --reference --check]`, `tts`, `edit [--preview]`, `meta [--style]`, `run` | 동작 (M1~M5) |
 
-아직 안 되는 것: 썸네일·캡션(M5), 원본 자막 인페인팅(inpaint는 지금 blur), 장면 설명으로 대본-장면 매칭, Ken Burns 줌, TikTok 검색.
+아직 안 되는 것: 원본 자막 인페인팅(inpaint는 지금 blur), 장면 설명으로 대본-장면 매칭, Ken Burns 줌, TikTok 검색, 플랫폼 자동 업로드(범위 밖).
 
 AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·레퍼런스 받아쓰기)는 PyTorch·CTranslate2가 필요하다.
 "쓸 수 없습니다"라고 나오면 **그 검사는 하지 않은 것**이다 — 사용자에게 그대로 알리고 `ssm doctor` 안내(대개 Visual C++ 런타임)를 따르게 한다.
@@ -46,12 +45,14 @@ AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·�
    - 답을 받으면 `ssm set ad_disclosure.profile coupang` (custom이면 `ssm set ad_disclosure.custom_text "문구"`도).
 4. **대본 요청서** — `ssm script --preset N` (사용자가 따라 하고 싶은 영상·대본을 줬으면 `--reference 링크|파일|대본.txt`)
    - 출력된 `script_prompt.md`를 읽고, `script_frames.jpg`(장면 모음)를 **직접 열어 본다**. 요청서 규칙대로 쓴다.
-5. **대본 작성** — `script.json` 저장 → `ssm script --check`
+5. **대본·문구 작성** — `script.json`과 `meta.json`(제목 3·썸네일 문구 3안·캡션 요약·해시태그·카테고리) 저장 → `ssm script --check`
    - 형식은 `src/ssm/schemas.py`의 `Script`. 분량은 길이 × 초당 6~7음절. 금지 표현(과장·최저가·의학적 효능 등)은 검사에서 막힌다.
    - 오류가 나오면 고쳐서 다시 검사한다. [주의](훅 길이·CTA 등)도 가능하면 고친다.
-6. **렌더링** — `ssm run` (tts → edit; meta는 아직 개발 전이라 건너뜀)
+6. **렌더링** — `ssm run` (tts → edit → meta)
    - `ssm tts`가 음성 길이를 알려준다. 목표보다 많이 길면 대본을 줄이거나 `ssm set tts.rate "+20%"` 후 `ssm run`.
-7. **보고 (개입 ②)** — `final_output.mp4` 경로, 길이, 프리셋, 대본 전문, 그리고 모아 둔 [주의](OCR 못 함·소스 부족·BGM 없음 등)를 알리고 수정 요청을 기다린다.
+7. **보고 (개입 ②)** — `final_output.mp4` 경로·길이, `thumbnails_preview.jpg`(썸네일 3안, **직접 열어 보고** 어떤 안인지 설명),
+   `caption.txt`(제목 후보 3개 포함), 프리셋, 대본 전문, 모아 둔 [주의](OCR 못 함·소스 부족·BGM 없음 등)를 알리고
+   썸네일 고르기와 수정 요청을 기다린다.
    - 빠르게 확인용이면 `ssm edit --preview` (540x960 `preview.mp4`).
    - 문장마다 `sfx`(whoosh·swish·pop·ding)를 달 수 있다. 훅=whoosh, 강조=pop/ding, 전환=swish. 2~3개면 충분.
 
@@ -64,7 +65,9 @@ AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·�
 | "이 영상 말투처럼" | `ssm script --reference 링크·파일·대본.txt` → 다시 작성 → `ssm script --check` | `ssm run` |
 | "목소리 남자로" | `ssm set tts.voice ko-KR-InJoonNeural` | `ssm run` (tts → edit) |
 | "자막 크게, 조금 위로" | `ssm set subtitle.size 90` / `ssm set subtitle.position_y_ratio 0.6` | `ssm run` (edit만) |
-| "썸네일 문구 바꿔줘" | `script.json`의 `thumbnail_text` 또는 `ssm set thumbnail.*` | `ssm run` (meta) |
+| "썸네일 문구 바꿔줘" / "제목·해시태그 바꿔줘" | `meta.json`의 `thumbnail_texts` / `titles` / `hashtags` | `ssm run` (meta만) |
+| "썸네일 글씨 크게·색 바꿔" | `ssm set thumbnail.top_size 170` / `ssm set thumbnail.top_color "#FF4D4D"` | `ssm run` (meta만) |
+| "이 썸네일 스타일처럼" | `ssm meta --style 이미지` (색·위치를 뽑아 `thumbnail_style.json`, 이미지를 보고 값 보정 가능) | (자동 실행) |
 | "이전 버전으로" | — | `ssm versions` → `ssm rollback <n>` |
 | "영상 더 넣어줘" / 소스 부족 경고 | `ssm add 파일...` | `ssm run` (analyze → edit) |
 | "이 영상은 다른 상품이야" | `selected.json`에서 그 영상 `grade`를 `mood`로 (hook·problem 구간에만 쓰임) | `ssm run` (analyze → edit) |
@@ -85,7 +88,7 @@ AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·�
 
 ## 개발할 때
 
-- 마일스톤 순서: M0~M4(완료) → M5 썸네일·캡션 → M6 수정 루프. 각 완료 기준은 기획서 9장.
+- 마일스톤 순서: M0~M5(완료) → M6 수정 루프. 각 완료 기준은 기획서 9장.
 - 테스트: `.venv/Scripts/python -m pytest` (Windows) / `.venv/bin/pytest`. 커밋 전에 전부 통과시킨다.
 - 사용자에게 보이는 메시지는 한국어로, "무엇이 실패했고 → 무엇을 하면 되는지" 형태로 쓴다.
 - 새 단계를 구현하면 `Workspace.mark_done(stage)`로 완료를 기록하고, 이 문서의 "현재 구현 상태" 표를 갱신한다.

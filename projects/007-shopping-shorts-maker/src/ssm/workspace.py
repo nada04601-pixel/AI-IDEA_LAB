@@ -44,8 +44,9 @@ STAGES: dict[str, Stage] = {
         Stage("edit", "편집·렌더링", ("tts", "analyze"),
               ("project", "video", "subtitle", "foreign_sub_removal", "ad_disclosure", "audio"),
               ("timeline.json", "subtitles.srt", "final_output.mp4"), "M1"),
+        # meta.json(제목·문구·해시태그, Claude 작성)과 thumbnail_style.json(레퍼런스 스타일)은 있으면 입력으로 본다
         Stage("meta", "썸네일·캡션", ("script", "analyze"), ("thumbnail", "ad_disclosure"),
-              ("thumbnail*.png", "caption.txt"), "M5"),
+              ("thumbnail*.png", "caption.txt"), "M5", inputs=("meta.json", "thumbnail_style.json")),
     ]
 }
 ORDER = list(STAGES)
@@ -203,8 +204,9 @@ class Workspace:
             "config": {k: dumped[k] for k in STAGES[stage].config_keys},
             "upstream": {u: self.output_hash(u) for u in STAGES[stage].upstream},
         }
-        if STAGES[stage].inputs:
-            payload["inputs"] = self._files_hash(self._paths(STAGES[stage].inputs))
+        if STAGES[stage].inputs:  # 없는 입력 파일은 건너뛴다 (있다가 생기거나 바뀌면 다시 실행 대상)
+            present = [p for p in STAGES[stage].inputs if any(self.path.glob(p))]
+            payload["inputs"] = self._files_hash(self._paths(tuple(present))) if present else None
         return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
     def status(self, stage: str, cfg: AppConfig | None = None) -> str:

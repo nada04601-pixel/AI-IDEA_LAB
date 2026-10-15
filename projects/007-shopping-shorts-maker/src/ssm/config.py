@@ -53,6 +53,12 @@ class ThumbnailCfg(_Section):
     font: str = "assets/fonts/BlackHanSans-Regular.ttf"
     top_color: str = "#FFE14D"
     bottom_color: str = "#FFFFFF"
+    stroke_color: str = "#000000"
+    top_size: int = Field(150, ge=40, le=300)  # 1080x1920 기준 글자 크기 (넘치면 자동으로 줄인다)
+    bottom_size: int = Field(96, ge=30, le=250)
+    stroke_width: int = Field(10, ge=0, le=30)
+    position_y_ratio: float = Field(0.16, ge=0.13, le=0.75)  # 글자 묶음 윗부분 위치 (세이프존 위 250px 아래)
+    gradient: bool = True  # 글자 뒤 위쪽을 어둡게 해 잘 읽히게
 
 
 class AdDisclosureCfg(_Section):

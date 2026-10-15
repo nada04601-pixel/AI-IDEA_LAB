@@ -183,13 +183,11 @@ def status_cmd(project_id: Optional[str] = ProjectArg) -> None:
     console.print(f"길이 {cfg.project.duration_sec}초 · {cfg.video.fps}fps · 광고 표시: "
                   f"{cfg.ad_disclosure.profile or '[yellow]선택 안 함[/]'}")
     table = Table()
-    for col in ("단계", "이름", "상태", "구현"):
+    for col in ("단계", "이름", "상태"):
         table.add_column(col)
     statuses = ws.statuses()
     for name in ORDER:
-        stage = STAGES[name]
-        table.add_row(name, stage.title, STATUS_LABEL[statuses[name]],
-                      "구현됨" if name in IMPLEMENTED else f"{stage.milestone} 예정")
+        table.add_row(name, STAGES[name].title, STATUS_LABEL[statuses[name]])
     console.print(table)
     versions = ws.versions()
     if versions:
@@ -243,6 +241,7 @@ def _run_stage(stage: str, ws: Workspace, **options) -> None:
     from ssm.analyzer import AnalyzeError, run_analyze
     from ssm.collector import CollectError, run_collect
     from ssm.media import MediaError
+    from ssm.metadata_gen import MetaError, run_meta
     from ssm.scripter import ScriptError, run_script_check
     from ssm.tts_engine import TTSError, run_tts
     from ssm.video_editor import EditError, run_edit
@@ -264,30 +263,11 @@ def _run_stage(stage: str, ws: Workspace, **options) -> None:
         elif stage == "edit":
             out = run_edit(ws, preview=options.get("preview", False), log=log)
             console.print(f"[green]완성:[/] {out}")
-    except (CollectError, AnalyzeError, ScriptError, TTSError, EditError, MediaError, WorkspaceError) as e:
+        elif stage == "meta":
+            run_meta(ws, log=log)
+            console.print(f"[green]썸네일·캡션:[/] {ws.path}")
+    except (CollectError, AnalyzeError, ScriptError, TTSError, EditError, MetaError, MediaError, WorkspaceError) as e:
         fail(str(e))
-
-
-IMPLEMENTED = ("collect", "analyze", "script", "tts", "edit")
-
-
-def _not_ready(stage: str) -> None:
-    s = STAGES[stage]
-    fail(f"'{s.title}'({stage}) 단계는 아직 구현되지 않았습니다 ({s.milestone}에서 구현 예정).", code=2)
-
-
-def _stage_command(stage: str) -> None:
-    def command(project_id: Optional[str] = ProjectArg) -> None:
-        open_ws(project_id)
-        _not_ready(stage)
-
-    command.__doc__ = f"{STAGES[stage].title} ({STAGES[stage].milestone}에서 구현 예정)"
-    app.command(stage)(command)
-
-
-for _stage in ORDER:
-    if _stage not in IMPLEMENTED:
-        _stage_command(_stage)
 
 
 @app.command("collect")
@@ -358,6 +338,26 @@ def script_cmd(project_id: Optional[str] = ProjectArg,
     console.print("다음: Claude가 요청서대로 script.json을 쓰고 → `ssm script --check` → `ssm run`")
 
 
+@app.command("meta")
+def meta_cmd(project_id: Optional[str] = ProjectArg,
+             style: Optional[str] = typer.Option(None, "--style", help="따라 할 썸네일 이미지 ('none'이면 해제)")) -> None:
+    """썸네일 3안(thumbnail_1~3.png)과 플랫폼별 캡션(caption.txt)을 만든다. 문구는 meta.json (Claude 작성)."""
+    from ssm.metadata_gen import MetaError, save_style
+
+    ws = open_ws(project_id)
+    if style is not None:
+        try:
+            result = save_style(ws, None if style.lower() == "none" else style)
+        except MetaError as e:
+            fail(str(e))
+        if result:
+            console.print(f"썸네일 스타일: 강조색 {result.top_color} · 요약색 {result.bottom_color} · 팔레트 "
+                          f"{', '.join(result.palette[:4])} → thumbnail_style.json", markup=False)
+            for note in result.notes:
+                console.print(f"[참고] {note}", markup=False)
+    _run_stage("meta", ws)
+
+
 @app.command("analyze")
 def analyze_cmd(project_id: Optional[str] = ProjectArg) -> None:
     """원본 영상의 샷·하이라이트 점수·고정 글자(자막) 영역을 분석해 analysis.json을 만든다."""
@@ -391,22 +391,15 @@ def edit_cmd(project_id: Optional[str] = ProjectArg,
 
 @app.command("run")
 def run_cmd(project_id: Optional[str] = ProjectArg) -> None:
-    """남은 단계를 순서대로 실행한다 (state.json 기준). 아직 개발 전인 단계는 건너뛴다."""
+    """남은 단계를 순서대로 실행한다 (state.json 기준). 결과가 바뀐 단계만 이어서 실행된다."""
     ws = open_ws(project_id)
     todo = ws.pending_stages()
     if not todo:
         console.print("모든 단계가 완료되어 있습니다.")
         return
-    if not any(s in IMPLEMENTED for s in todo):
-        console.print(f"구현된 단계({', '.join(IMPLEMENTED)})는 모두 최신입니다. "
-                      f"남은 단계 {', '.join(todo)}는 아직 개발 전입니다.")
-        return
     console.print(f"실행할 단계: {' → '.join(todo)}")
-    for stage in ORDER:  # 앞 단계를 돌린 뒤 상태를 다시 보므로, 결과가 바뀐 단계만 이어서 실행된다
-        if stage not in IMPLEMENTED:
-            if stage in todo:
-                console.print(f"[dim]- {stage}: 아직 개발 전 단계라 건너뜁니다 ({STAGES[stage].milestone} 예정)[/]")
-        elif ws.status(stage) != "done":
+    for stage in ORDER:  # 앞 단계를 돌린 뒤 상태를 다시 보므로, 앞 단계 결과가 그대로면 뒤 단계는 건너뛴다
+        if ws.status(stage) != "done":
             _run_stage(stage, ws)
 
 
