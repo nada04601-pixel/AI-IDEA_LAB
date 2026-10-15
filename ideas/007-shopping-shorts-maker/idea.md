@@ -1,7 +1,7 @@
 # 007. 쇼핑 쇼츠 메이커 (Shopping Shorts Maker)
 
-- 상태: **기획 확정 (요구사항 v1.0) — 개발 시작 전**
-- 프로젝트 코드: 아직 없음 (`projects/007-shopping-shorts-maker` 예정)
+- 상태: **개발진행중 (M0 완료 — 설치·설정·작업 폴더·doctor)**
+- 프로젝트 코드: [projects/007-shopping-shorts-maker](../../projects/007-shopping-shorts-maker)
 - 문서 버전: 1.0
 - 작성일: 2026-10-15
 - 프로젝트 유형: 개인용 CLI + Claude Code 대화형 자동화 (Windows + NVIDIA GPU 우선)

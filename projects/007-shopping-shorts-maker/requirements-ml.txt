@@ -1,0 +1,5 @@
+# AI 모델 패키지 (OCR·음성 인식·이미지 유사도). PyTorch는 setup이 GPU 여부를 보고 먼저 설치한다.
+# M3(수집·필터)부터 사용한다. 실제 GPU PC에서 설치를 검증한 뒤 버전을 고정할 예정.
+easyocr>=1.7,<2
+faster-whisper>=1.2,<2
+open-clip-torch>=3.0,<4

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# 가상환경의 ssm을 실행한다 (setup.sh가 만든 .venv 사용)
+DIR="$(cd "$(dirname "$0")" && pwd)"
+[ -x "$DIR/.venv/bin/python" ] || { echo "[오류] .venv가 없습니다. ./setup.sh를 먼저 실행하세요."; exit 1; }
+exec "$DIR/.venv/bin/python" -m ssm "$@"
