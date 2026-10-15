@@ -8,7 +8,10 @@
 
 ## 명령 실행 방법
 
-- Windows: `ssm.bat <명령>` (이 폴더에서) / Mac·Linux: `./ssm <명령>`
+- Windows: `.venv/Scripts/ssm.exe <명령>` (이 폴더에서) / Mac·Linux: `./ssm <명령>`
+  - **링크는 항상 따옴표로 감싼다.** 샤오홍슈·rednote 공유 링크에는 `&`가 있고, 접근 토큰(`xsec_token`)까지 전부 있어야 열린다.
+  - Windows에서 `ssm.bat`은 PowerShell·bash가 따옴표를 떼어 넘겨 `&` 뒤가 잘리므로 Claude는 `ssm.exe`를 쓴다
+    (`ssm.bat`은 사람이 cmd 창에서 쓸 때만).
 - 설치가 안 되어 있으면 사용자에게 `setup.bat`(Windows) 또는 `./setup.sh` 실행을 안내한다.
 - 문제가 생기면 먼저 `ssm doctor`로 점검한다.
 

@@ -33,8 +33,11 @@ XHS = "https://www.xiaohongshu.com/explore/{:024x}"
 def test_korean_text_reason():
     assert korean_text_reason([["这个水壶"], ["好用"]]) is None
     assert "한글" in korean_text_reason([["这个"], ["진짜좋아요"]])  # 4자 연속
-    assert "비율" in korean_text_reason([["가 나 다 abc"]])  # 한글 3자 / 6자 = 50%
-    assert korean_text_reason([["ABCDEFGHIJKLMNOPQRSTUVWXYZ가"]]) is None  # 1/27 < 10%
+    assert "비율" in korean_text_reason([["가 나 다 abc"], ["라 마 바"]])  # 한글 6자, 2프레임, 6/9
+    assert korean_text_reason([["ABCDEFGHIJKLMNOPQRSTUVWXYZ" * 3 + "가나다"], ["라마바"]]) is None  # 6/84 = 7% < 10%
+    # 실측 오탐: 중국어 자막 영상에서 한국어 OCR이 한자를 '제' 한 글자로 잘못 읽음 → 제외하면 안 된다
+    assert korean_text_reason([["제"], [], ["IIp"], []]) is None
+    assert korean_text_reason([["가 나 다 라 마 바"]]) is None  # 한 프레임에서만 보이면 비율 규칙 적용 안 함
 
 
 def test_korean_speech_and_meta():
@@ -57,6 +60,7 @@ def test_helpers(tmp_path):
     assert platform_of("https://v.douyin.com/abc/") == "douyin"
     assert platform_of("https://example.com/v.mp4") == "other"
     assert title_keyword("折叠电热水壶🔥出差必备 #好物分享[话题]# #旅行#") == "折叠电热水壶 出差必备"
+    assert title_keyword("免打孔的罗马帘买一套这个上梁就搞定了👍 - rednote") == "免打孔的罗马帘买一套这个上梁就搞定了"
     assert collector._media_id(XHS.format(5) + "?xsec_token=a") == collector._media_id(XHS.format(5) + "?xsec_token=b")
 
     assert platform_of("https://www.rednote.com/explore/abc") == "xiaohongshu"  # 샤오홍슈 국제판

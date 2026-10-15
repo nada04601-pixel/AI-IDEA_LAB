@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+import click
 import typer
 import yaml
 from pydantic import ValidationError
@@ -91,9 +92,14 @@ def fonts_cmd(force: bool = typer.Option(False, "--force", help="이미 있어�
 # ---- 프로젝트 ---------------------------------------------------------------------
 
 
+def _is_terminal() -> bool:
+    """사람이 직접 입력하는 창인지 (Claude Code·스크립트에서는 묻지 않고 기본값)."""
+    return sys.stdin.isatty()
+
+
 def _ask_choice(label: str, choices: list[str], default: str) -> str:
     return typer.prompt(f"{label} ({'/'.join(choices)})", default=default,
-                        type=typer.Choice(choices, case_sensitive=False))
+                        type=click.Choice(choices, case_sensitive=False))
 
 
 @app.command("new")
@@ -109,7 +115,7 @@ def new_cmd(
     """새 프로젝트를 만든다."""
     if not source and not local:
         fail("URL·키워드 또는 --local 파일 중 하나는 필요합니다.")
-    interactive = sys.stdin.isatty() and not yes
+    interactive = _is_terminal() and not yes
     if interactive:
         if duration is None:
             duration = int(_ask_choice("영상 길이(초)", [str(d) for d in DURATIONS], "30"))
@@ -132,6 +138,9 @@ def new_cmd(
         src = Source(type="local", value=source, files=[str(p.resolve()) for p in local])
     elif source.startswith(("http://", "https://")):
         src = Source(type="url", value=source)
+        if _looks_cut(source):
+            console.print("[yellow][주의][/] 링크에 접근 토큰(xsec_token)이 없습니다 — 공유 링크의 '&' 뒤가 잘렸을 수 있습니다.\n"
+                          "  PowerShell에서 ssm.bat을 쓰면 '&' 뒤가 잘립니다 → `.venv\\Scripts\\ssm.exe new \"링크\"`를 쓰세요.")
     else:
         src = Source(type="keyword", value=source)
 
@@ -155,6 +164,13 @@ def new_cmd(
         console.print("  다음 단계: `ssm run`으로 수집·분석 → `ssm script --preset N`으로 대본 요청서 → 대본 작성 → `ssm run`")
     else:
         console.print("  다음 단계: `ssm collect` (같은 상품 영상 수집·필터) → `ssm analyze` → `ssm script --preset N`")
+
+
+def _looks_cut(url: str) -> bool:
+    """샤오홍슈·rednote 글 링크인데 접근 토큰이 없으면 (짧은 링크 xhslink 제외) — 열 때 보안 오류가 난다."""
+    from ssm.downloader import platform_of
+
+    return platform_of(url) == "xiaohongshu" and "xhslink.com" not in url and "xsec_token=" not in url
 
 
 @app.command("list")
