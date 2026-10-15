@@ -1,13 +1,13 @@
 # 007. 쇼핑 쇼츠 메이커 (Shopping Shorts Maker)
 
-- 상태: **기획 (요구사항 v0.2, 미결정 사항 확인 중)**
+- 상태: **기획 확정 (요구사항 v1.0) — 개발 시작 전**
 - 프로젝트 코드: 아직 없음 (`projects/007-shopping-shorts-maker` 예정)
-- 문서 버전: 0.2
+- 문서 버전: 1.0
 - 작성일: 2026-10-15
-- 프로젝트 유형: 개인용 CLI + Claude Code 대화형 자동화
+- 프로젝트 유형: 개인용 CLI + Claude Code 대화형 자동화 (Windows + NVIDIA GPU 우선)
 - 목표: 해외 숏폼 링크 하나로 수집 → 대본 → TTS → 자막 제거·한국어 자막 → 컷 편집 → 썸네일·캡션까지 자동화
 - 관련 아이디어:
-  - [006 AI Shorts Studio](../006-ai-shorts-studio/idea.md) — FFmpeg 렌더링·자막(SRT)·TTS 어댑터 구조가 겹치므로 재사용 여부 검토 (10장 미결정 사항 7번)
+  - [006 AI Shorts Studio](../006-ai-shorts-studio/idea.md) — 영역이 겹치지만 **코드를 공유하지 않고 별도로 개발**한다 (10장 결정 7). 006에서 얻은 Windows 실행·FFmpeg 경로 처리 노하우만 참고
   - [005 오늘의 떡상 쇼츠 분석기](../005-shorts-trend/idea.md) — 급상승 키워드를 상품 탐색·해시태그에 활용 가능
 
 ---
@@ -21,6 +21,8 @@
 > 3. 마일스톤(9장) 순서대로 구현하고, 각 마일스톤의 완료 기준(Acceptance Criteria)을 만족시킨 뒤 다음으로 넘어간다.
 
 > **v0.1 → v0.2 변경 요약:** LLM 비용 구조 명시(아키텍처 신설), 데이터 스키마·config 예시 추가, 상품 일치성 검증·BGM/라우드니스·세이프존·자막 줄바꿈 규칙 보완, 한국인 '얼굴' 판별을 현실적인 신호(한글 OCR·한국어 음성·작성자 메타데이터)로 교체, 법적 고지/리스크, 에러 처리, 마일스톤·완료 기준, 미결정 사항 추가.
+>
+> **v0.2 → v1.0 변경 요약:** 10장 미결정 사항 확정 — Claude Code 대화형, 비슷한 분위기 영상 허용(단 상품이 보이는 구간은 같은 상품만), 원본 소리 완전 음소거, 광고 표시 3종 프로필(쿠팡·알리·직접 입력), Windows + NVIDIA GPU 기준, 길이·fps 프로젝트별 선택, 부계정 쿠키, 006과 별도 개발.
 
 ---
 
@@ -29,7 +31,7 @@
 * **목적:** 해외 숏폼(샤오홍슈, 도우인 등) 링크 하나만 입력하면 원본 영상 수집부터 대본 작성, TTS 더빙, 중국어 자막 제거, 한국어 자막 생성, 컷 편집, 썸네일/설명글 생성까지 전 과정을 자동화하는 CLI 및 대화형 에이전트 기반 프로그램 구축.
 * **핵심 가치:** 건당 과금되는 외부 API 없이, 기존 Claude 구독 환경(Claude Code)과 무료 TTS/오픈소스 라이브러리로 추가 비용 없이 쇼츠 영상 제작.
 * **타깃 사용자:** 쿠팡 파트너스 등 제휴 마케팅으로 쇼핑 쇼츠를 운영하는 1인 크리에이터 (비개발자 포함).
-* **목표 성능:** 링크 입력 → 최종 MP4까지 **10분 이내** (CPU 기준, 다운로드 시간 제외), 사람 손 개입은 "프리셋 선택"과 "최종 확인" 2회.
+* **목표 성능:** 링크 입력 → 최종 MP4까지 **5분 이내** (NVIDIA GPU 기준, 다운로드 시간 제외. CPU만 쓰면 15분 이내), 사람 손 개입은 "프리셋 선택"과 "최종 확인" 2회.
 
 ### 1.1 범위 밖 (Non-Goals, v1 기준)
 * 플랫폼 자동 업로드(유튜브/인스타/틱톡 API 연동)
@@ -42,7 +44,7 @@
 ## 2. 시스템 아키텍처 (신설)
 
 ### 2.1 "추가 비용 0원"의 실제 의미
-대본 생성(Module 2)과 자연어 수정 해석(Module 6)은 **LLM이 반드시 필요**합니다. 별도 API 키 없이 이를 해결하는 방식은 다음 중 하나이며, **기본값은 A안**입니다.
+대본 생성(Module 2)과 자연어 수정 해석(Module 6)은 **LLM이 반드시 필요**합니다. 아래 세 방식 중 **A안으로 확정**했습니다 (B·C안은 인터페이스만 열어두고 v1에서는 구현하지 않음).
 
 | 방식 | 설명 | 비용 | 비고 |
 |---|---|---|---|
@@ -95,10 +97,15 @@ thumbnail.png + caption.txt
 * **입력:** 타깃 상품 영상 URL(샤오홍슈/도우인/틱톡) 또는 키워드(중국어 키워드 권장, 한국어 입력 시 Claude가 중국어 검색어로 변환).
 * **유사 영상 다중 다운로드:** 해당 영상을 포함해 같은 상품의 원본 영상을 **최대 N개(기본 5개, 후보는 10개까지 탐색)** 검색·다운로드.
   * 플랫폼별 다운로더를 `Downloader` 인터페이스로 분리 (`yt-dlp` 우선 → 실패 시 `playwright` 폴백).
-  * 샤오홍슈/도우인은 비로그인 접근이 제한되므로 **브라우저 쿠키 파일(`cookies.txt`) 경로**를 config로 받는다. 쿠키 만료 시 명확한 안내 메시지 출력.
+  * 샤오홍슈/도우인은 비로그인 접근이 제한되므로 **부계정의 브라우저 쿠키 파일(`cookies.txt`) 경로**를 config로 받는다 (확정: 본계정 사용 금지 권장). 쿠키 만료·차단 시 명확한 안내 메시지 출력, `docs/cookies.md`에 Chrome 확장으로 쿠키를 내보내는 방법 안내. 쿠키 파일은 `.gitignore`에 포함.
   * 워터마크 없는 원본 URL을 우선 사용, 불가 시 플랫폼 워터마크 위치를 `analysis.json`에 기록해 Module 4에서 함께 가린다.
   * 요청 간 랜덤 지연(2~5초), 동시 다운로드 2개 이하 (차단 방지).
-* **상품 일치성 검증 (신설):** 유사 영상이 *다른 상품*일 경우 교차 편집 시 영상이 망가지므로, 기준 영상의 대표 프레임과 후보 영상 프레임 간 **CLIP 임베딩 유사도**(`open_clip`, CPU 가능)를 비교해 임계값(기본 0.80) 미만은 제외.
+* **유사도 등급 분류 (확정: 비슷한 분위기 영상 허용):** 기준 영상 대표 프레임과 후보 영상 프레임 간 **CLIP 임베딩 유사도**(`open_clip`)로 후보를 두 등급으로 나눈다.
+  * `same_product` (기본 0.80 이상): 같은 상품. 모든 구간에 사용 가능.
+  * `mood` (0.60 이상 ~ 0.80 미만): 분위기·상황이 비슷한 다른 영상. **훅·문제 제기 구간(`hook`, `problem`)에만** 사용하고, 상품이 직접 보이는 `demo`·`benefit`·`cta` 구간에는 쓰지 않는다 (다른 상품을 광고 상품처럼 보여주면 허위·기만 광고 소지).
+  * 0.60 미만은 제외. 등급과 점수는 `candidates.json`에 기록하고, 사용자가 등급을 직접 바꿀 수 있다.
+  * `same_product` 영상이 1개뿐이면 그 영상의 샷을 최대한 나눠 쓰고, 부족하면 사용자에게 같은 상품 영상 추가(URL 또는 로컬 파일)를 요청한다.
+* **로컬 파일 입력:** URL 대신 `ssm new --local <파일들>`로 직접 받아둔 영상을 넣을 수 있다 (다운로드가 막혔을 때의 대안).
 * **국내 콘텐츠 필터링 (필수):** 다음 중 하나라도 해당하면 제외하고 사유를 `candidates.json`에 기록.
   1. **한글 텍스트:** 영상 길이 기준 균등 8프레임 샘플링 → OCR → 한글 음절(U+AC00–U+D7A3) 비율이 인식 문자 중 10% 이상 또는 한글 4자 이상 연속 검출.
   2. **한국어 음성:** 원본 오디오 앞 30초를 `faster-whisper`(tiny/base) 언어 감지 → `ko` 확률 0.5 이상.
@@ -120,7 +127,7 @@ Module 2·4가 공통으로 쓰는 분석 결과를 한 번만 계산해 캐시�
   * ① 호기심 유발/문제 해결형, ② 내돈내산 찐리뷰형, ③ 가성비/할인 강조형, ④ 정보성 큐레이션형(계정 육성용)
 * **상품 정보 입력:** 상품명, 핵심 특징 3개, 가격대(선택). 원본 영상 제목/설명(중국어)을 번역·요약해 초안을 자동 채우고 사용자가 확인.
 * **레퍼런스 클로닝:** 벤치마킹 영상 링크 → `faster-whisper`로 음성 전사 → 화법(문장 길이, 훅 구조, 어미, 말 속도)을 분석해 동일 스타일로 대본 생성. 텍스트 예시를 직접 붙여넣는 것도 지원.
-* **분량 규칙:** 목표 길이(기본 **30초**, 범위 15~60초) × 한국어 TTS 기준 약 **초당 6~7음절**로 글자 수 상한 계산.
+* **분량 규칙:** 프로젝트 생성 시 선택한 목표 길이(15·30·45·60초 중 선택, 기본 **30초**) × 한국어 TTS 기준 약 **초당 6~7음절**로 글자 수 상한 계산.
 * **구조:** `hook(0~3초)` → `problem/curiosity` → `product demo` → `benefit` → `CTA` 섹션으로 구성하고, 각 문장에 강조 키워드와 효과음 큐를 태깅.
 * **CTA 자동 삽입:** 영상 후반부에 댓글 유도 문구 자동 포함 (예: "상품 정보 궁금하시면 댓글에 '링크' 남겨주세요!").
 * **금지 표현 검사:** 과장·허위 광고 소지 표현("100% 효과", "최저가 보장", 의학적 효능 등) 목록을 두고 생성 후 자동 검사.
@@ -132,6 +139,7 @@ Module 2·4가 공통으로 쓰는 분석 결과를 한 번만 계산해 캐시�
 * **문장 단위 생성 후 결합:** 문장별로 TTS를 생성해 이어 붙인다(문장 사이 무음 120~200ms). 부분 수정 시 바뀐 문장만 재생성.
 * **커스텀 TTS 확장 구조:** `TTSProvider` 인터페이스(`synthesize(text, voice) -> (audio_path, word_timings)`). ElevenLabs/OpenAI/Typecast 등은 API 키가 있을 때만 활성화. 타임스탬프를 주지 않는 엔진은 `faster-whisper` 강제 정렬로 보완.
 * **효과음(SFX) 믹싱:** `script.json`의 SFX 큐 위치에 `assets/sfx/` 에셋 자동 배치 (훅=whoosh, 강조=pop/ding, 전환=swish).
+* **원본 소리 (확정):** 원본 영상의 오디오(중국어 음성·현장음·BGM)는 **완전 음소거**하고 TTS + SFX + 새 BGM만 사용한다.
 * **BGM (신설):** `assets/bgm/`의 저작권 프리 음원을 깔고, 음성 구간에서 **사이드체인 덕킹**(FFmpeg `sidechaincompress`)으로 BGM을 -18dB 수준으로 낮춤.
 * **라우드니스 정규화 (신설):** 최종 오디오 **-14 LUFS, True Peak -1.0 dBTP** (`loudnorm` 2-pass).
 * **실패 처리:** edge-tts는 비공식 엔드포인트라 차단·변경될 수 있음 → 3회 재시도 후 실패 시 대체 엔진(로컬 TTS 또는 사용자 API 키)으로 전환 안내.
@@ -139,8 +147,9 @@ Module 2·4가 공통으로 쓰는 분석 결과를 한 번만 계산해 캐시�
 ### Module 4. 영상 편집 및 후처리 (`video_editor.py`)
 * **기존 외국어 자막 제거/가리기:** Module 1.5의 "고정 텍스트 영역"을 대상으로 아래 방식 중 config로 선택.
   * `crop` (기본 후보): 자막이 화면 상·하단 가장자리에만 있으면 잘라내고 9:16으로 재확대
-  * `blur` (기본값): 해당 영역 가우시안 블러 + 반투명 박스. 새 한국어 자막을 그 위에 얹어 자연스럽게 가림
-  * `inpaint` (선택): OpenCV `cv2.inpaint`(빠름, 품질 낮음) / LaMa·ProPainter(고품질, GPU 필요)
+  * `blur`: 해당 영역 가우시안 블러 + 반투명 박스. 새 한국어 자막을 그 위에 얹어 자연스럽게 가림
+  * `inpaint`: LaMa(프레임 단위, NVIDIA GPU) 또는 ProPainter(영상 단위, 고품질·느림). GPU가 없으면 OpenCV `cv2.inpaint`
+  * `auto` (기본값, 확정): CUDA GPU가 감지되면 `inpaint`(LaMa), 아니면 `blur`. 인페인팅 결과가 깨지면(전후 프레임 차이 급증) 해당 구간만 `blur`로 폴백
   * 자막 영역이 프레임마다 달라지는 경우(동적 자막)는 프레임별 OCR 마스크를 적용하되, 처리 시간 상한(기본 2분)을 넘으면 `blur` 박스로 폴백.
 * **9:16 정규화:** 가로/정사각 원본은 블러 배경 + 중앙 배치(또는 스마트 크롭)로 1080x1920 변환.
 * **자동 컷 편집 및 싱크 매칭:**
@@ -153,9 +162,14 @@ Module 2·4가 공통으로 쓰는 분석 결과를 한 번만 계산해 캐시�
   * 한 줄 최대 **14자**, 최대 2줄, 한 화면 표시 0.6~2.5초. 조사·어절 단위로 줄바꿈(단어 중간 분리 금지).
   * 강조 키워드는 색상 변경(기본 노란색), 외곽선 6~8px, 선택적 반투명 배경 박스.
   * 렌더링 방식: Pillow로 자막 PNG 생성 후 FFmpeg `overlay` (Windows에서 `drawtext`/libass 폰트 경로 문제 회피). ASS 자막 방식은 옵션.
-* **광고 표시:** 영상 **시작부터 끝까지** 상단 고정. 문구는 `config.yaml`에서 지정 (6장 config 예시 참고).
+* **광고 표시 (확정: 3종 프로필):** 영상 **시작부터 끝까지** 상단 고정. 프로젝트마다 프로필을 하나 고른다 (6장 config 예시 참고).
+  * `coupang`: 쿠팡 파트너스 필수 문구 "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
+  * `aliexpress`: "이 영상은 알리익스프레스 어필리에이트 활동의 일환으로, 구매 시 일정액의 수수료를 받을 수 있습니다." (권장 문구 — 프로그램 약관에서 지정 문구가 있으면 그것으로 교체)
+  * `custom`: 사용자가 입력한 문구 (예: "유료 광고 포함", "OO로부터 제품을 제공받아 제작")
+  * 화면에는 왼쪽 상단에 `광고` 배지를 두고, 그 옆에 프로필 문구를 작은 글씨(2줄 이내)로 상시 표시. 같은 문구를 캡션 첫 줄에도 넣는다.
+  * 광고 표시는 끌 수 없게 하고, 프로필을 고르지 않으면 렌더링을 멈추고 선택을 요청한다.
 * **플랫폼 세이프존 (신설):** 자막·광고표시가 UI에 가리지 않도록 **상단 250px, 하단 400px, 우측 150px**는 핵심 텍스트 배치 금지. 자막 기본 위치는 화면 높이 62~70% 지점.
-* **표준 규격 렌더링:** `1080x1920`, `30fps`(기본) 또는 `60fps`, `H.264 High / yuv420p / CRF 20 / AAC 192kbps / +faststart`.
+* **표준 규격 렌더링:** `1080x1920`, fps는 프로젝트별 선택(`30` 기본 / `60`), `H.264 High / yuv420p / CRF 20 / AAC 192kbps / +faststart`.
 * **미리보기 모드:** `--preview` 시 540x960, `ultrafast` 프리셋으로 빠르게 렌더링해 확인 후 최종 렌더.
 * **출력:** `timeline.json`(컷 목록 — 자막만 바꿀 때 재사용), `final_output.mp4`
 
@@ -185,13 +199,15 @@ Module 2·4가 공통으로 쓰는 분석 결과를 한 번만 계산해 캐시�
 
 1. **원클릭 설치 (One-Click Setup):**
    * `setup.bat`(Windows) / `setup.sh`(Mac/Linux) 제공.
-   * Python 3.10~3.12 확인 → 가상환경 생성 → `requirements.txt` 설치 → FFmpeg 확인(없으면 Windows는 `winget install Gyan.FFmpeg`, Mac은 `brew install ffmpeg`, Linux는 패키지 매니저 안내) → 폰트 자동 다운로드 → `ssm doctor`로 설치 검증.
+   * **Windows가 1순위 (확정).** `setup.bat`은 더블클릭용 껍데기이고 실제 작업은 `setup.ps1`이 한다 (Windows PowerShell 5.1 호환 문법, UTF-8 BOM 저장 — 006에서 검증된 방식).
+   * Python 3.11~3.12 확인 → 가상환경 생성 → `nvidia-smi`로 GPU 감지 시 **CUDA용 PyTorch**, 없으면 CPU용 설치 → `requirements.txt` 설치 → FFmpeg 확인(없으면 `winget install Gyan.FFmpeg`, Mac은 `brew install ffmpeg`) → 폰트 자동 다운로드 → `ssm doctor`로 설치 검증 (GPU 인식 여부 포함).
    * 폰트는 **상업적 이용이 허용된 라이선스(OFL 등)** 만 사용하고, GitHub 릴리스 등 **고정 다운로드 URL + SHA256 체크섬**으로 받는다. (예: Pretendard — OFL)
    * 무거운 의존성(OCR 모델, CLIP, whisper)은 첫 실행 시 지연 다운로드하고 진행률 표시.
 2. **상태 저장 및 캐싱 (Workspace Management):**
    * `workspace/{project_id}/`에 단계별 산출물 저장, `state.json`으로 부분 재실행 (2.3 참고).
    * `project_id` 형식: `YYYYMMDD-HHMM-{상품슬러그}`.
-3. **하드웨어 요구사항:** 최소 CPU 4코어 / RAM 8GB / 여유 디스크 5GB. NVIDIA GPU가 있으면 OCR·whisper·inpaint 자동 가속.
+3. **하드웨어 요구사항 (확정):** 기준 환경은 **Windows 10/11 + NVIDIA GPU(VRAM 6GB 이상 권장)**, RAM 16GB, 여유 디스크 15GB(모델 포함). OCR·whisper·CLIP·LaMa를 GPU로 실행하고, FFmpeg 인코딩은 `h264_nvenc` 사용 가능 시 선택(`video.encoder: auto`). GPU가 없어도 CPU로 동작은 해야 한다 (느려질 뿐).
+   * **목표 성능(GPU 기준):** 30초 영상 1편, 다운로드 제외 **5분 이내**.
 4. **크로스 플랫폼:** 모든 파일 입출력 UTF-8 고정, 경로는 `pathlib` 사용, 한글/공백 포함 경로 테스트 필수.
 5. **로깅·에러 처리:** 단계별 로그를 `workspace/{id}/logs/`에 저장. 사용자에게는 "무엇이 실패했고 → 무엇을 하면 되는지" 형태의 한국어 메시지 출력. 네트워크 작업은 지수 백오프 재시도.
 6. **테스트:** 각 모듈 단위 테스트(`pytest`) + 샘플 영상 3개(`tests/fixtures/`, 직접 제작한 저작권 문제 없는 영상)로 E2E 스모크 테스트.
@@ -202,7 +218,8 @@ Module 2·4가 공통으로 쓰는 분석 결과를 한 번만 계산해 캐시�
 
 | 용도 | 라이브러리 | 비고 |
 |---|---|---|
-| 언어 | Python 3.10+ | |
+| 언어 | Python 3.11~3.12 | CUDA PyTorch 휠 호환 범위 |
+| GPU | PyTorch (CUDA 12.x) | OCR·whisper·CLIP·LaMa 공용, `device: auto` |
 | CLI | `typer`, `rich` | 서브커맨드·진행률 표시 |
 | 설정/스키마 | `pyyaml`, `pydantic` v2 | `script.json` 등 스키마 검증 |
 | 영상 다운로드 | `yt-dlp`, `playwright` | 쿠키 파일 지원 |
@@ -237,7 +254,9 @@ Module 2·4가 공통으로 쓰는 분석 결과를 한 번만 계산해 캐시�
 
 ### 6.2 `config.yaml` (주요 항목)
 ```yaml
-video:   { width: 1080, height: 1920, fps: 30, crf: 20 }
+# 아래는 기본값. 길이·fps·광고 프로필은 `ssm new` 때 프로젝트별로 고르고 workspace/{id}/project.yaml에 저장된다
+project: { duration_sec: 30 }            # 15 | 30 | 45 | 60
+video:   { width: 1080, height: 1920, fps: 30, crf: 20, encoder: auto }   # fps: 30 | 60, encoder: auto | libx264 | h264_nvenc
 subtitle:
   font: assets/fonts/Pretendard-ExtraBold.otf
   size: 78
@@ -247,23 +266,29 @@ subtitle:
   emphasis_color: "#FFE14D"
   stroke_width: 7
   box: false
-foreign_sub_removal: blur        # crop | blur | inpaint
+foreign_sub_removal: auto        # auto | crop | blur | inpaint
 ad_disclosure:
-  enabled: true
-  text: "유료 광고 포함 · 쿠팡 파트너스 활동의 일환으로 일정액의 수수료를 제공받습니다"
-  position: top_center
+  profile: null                  # coupang | aliexpress | custom — 비어 있으면 렌더링 전에 선택 요청
+  custom_text: ""
+  profiles:
+    coupang: "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
+    aliexpress: "이 영상은 알리익스프레스 어필리에이트 활동의 일환으로, 구매 시 일정액의 수수료를 받을 수 있습니다."
+  position: top_left
 tts:     { provider: edge, voice: ko-KR-SunHiNeural, rate: "+10%" }
-audio:   { bgm: auto, bgm_duck_db: -18, target_lufs: -14 }
+audio:   { original: mute, bgm: auto, bgm_duck_db: -18, target_lufs: -14 }
 collector:
   max_videos: 5
-  clip_similarity_threshold: 0.80
-  cookies_file: null
-llm:     { provider: claude_code }   # claude_code | anthropic_api | ollama
+  same_product_threshold: 0.80   # 이상: 모든 구간 사용
+  mood_threshold: 0.60           # 이상~same 미만: hook·problem 구간에만 사용
+  cookies_file: secrets/cookies.txt   # 부계정 쿠키 (Git 제외)
+device: auto                     # auto | cuda | cpu
+llm:     { provider: claude_code }   # v1은 claude_code만 구현
 ```
 
 ### 6.3 CLI 명령어
 ```text
-ssm new <url|keyword>          # 프로젝트 생성 + collect + analyze
+ssm new <url|keyword> [--local 파일...] [--duration 30] [--fps 30] [--ad coupang]
+                               # 프로젝트 생성 + collect + analyze (옵션 생략 시 대화형으로 질문)
 ssm script <id> --preset 1     # (A안) 프롬프트 출력 / (B안) 대본 생성
 ssm tts <id>
 ssm edit <id> [--preview]
@@ -277,9 +302,12 @@ ssm status <id> | rollback <id> v2 | doctor
 ## 7. 권장 디렉토리 구조 (Directory Structure)
 
 ```text
-shopping-shorts-maker/
+projects/007-shopping-shorts-maker/   # 006과 코드 공유 없음 (독립 프로젝트)
 ├── CLAUDE.md                 # Claude Code용 워크플로우, 명령어, 수정 요청→재실행 매핑표
-├── setup.bat / setup.sh      # 원클릭 설치
+├── setup.bat / setup.ps1     # Windows 원클릭 설치 (bat는 ps1 실행용 껍데기)
+├── setup.sh                  # Mac/Linux 설치
+├── docs/                     # 사용 가이드, cookies.md(부계정 쿠키 내보내기)
+├── secrets/                  # cookies.txt 등 (Git 제외)
 ├── requirements.txt
 ├── config.yaml
 ├── assets/
@@ -314,6 +342,7 @@ shopping-shorts-maker/
 
 | 리스크 | 내용 | 대응 |
 |---|---|---|
+| **분위기 영상 혼용** | 다른 상품이 나오는 장면을 광고 상품처럼 보여주면 기만 광고 소지 | `mood` 등급 영상은 훅·문제 제기 구간에만 사용 (Module 1) |
 | **원본 영상 저작권** | 해외 영상이라도 저작권은 원작자에게 있음. "국내 크리에이터 필터"는 분쟁 가능성을 줄일 뿐 **적법성을 보장하지 않음**. 플랫폼 신고 시 채널 경고·수익 정지 가능 | 판매자 공식 영상·허락받은 영상 우선, 원작자 출처 표기 옵션, 사용자 책임 고지를 첫 실행 시 표시 |
 | **플랫폼 약관** | 샤오홍슈·도우인 스크래핑은 약관 위반 소지, 계정 차단 가능 | 부계정 쿠키 사용 권장, 요청 속도 제한 |
 | **광고 표시 의무** | 공정위 「추천·보증 등에 관한 표시·광고 심사지침」: 광고 표시는 영상 **시작 부분과 전체**, 그리고 게시물 **제목/본문 첫머리**에 명확히 | 광고 워터마크 상시 고정 + 캡션 첫 줄 자동 삽입 (끌 수 없도록 기본값 강제) |
@@ -327,7 +356,7 @@ shopping-shorts-maker/
 
 | 단계 | 내용 | 완료 기준 |
 |---|---|---|
-| M0 | 뼈대: 디렉토리, `setup.*`, `config.yaml`, `workspace.py`, CLI 골격, `ssm doctor` | 새 PC에서 setup 1회 실행 후 `ssm doctor` 전 항목 통과 |
+| M0 | 뼈대: 디렉토리, `setup.*`, `config.yaml`, `workspace.py`, CLI 골격, `ssm doctor` | Windows + NVIDIA PC에서 `setup.bat` 더블클릭 1회 후 `ssm doctor` 전 항목 통과 (CUDA 인식 포함) |
 | M1 | TTS + 자막 + 단일 영상 렌더 (로컬 mp4 입력) | 로컬 영상 1개 + 대본 json → 자막·광고표시 포함 1080x1920 MP4 생성 |
 | M2 | 다중 영상 컷 편집 + 외국어 자막 블러 + BGM/SFX/라우드니스 | 샘플 3개 영상으로 30초 쇼츠, 컷이 문장 경계에 맞음, -14 LUFS ±1 |
 | M3 | 수집기 + 필터 (yt-dlp → playwright 폴백) | 완료 기준은 Module 1 참고 |
@@ -339,17 +368,25 @@ shopping-shorts-maker/
 
 ---
 
-## 10. 미결정 사항 (Open Questions)
-1. LLM 방식: A(Claude Code) / B(API) / C(로컬) 중 기본값 확정 필요
-2. 주 사용 OS (Windows 우선 여부), GPU 유무
-3. 광고 표시 문구 기본값 — 쿠팡 파트너스 고정인지, 다른 제휴(알리 어필리에이트 등)도 지원하는지
-4. 유사 영상 검색 범위 — "같은 상품의 다른 영상"인지, "비슷한 분위기의 다른 상품 영상"까지 허용인지
-5. 원본 영상의 음성/배경음 처리 — 완전 음소거 vs 낮은 볼륨 유지
-6. 목표 영상 길이 기본값(30초 제안)과 60fps 필요 여부
-7. 006 AI Shorts Studio와의 관계 — 별도 CLI 프로젝트로 갈지, 006의 렌더링·TTS·자막 모듈을 공유(또는 006에 '쇼핑 모드'로 통합)할지
+## 10. 결정 사항 (2026-10-15 확정)
+
+| # | 항목 | 결정 | 반영 위치 |
+|---|---|---|---|
+| 1 | 대본·수정 해석 방식 | **Claude Code 대화형 (A안)** — 추가 비용 0원 | 2.1, Module 6 |
+| 2 | 유사 영상 범위 | **비슷한 분위기 영상도 허용**. 단 상품이 보이는 구간은 같은 상품 영상만 | Module 1, 8장 |
+| 3 | 원본 영상 소리 | **완전 음소거** (TTS + SFX + 새 BGM) | Module 3 |
+| 4 | 광고 표시 | **쿠팡 파트너스 / 알리익스프레스 어필리에이트 / 직접 입력** 3종 프로필, 프로젝트별 선택 | Module 4, 6.2 |
+| 5 | 사용 환경 | **Windows + NVIDIA GPU** 우선 (CPU·Mac도 동작은 보장) | 4장 |
+| 6 | 영상 길이·fps | **프로젝트별 선택** — 길이 15/30/45/60초(기본 30), fps 30/60(기본 30) | Module 2·4, 6.2 |
+| 7 | 006과의 관계 | **별도 프로젝트로 독립 개발** (코드 공유 없음) | 머리말, 7장 |
+| 8 | 수집 계정 | **부계정 쿠키** 사용, 로컬 파일 입력도 지원 | Module 1 |
+
+### 남은 확인 사항 (개발 중 결정해도 되는 것)
+* 기본 TTS 목소리 (여성 `SunHi` / 남성 `InJoon` / `Hyunsu`) — M1에서 샘플을 들어보고 결정
+* 기본 BGM·효과음 에셋 출처 (YouTube 오디오 보관함 등) — M2에서 결정
 
 ---
 
 ## 11. Claude에게 바로 입력할 첫 번째 개발 프롬프트
 
-> **"첨부한 `shopping_shorts_maker_spec.md` 문서를 숙지해 줘. 9장 마일스톤 M0부터 시작하자. 7장 디렉토리 구조에 맞춰 뼈대 파일, `requirements.txt`, `config.yaml`, `setup.bat`/`setup.sh`, `workspace.py`, `ssm doctor` 명령까지 작성하고, M0 완료 기준을 어떻게 확인했는지 알려줘. 그다음 M1로 넘어가기 전에 나에게 확인받아."**
+> **"`ideas/007-shopping-shorts-maker/idea.md`를 숙지해 줘. 9장 마일스톤 M0부터 시작하자. 7장 디렉토리 구조에 맞춰 `projects/007-shopping-shorts-maker/`에 뼈대 파일, `requirements.txt`, `config.yaml`, `setup.bat`/`setup.ps1`/`setup.sh`, `workspace.py`, `ssm doctor` 명령까지 작성하고, M0 완료 기준을 어떻게 확인했는지 알려줘. 006 코드는 참고만 하고 수정하지 마. M1로 넘어가기 전에 나에게 확인받아."**

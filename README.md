@@ -11,4 +11,4 @@
 | 004 | 마음장부 (주고받은 경조사비 장부·사진 등록·백업) | **개발진행중 (MVP 구현 완료, 안드로이드 테스트 앱)** | [projects/004-maeum-jangbu](projects/004-maeum-jangbu) | [ideas/004-gyeongjosa-ledger](ideas/004-gyeongjosa-ledger/idea.md) |
 | 005 | 오늘의 떡상 쇼츠 분석기 (급상승 쇼츠·키워드 순위) | **공개 페이지 (1시간마다 자동 수집, [링크](https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/))** | [projects/005-shorts-trend](projects/005-shorts-trend) | [ideas/005-shorts-trend](ideas/005-shorts-trend/idea.md) |
 | 006 | AI Shorts Studio (주제 → 대본·장면 생성 → 장면별 승인 → MP4 렌더링) | **MVP 완료 (1~5단계, mock 공급자 — 실제 AI 연결 전)** | [projects/006-ai-shorts-studio](projects/006-ai-shorts-studio) | [ideas/006-ai-shorts-studio](ideas/006-ai-shorts-studio/idea.md) |
-| 007 | 쇼핑 쇼츠 메이커 (해외 숏폼 링크 → 대본·TTS·자막 교체·컷 편집·썸네일 자동화) | **기획 (요구사항 v0.2)** | - | [ideas/007-shopping-shorts-maker](ideas/007-shopping-shorts-maker/idea.md) |
+| 007 | 쇼핑 쇼츠 메이커 (해외 숏폼 링크 → 대본·TTS·자막 교체·컷 편집·썸네일 자동화) | **기획 확정 (요구사항 v1.0)** | - | [ideas/007-shopping-shorts-maker](ideas/007-shopping-shorts-maker/idea.md) |
