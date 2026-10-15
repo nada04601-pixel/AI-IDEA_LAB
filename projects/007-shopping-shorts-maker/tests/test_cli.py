@@ -3,6 +3,8 @@ from typer.testing import CliRunner
 from ssm.main import app
 from ssm.workspace import Workspace
 
+from conftest import make_video, needs_ffmpeg
+
 runner = CliRunner()
 
 
@@ -64,17 +66,18 @@ def test_set_and_list(home):
 
 def test_unimplemented_stage_exit_code(home):
     invoke("new", "전기포트", "-y")
-    r = invoke("collect")
+    r = invoke("meta")
     assert r.exit_code == 2
-    assert "M3" in r.output
+    assert "M5" in r.output
 
 
-def test_tts_and_run_without_script(home):
-    invoke("new", "전기포트", "-y")
+@needs_ffmpeg
+def test_tts_and_run_without_script(home, tmp_path):
+    invoke("new", "--local", str(make_video(tmp_path / "a.mp4")), "-y")
     r = invoke("tts")
     assert r.exit_code == 1 and "script.json이 없습니다" in r.output
-    r = invoke("run")  # 수집은 건너뛰고, 분석에서 영상이 없으니 추가하라고 알린다
-    assert r.exit_code == 1 and "건너뜁니다" in r.output and "ssm add" in r.output
+    r = invoke("run")  # 수집(로컬)·분석까지 하고, 대본은 건너뛰고, tts에서 대본이 없다고 알린다
+    assert r.exit_code == 1 and "▶ 영상 분석" in r.output and "건너뜁니다" in r.output and "script.json" in r.output
 
 
 def test_no_project_message(home):

@@ -64,6 +64,10 @@ class EasyOCRDetector:
 
 def load_detector(cfg: AppConfig) -> tuple[TextDetector | None, str]:
     """(검출기, 실패 이유). PyTorch·EasyOCR를 쓸 수 없으면 검출기 없이 진행한다."""
+    from ssm.doctor import native_runtime_problem
+
+    if problem := native_runtime_problem():
+        return None, problem
     try:
         import torch
 
@@ -245,6 +249,13 @@ def run_analyze(ws: Workspace, cfg: AppConfig | None = None, detector: TextDetec
                         for v in json.loads(out.read_text(encoding="utf-8"))["videos"]}
         except (ValueError, KeyError, TypeError):
             previous = {}
+    selected = ws.path / "selected.json"  # 수집 단계가 정한 등급이 우선 (사용자는 selected.json에서 바꾼다)
+    if selected.is_file():
+        try:
+            previous.update({v["file"]: v["grade"]
+                             for v in json.loads(selected.read_text(encoding="utf-8"))["videos"]})
+        except (ValueError, KeyError, TypeError):
+            pass
 
     if detector is None:
         log("  글자 영역 검출기(OCR) 준비 중… (처음에는 모델을 내려받아 시간이 걸립니다)")

@@ -50,6 +50,10 @@ audio:
   target_lufs: -14
 
 collector:
+  keyword: null                # 같은 상품 검색어 (중국어 권장, 비우면 기준 영상 제목) — `ssm collect --keyword`로 지정
+  urls: []                     # 직접 지정한 추가 후보 링크 — `ssm collect --url`
+  max_candidates: 10           # 검사할 후보 수
+  delay_sec: [2, 5]            # 요청 사이 무작위 대기(초), 차단 방지
   max_videos: 5
   same_product_threshold: 0.80 # 이상: 모든 구간에 사용
   mood_threshold: 0.60         # 이상~same 미만: hook·problem 구간에만 사용

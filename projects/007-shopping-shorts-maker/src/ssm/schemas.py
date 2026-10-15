@@ -92,10 +92,51 @@ class WordTimings(_Model):
     sentences: list[SentenceTiming]
 
 
+Grade = Literal["same_product", "mood"]
+
+
+# ---- candidates.json · selected.json (collect 단계 결과) ---------------------------
+
+
+class Candidate(_Model):
+    id: str  # c01, c02 … (c01이 기준 영상)
+    url: str | None = None
+    platform: str = "other"  # xiaohongshu | douyin | tiktok | local | other
+    reference: bool = False  # 사용자가 준 기준 영상
+    file: str | None = None  # 프로젝트 폴더 기준 내려받은 파일 (candidates/c01.mp4)
+    title: str = ""
+    description: str = ""
+    author: str = ""
+    location: str = ""  # 작성자 IP 표시 지역 등
+    similarity: float | None = None  # 기준 영상과의 CLIP 유사도 (검사 못 하면 None)
+    grade: Grade | Literal["excluded"] | None = None
+    reasons: list[str] = Field(default_factory=list)  # 제외 사유
+    notes: list[str] = Field(default_factory=list)  # 검사하지 못한 항목 등 참고 사항
+    error: str | None = None  # 내려받기 실패
+
+
+class Candidates(_Model):
+    version: Literal[1] = 1
+    source: str | None = None
+    keyword: str | None = None
+    candidates: list[Candidate]
+
+
+class SelectedVideo(_Model):
+    file: str  # raw_videos/01.mp4
+    candidate: str  # candidates.json의 id
+    grade: Grade
+    similarity: float | None = None
+    url: str | None = None
+
+
+class Selected(_Model):
+    version: Literal[1] = 1
+    videos: list[SelectedVideo]
+
+
 # ---- analysis.json (analyze 단계 결과) ------------------------------------------
 # 좌표는 원본 영상 화면(회전 반영) 기준 픽셀, 시간은 원본 영상 기준 초.
-
-Grade = Literal["same_product", "mood"]
 
 
 class Shot(_Model):

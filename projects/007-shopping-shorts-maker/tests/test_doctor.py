@@ -43,6 +43,9 @@ class FakeProbe(Probe):
     def free_gb(self, path):
         return 100.0
 
+    def browser(self):
+        return "/chrome"
+
     def vc_runtime(self):
         return getattr(self, "vc", (14, 44))
 

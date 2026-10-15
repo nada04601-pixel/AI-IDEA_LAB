@@ -10,3 +10,5 @@ scenedetect==0.7.2
 edge-tts==7.3.1
 # 사이트 변경에 맞춰 자주 업데이트되므로 하한만 둔다 (setup 때마다 최신으로 올린다)
 yt-dlp>=2026.8.19
+# yt-dlp가 막힐 때 실제 브라우저로 내려받기·검색 (setup이 Chromium도 설치)
+playwright==1.64.0

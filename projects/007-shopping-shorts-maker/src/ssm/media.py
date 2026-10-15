@@ -73,6 +73,30 @@ class Media:
             w, h = h, w
         return VideoInfo(w, h, float(data.get("format", {}).get("duration") or 0))
 
+    def sample_frames(self, path: Path, count: int, width: int = 448):
+        """영상 전체에서 고르게 count장의 RGB 프레임 (numpy 배열 [n, h, w, 3])."""
+        import numpy as np
+
+        info = self.probe_video(path)
+        height = max(2, int(round(info.height * width / info.width / 2)) * 2)
+        rate = count / max(info.duration, 0.1)
+        raw = self.run(["-i", str(path), "-vf", f"fps={rate:.6f},scale={width}:{height}", "-frames:v", str(count),
+                        "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"], what=f"{path.name} 프레임 추출")
+        frames = np.frombuffer(raw, dtype=np.uint8)
+        n = frames.size // (width * height * 3)
+        return frames[: n * width * height * 3].reshape(n, height, width, 3)
+
+    def audio_pcm16k(self, path: Path, seconds: float = 30.0):
+        """앞 seconds초 오디오를 16kHz 모노 float32로 (음성 언어 감지용). 소리가 없으면 빈 배열."""
+        import numpy as np
+
+        try:
+            raw = self.run(["-t", str(seconds), "-i", str(path), "-vn", "-f", "f32le", "-ac", "1", "-ar", "16000", "-"],
+                           what=f"{path.name} 소리 추출")
+        except MediaError:
+            return np.zeros(0, dtype=np.float32)
+        return np.frombuffer(raw, dtype=np.float32)
+
     def audio_duration(self, path: Path) -> float:
         p = subprocess.run([self.ffprobe, "-v", "error", "-show_entries", "format=duration", "-of",
                             "default=nw=1:nk=1", str(path)], capture_output=True, text=True)

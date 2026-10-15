@@ -21,7 +21,7 @@ from ssm.config import AppConfig, app_root, load_config
 CORE_PACKAGES = {  # import 이름: pip 패키지 이름
     "typer": "typer", "rich": "rich", "yaml": "PyYAML", "pydantic": "pydantic", "PIL": "pillow",
     "numpy": "numpy", "cv2": "opencv-python-headless", "scenedetect": "scenedetect",
-    "edge_tts": "edge-tts", "yt_dlp": "yt-dlp",
+    "edge_tts": "edge-tts", "yt_dlp": "yt-dlp", "playwright": "playwright",
 }
 ML_PACKAGES = {"easyocr": "easyocr", "faster_whisper": "faster-whisper", "open_clip": "open-clip-torch"}
 MIN_FREE_GB = 15
@@ -78,6 +78,17 @@ class Probe:
     def free_gb(self, path: Path) -> float:
         return shutil.disk_usage(path).free / 1024**3
 
+    def browser(self) -> str | None:
+        """Playwright Chromium 실행 파일 경로. 없으면 None."""
+        try:
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as p:
+                path = p.chromium.executable_path
+        except Exception:  # noqa: BLE001
+            return None
+        return path if path and Path(path).is_file() else None
+
     def vc_runtime(self) -> tuple[int, int] | None:
         """Windows의 Visual C++ 런타임(msvcp140.dll) 버전. Windows가 아니면 None, 없으면 (0, 0)."""
         if sys.platform != "win32":
@@ -130,7 +141,7 @@ def _check_packages(probe: Probe) -> list[Check]:
               else Check("기본", "필수 패키지", "ok", f"{len(CORE_PACKAGES)}개 설치됨")]
     ml_missing = [pip for mod, pip in ML_PACKAGES.items() if not probe.has_module(mod)]
     checks.append(Check("AI 모델", "OCR·음성인식·유사도 패키지", "warn", "없음: " + ", ".join(ml_missing) +
-                        " (M3 수집·필터부터 필요)", SETUP_HINT) if ml_missing
+                        " (수집·필터·자막 영역 감지에 필요)", SETUP_HINT) if ml_missing
                   else Check("AI 모델", "OCR·음성인식·유사도 패키지", "ok", ", ".join(ML_PACKAGES.values())))
     return checks
 
@@ -173,6 +184,26 @@ def _check_gpu(cfg: AppConfig, probe: Probe, gpu: str | None) -> list[Check]:
         checks.append(Check("GPU", "설정 device", "fail", "device: cuda인데 GPU를 쓸 수 없음",
                             "config의 device를 auto로 바꾸거나 GPU용 PyTorch를 설치하세요."))
     return checks
+
+
+_native_problem: list[str | None] = []
+
+
+def native_runtime_problem(probe: Probe | None = None) -> str | None:
+    """PyTorch·CTranslate2 같은 네이티브 모델을 불러오면 안 되는 이유. 괜찮으면 None.
+
+    Visual C++ 런타임이 오래된 Windows에서는 import 단계에서 DLL 오류가 나거나 프로세스가 통째로 죽으므로
+    (access violation) 미리 확인해 모델을 아예 불러오지 않는다.
+    """
+    if probe is None and _native_problem:
+        return _native_problem[0]
+    version = (probe or Probe()).vc_runtime()
+    problem = None
+    if version is not None and version < MIN_VC_RUNTIME:
+        problem = f"Visual C++ 런타임 {'.'.join(map(str, version))}이 오래됨 → {VC_FIX}"
+    if probe is None:
+        _native_problem.append(problem)
+    return problem
 
 
 def _check_vc_runtime(probe: Probe) -> list[Check]:
@@ -251,12 +282,22 @@ def _check_storage(cfg: AppConfig, probe: Probe) -> list[Check]:
     return checks
 
 
+def _check_browser(probe: Probe) -> Check:
+    if not probe.has_module("playwright"):
+        return Check("수집", "브라우저(Playwright)", "warn", "playwright 없음 (yt-dlp가 막힐 때 대체 수단)", SETUP_HINT)
+    path = probe.browser()
+    if not path:
+        return Check("수집", "브라우저(Playwright)", "warn", "Chromium 없음 (yt-dlp가 막힐 때 대체 수단)",
+                     "python -m playwright install chromium 을 실행하세요 (.venv 안에서).")
+    return Check("수집", "브라우저(Playwright)", "ok", "Chromium 준비됨")
+
+
 def _check_cookies(cfg: AppConfig) -> Check:
     if not cfg.collector.cookies_file:
-        return Check("수집", "부계정 쿠키", "warn", "설정 안 됨 (M3 수집부터 필요)", "docs/cookies.md 참고")
+        return Check("수집", "부계정 쿠키", "warn", "설정 안 됨 (링크로 수집할 때 필요)", "docs/cookies.md 참고")
     path = cfg.path(cfg.collector.cookies_file)
     if not path.is_file():
-        return Check("수집", "부계정 쿠키", "warn", f"{cfg.collector.cookies_file} 없음 (M3 수집부터 필요)",
+        return Check("수집", "부계정 쿠키", "warn", f"{cfg.collector.cookies_file} 없음 (링크로 수집할 때 필요)",
                      "docs/cookies.md를 보고 부계정 쿠키를 저장하세요.")
     return Check("수집", "부계정 쿠키", "ok", cfg.collector.cookies_file)
 
@@ -275,6 +316,7 @@ def run_checks(probe: Probe | None = None) -> list[Check]:
     checks += _check_ffmpeg(cfg, probe, gpu is not None)
     checks.append(_check_fonts())
     checks += _check_storage(cfg, probe)
+    checks.append(_check_browser(probe))
     checks.append(_check_cookies(cfg))
     return checks
 
