@@ -1,0 +1,43 @@
+# 대본 프리셋 ④ — `ssm script --preset 4` (또는 info_curation)
+id: info_curation
+number: 4
+name: 정보성 큐레이션형 (계정 육성용)
+description: 판매보다 '알아두면 좋은 정보'로 저장·팔로우를 노린다. 사용법·고르는 법·활용 팁을 차분하게 정리한다.
+fits: 쓰는 법이 궁금한 상품, 고를 때 기준이 필요한 상품, 계정 초반 신뢰 쌓기용
+tone: 차분한 설명형 존댓말. '첫째, 둘째'처럼 정리. 감탄사·과한 리액션은 줄인다.
+hook_patterns:
+  - "○○ 살 때 이것만 확인하세요."
+  - "○○, 이렇게 쓰면 훨씬 오래 써요."
+  - "모르면 손해 보는 ○○ 활용법 알려드릴게요."
+  - "○○ 고르는 기준, 딱 세 가지예요."
+sentence_syllables: [8, 24]
+endings: ["-습니다", "-요", "-세요", "-거든요"]
+structure:
+  hook: 저장하고 싶은 정보라는 걸 알린다 (고르는 법·활용법·주의점).
+  problem: 사람들이 흔히 놓치는 점.
+  demo: 팁을 순서대로 2~3개. 각 팁은 영상에 보이는 장면과 맞춘다.
+  benefit: 그렇게 하면 무엇이 좋아지는지 사실 위주로.
+  cta: 저장·팔로우 유도 + 상품 정보는 댓글로.
+cta_examples:
+  - "필요할 때 보시게 저장해 두시고, 제품 정보는 댓글에 '정보' 남겨주세요."
+  - "이런 팁 더 보고 싶으시면 팔로우해 주세요."
+avoid:
+  - 출처 없는 통계·전문가 인용 ("전문가들이 추천하는" 등)
+  - 건강·위생 효능 단정 ("세균 99% 제거" 등 — 시험 성적이 없으면 쓰지 않는다)
+examples:
+  - product: 스테인리스 전기포트 세척 팁
+    sentences:
+      - {section: hook, text: "전기포트, 이렇게 관리하면 훨씬 오래 써요.", emphasis: ["오래 써요"], sfx: whoosh}
+      - {section: problem, text: "바닥에 하얗게 끼는 물때, 그냥 두시는 분 많으시죠.", emphasis: ["물때"]}
+      - {section: demo, text: "첫째, 물을 반쯤 채우고 구연산 한 스푼을 넣어 끓여 주세요.", emphasis: ["구연산"], sfx: pop}
+      - {section: demo, text: "둘째, 식으면 부드러운 솔로 바닥만 살살 닦아 주세요.", emphasis: ["부드러운 솔"]}
+      - {section: benefit, text: "한 달에 한 번만 해도 물때가 훨씬 덜 쌓입니다.", emphasis: ["한 달에 한 번"]}
+      - {section: cta, text: "필요할 때 보시게 저장해 두시고, 제품 정보는 댓글에 '정보' 남겨주세요.", emphasis: ["저장"]}
+  - product: 휴대용 보조배터리 고르는 법
+    sentences:
+      - {section: hook, text: "보조배터리 살 때 이것만 확인하세요.", emphasis: ["이것만"], sfx: whoosh}
+      - {section: problem, text: "용량만 보고 샀다가 비행기에 못 들고 타는 경우가 있거든요.", emphasis: ["비행기"]}
+      - {section: demo, text: "첫째, 기내 반입은 보통 100와트시 이하인지 확인하세요.", emphasis: ["100와트시"], sfx: pop}
+      - {section: demo, text: "둘째, 내 휴대폰이 고속 충전 규격을 지원하는지 보세요.", emphasis: ["고속 충전"]}
+      - {section: benefit, text: "이 두 가지만 맞추면 여행 갈 때 걱정이 줄어듭니다.", emphasis: ["두 가지"]}
+      - {section: cta, text: "이런 팁 더 보고 싶으시면 팔로우해 주세요.", emphasis: ["팔로우"]}

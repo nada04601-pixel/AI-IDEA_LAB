@@ -38,7 +38,7 @@ STAGES: dict[str, Stage] = {
         Stage("collect", "원본 수집·필터", (), ("collector",), ("raw_videos", "candidates.json", "selected.json"), "M3"),
         # 자막 가리는 방식(foreign_sub_removal)은 edit에서 적용하므로 분석 결과와 무관하다
         Stage("analyze", "영상 분석", ("collect",), (), ("analysis.json",), "M2", inputs=("raw_videos",)),
-        Stage("script", "대본", ("analyze",), ("project",), ("script.json",), "M4"),
+        Stage("script", "대본", ("analyze",), ("project", "script"), ("script.json",), "M4"),
         Stage("tts", "음성·자막 타이밍", ("script",), ("tts", "audio"), ("tts.mp3", "word_timings.json"), "M1"),
         # 자막 화면 나누기는 자막 설정(한 줄 글자 수)에 따라 달라지므로 subtitles.srt는 edit에서 만든다
         Stage("edit", "편집·렌더링", ("tts", "analyze"),

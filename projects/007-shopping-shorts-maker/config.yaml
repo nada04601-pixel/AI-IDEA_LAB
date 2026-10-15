@@ -59,6 +59,10 @@ collector:
   mood_threshold: 0.60         # 이상~same 미만: hook·problem 구간에만 사용
   cookies_file: secrets/cookies.txt
 
+script:
+  preset: null                 # 대본 프리셋 — `ssm presets`로 목록, `ssm script --preset 1~4`로 선택
+  reference: null              # 화법을 따라 할 영상 링크·파일 또는 대본 .txt — `ssm script --reference`
+
 device: auto                   # auto | cuda | cpu
 ffmpeg_path: null              # 비우면 PATH에서 찾는다
 workspace_dir: workspace

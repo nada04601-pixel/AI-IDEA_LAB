@@ -1,0 +1,44 @@
+# 대본 프리셋 ③ — `ssm script --preset 3` (또는 value_deal)
+id: value_deal
+number: 3
+name: 가성비·할인 강조형
+description: 비슷한 기능의 비싼 제품과 비교해 '이 가격에 이 정도'를 강조한다. 가격대가 확실할 때만 쓴다.
+fits: 가격 경쟁력이 분명한 상품 (대체품·호환품·대용량), 상품 정보에 가격대가 있을 때
+tone: 빠르고 경쾌하게. 숫자를 또렷하게. 단정 대신 '○○대', '이 가격에'처럼 범위로 말한다.
+hook_patterns:
+  - "이게 ○만원대라고요?"
+  - "비싼 ○○ 사지 마세요, 이거면 충분해요."
+  - "같은 기능인데 가격은 절반 수준이에요."
+  - "○○ 사려다 이거 보고 마음 바꿨어요."
+sentence_syllables: [6, 20]
+endings: ["-요", "-죠", "-예요", "-거든요"]
+structure:
+  hook: 가격이나 비교로 바로 시작. 숫자는 상품 정보의 가격대 그대로 (지어내지 않는다).
+  problem: 비싼 대안의 부담을 짧게.
+  demo: 기능을 빠르게 2~3개 보여준다.
+  benefit: 가격 대비 좋은 점. '최저가'처럼 확인할 수 없는 말 대신 '이 가격대에서'.
+  cta: 가격·할인 정보는 바뀔 수 있으니 댓글로 안내.
+cta_examples:
+  - "가격은 바뀔 수 있으니 댓글에 '가격' 남겨주시면 알려드릴게요."
+  - "할인할 때 담으세요, 댓글에 '링크' 남겨주세요!"
+avoid:
+  - '최저가·역대 최저·오늘만 이 가격 같은 확인할 수 없는 가격 표현 (표시광고법)'
+  - 정가·할인율을 지어내기 — 상품 정보에 없는 숫자는 쓰지 않는다
+  - 다른 브랜드 이름을 깎아내리기
+examples:
+  - product: 미니 무선 핸디 선풍기 (1만원대)
+    sentences:
+      - {section: hook, text: "이게 만원대라고요?", emphasis: ["만원대"], sfx: whoosh}
+      - {section: problem, text: "여름마다 들고 다닐 선풍기, 비싼 거 사기는 아깝잖아요.", emphasis: ["아깝잖아요"]}
+      - {section: demo, text: "바람 세기가 세 단계로 바뀌고요.", emphasis: ["세 단계"], sfx: pop}
+      - {section: demo, text: "접으면 거치대가 돼서 책상 위에 세워 둘 수 있어요.", emphasis: ["거치대"]}
+      - {section: benefit, text: "이 가격대에서 충전 단자가 C타입인 게 제일 마음에 들어요.", emphasis: ["C타입"]}
+      - {section: cta, text: "할인할 때 담으세요, 댓글에 '링크' 남겨주세요!", emphasis: ["링크"]}
+  - product: 대용량 진공 압축 수납팩 10매 (2만원대)
+    sentences:
+      - {section: hook, text: "비싼 수납장 사지 마세요, 이거면 충분해요.", emphasis: ["충분해요"], sfx: whoosh}
+      - {section: problem, text: "겨울 이불 하나가 옷장 한 칸을 다 차지하잖아요.", emphasis: ["한 칸을"]}
+      - {section: demo, text: "이불 넣고 청소기로 공기만 빼면", emphasis: ["공기만"], sfx: pop}
+      - {section: demo, text: "부피가 이렇게 납작하게 줄어들어요.", emphasis: ["납작하게"]}
+      - {section: benefit, text: "열 장이 2만원대라 계절 옷 정리할 때 넉넉하게 써요.", emphasis: ["2만원대"]}
+      - {section: cta, text: "가격은 바뀔 수 있으니 댓글에 '가격' 남겨주시면 알려드릴게요.", emphasis: ["가격"]}

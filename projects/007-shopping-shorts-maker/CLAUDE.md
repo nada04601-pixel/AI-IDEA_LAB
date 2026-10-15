@@ -12,47 +12,56 @@
 - 설치가 안 되어 있으면 사용자에게 `setup.bat`(Windows) 또는 `./setup.sh` 실행을 안내한다.
 - 문제가 생기면 먼저 `ssm doctor`로 점검한다.
 
-## 현재 구현 상태 (M3 완료)
+## 현재 구현 상태 (M4 완료)
 
 | 명령 | 상태 |
 |---|---|
 | `doctor`, `fonts`, `new`, `list`, `status`, `set`, `versions`, `rollback` | 동작 |
-| `collect [--keyword --url --max]`, `add`, `analyze`, `tts`, `edit [--preview]`, `run` | 동작 (M1~M3). `run`은 개발 전 단계를 건너뛴다 |
-| `script`(M4), `meta`(M5) | **아직 구현 전** — 종료 코드 2와 함께 예정 마일스톤을 알려준다 |
+| `collect`, `add`, `analyze`, `presets`, `script [--preset --reference --check]`, `tts`, `edit [--preview]`, `run` | 동작 (M1~M4) |
+| `meta`(M5: 썸네일·캡션) | **아직 구현 전** — 종료 코드 2. `run`은 건너뛴다 |
 
-아직 안 되는 것: 원본 자막 인페인팅(inpaint 설정은 지금 blur로 처리), 장면 설명으로 대본-장면 매칭, Ken Burns 줌, TikTok 검색.
+아직 안 되는 것: 썸네일·캡션(M5), 원본 자막 인페인팅(inpaint는 지금 blur), 장면 설명으로 대본-장면 매칭, Ken Burns 줌, TikTok 검색.
 
-AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역)는 PyTorch·CTranslate2가 필요하다. `collect`·`analyze`가
-"쓸 수 없습니다"라고 하면 **그 검사는 하지 않은 것**이다 — 사용자에게 그대로 알리고 `ssm doctor` 안내(대개 Visual C++ 런타임)를 따르게 한다.
-이때 유사도를 모르는 후보는 안전하게 `mood`(hook·problem 구간만)로 분류된다.
+AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·레퍼런스 받아쓰기)는 PyTorch·CTranslate2가 필요하다.
+"쓸 수 없습니다"라고 나오면 **그 검사는 하지 않은 것**이다 — 사용자에게 그대로 알리고 `ssm doctor` 안내(대개 Visual C++ 런타임)를 따르게 한다.
+유사도를 모르는 후보는 안전하게 `mood`(hook·problem 구간만)로 분류된다.
 
 구현되지 않은 단계를 사용자가 요청하면, 결과를 꾸며내지 말고 "아직 개발 전 단계"라고 그대로 알린다.
 
 ## 쇼츠 제작 흐름 (사용자가 "이 링크로 쇼츠 만들어줘"라고 할 때)
 
-1. `ssm new <URL> --duration <15|30|45|60> --fps <30|60> --ad <coupang|aliexpress|custom>`
-   - 길이·fps·광고 표시를 사용자가 말하지 않았으면 물어본다 (기본 30초·30fps). 광고 프로필은 반드시 확인한다.
-   - 다운로드가 막히면 `--local 파일...`로 직접 받은 영상을 넣을 수 있다고 안내한다.
-2. `ssm collect` → `ssm analyze` (수집·필터·분석)
-   - 검색어는 기본으로 기준 영상 제목을 쓴다. 상품명을 알면 **중국어 검색어**로 바꿔 `ssm collect --keyword 折叠电热水壶`
-     (사용자가 한국어로 말하면 Claude가 중국어로 옮긴다). 사용자가 같은 상품 링크를 주면 `--url 링크` (여러 번 가능).
-   - 결과 표를 보여준다: 채택(same_product·mood)·제외 사유·내려받기 실패. 같은 상품이 3개 미만이면 링크나 파일을 더 요청한다.
-   - 기준 영상이 막히면(쿠키 만료 등) `docs/cookies.md`를 안내하거나, 직접 받은 영상으로 `ssm new --local`.
-   - 키워드로 시작한 프로젝트는 검색 결과 첫 영상이 기준이 되므로 **상품이 맞는지 사용자에게 꼭 확인**한다.
-3. 대본 프리셋 4종(①호기심/문제해결 ②내돈내산 찐리뷰 ③가성비/할인 ④정보성 큐레이션)을 보여주고 고르게 한다.
-4. Claude가 대본을 써서 `script.json`으로 저장한다. 형식은 `src/ssm/schemas.py`의 `Script` (첫 문장 hook, 마지막 cta, 강조어는 문장에 포함).
-   - 분량: 목표 길이 × 초당 6~7음절. 과장 표현("100% 효과", "최저가 보장", 의학적 효능) 금지.
-5. `ssm tts` → `ssm edit` → `ssm meta` (또는 `ssm run`으로 남은 단계 일괄)
-   - `ssm tts`가 음성 길이를 알려준다. 목표보다 길면 대본을 줄이거나 `ssm set tts.rate "+20%"`.
-   - 빠르게 확인만 하려면 `ssm edit --preview` (540x960 `preview.mp4`).
-   - 문장마다 `sfx`(whoosh·swish·pop·ding)를 달 수 있다. 훅=whoosh, 강조=pop/ding, 전환=swish. 남발하지 말 것 (2~3개면 충분).
-6. 결과(`final_output.mp4`, 썸네일 후보, `caption.txt`)를 알려주고 수정 요청을 기다린다.
+목표: 사용자 개입은 **① 시작 직후 질문 한 번(프리셋·광고 표시·상품 정보 확인)** 과 **② 결과 확인** 두 번 (기획서 1장).
+그 사이에는 묻지 말고 끝까지 진행한다. 명령 출력의 [주의]는 숨기지 말고 마지막 보고에 모아서 알린다.
+
+1. **프로젝트 만들기** — `ssm new <URL> --duration 30 --fps 30 -y`
+   - 사용자가 길이·fps를 말했으면 그 값, 아니면 기본값(30초·30fps)으로 만들고 보고 때 알린다 (`ssm set project.duration_sec 45`로 바꿀 수 있음).
+   - 링크 대신 직접 받은 영상 파일을 주면 `ssm new --local 파일1 --local 파일2 -y`.
+2. **수집·분석** — `ssm collect` → `ssm analyze`
+   - collect 결과 표(채택·제외 사유)를 기억해 둔다. 기준 영상이 막히면(쿠키 만료 등) `docs/cookies.md`를 안내하고 멈춘다.
+   - 같은 상품이 3개 미만이어도 계속 진행하되, 보고 때 같은 상품 링크·파일을 더 달라고 한다.
+3. **질문 한 번 (AskUserQuestion으로 한꺼번에)**
+   - 대본 프리셋: `ssm presets`의 4종 (①호기심/문제해결 ②내돈내산 찐리뷰 ③가성비/할인 ④정보성 큐레이션). 상품에 맞는 것을 추천 표시.
+   - 광고 표시: 쿠팡 파트너스 / 알리익스프레스 어필리에이트 / 직접 입력 — **반드시 확인** (법적 의무).
+   - 상품 정보 확인: `candidates.json` 기준 영상의 제목·설명(중국어)과 장면을 보고 만든 상품명·핵심 특징 3개 초안, 가격대(모르면 사용자에게 물음).
+   - 답을 받으면 `ssm set ad_disclosure.profile coupang` (custom이면 `ssm set ad_disclosure.custom_text "문구"`도).
+4. **대본 요청서** — `ssm script --preset N` (사용자가 따라 하고 싶은 영상·대본을 줬으면 `--reference 링크|파일|대본.txt`)
+   - 출력된 `script_prompt.md`를 읽고, `script_frames.jpg`(장면 모음)를 **직접 열어 본다**. 요청서 규칙대로 쓴다.
+5. **대본 작성** — `script.json` 저장 → `ssm script --check`
+   - 형식은 `src/ssm/schemas.py`의 `Script`. 분량은 길이 × 초당 6~7음절. 금지 표현(과장·최저가·의학적 효능 등)은 검사에서 막힌다.
+   - 오류가 나오면 고쳐서 다시 검사한다. [주의](훅 길이·CTA 등)도 가능하면 고친다.
+6. **렌더링** — `ssm run` (tts → edit; meta는 아직 개발 전이라 건너뜀)
+   - `ssm tts`가 음성 길이를 알려준다. 목표보다 많이 길면 대본을 줄이거나 `ssm set tts.rate "+20%"` 후 `ssm run`.
+7. **보고 (개입 ②)** — `final_output.mp4` 경로, 길이, 프리셋, 대본 전문, 그리고 모아 둔 [주의](OCR 못 함·소스 부족·BGM 없음 등)를 알리고 수정 요청을 기다린다.
+   - 빠르게 확인용이면 `ssm edit --preview` (540x960 `preview.mp4`).
+   - 문장마다 `sfx`(whoosh·swish·pop·ding)를 달 수 있다. 훅=whoosh, 강조=pop/ding, 전환=swish. 2~3개면 충분.
 
 ## 수정 요청 → 바꿀 것 → 다시 실행할 것
 
 | 요청 예 | 바꿀 것 | 다시 실행 |
 |---|---|---|
-| "대본 더 친근하게" | `script.json` 다시 작성 | `ssm run` (tts → edit → meta) |
+| "대본 더 친근하게" | `script.json` 다시 작성 → `ssm script --check` | `ssm run` (tts → edit) |
+| "다른 프리셋으로" | `ssm script --preset N` → 요청서대로 `script.json` 다시 작성 → `ssm script --check` | `ssm run` (tts → edit) |
+| "이 영상 말투처럼" | `ssm script --reference 링크·파일·대본.txt` → 다시 작성 → `ssm script --check` | `ssm run` |
 | "목소리 남자로" | `ssm set tts.voice ko-KR-InJoonNeural` | `ssm run` (tts → edit) |
 | "자막 크게, 조금 위로" | `ssm set subtitle.size 90` / `ssm set subtitle.position_y_ratio 0.6` | `ssm run` (edit만) |
 | "썸네일 문구 바꿔줘" | `script.json`의 `thumbnail_text` 또는 `ssm set thumbnail.*` | `ssm run` (meta) |
@@ -76,7 +85,7 @@ AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역)는
 
 ## 개발할 때
 
-- 마일스톤 순서: M0·M1·M2·M3(완료) → M4 대본 → M5 썸네일·캡션 → M6 수정 루프. 각 완료 기준은 기획서 9장.
+- 마일스톤 순서: M0~M4(완료) → M5 썸네일·캡션 → M6 수정 루프. 각 완료 기준은 기획서 9장.
 - 테스트: `.venv/Scripts/python -m pytest` (Windows) / `.venv/bin/pytest`. 커밋 전에 전부 통과시킨다.
 - 사용자에게 보이는 메시지는 한국어로, "무엇이 실패했고 → 무엇을 하면 되는지" 형태로 쓴다.
 - 새 단계를 구현하면 `Workspace.mark_done(stage)`로 완료를 기록하고, 이 문서의 "현재 구현 상태" 표를 갱신한다.

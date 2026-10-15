@@ -7,6 +7,7 @@
 import asyncio
 import hashlib
 import json
+import re
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -22,7 +23,11 @@ from ssm.workspace import Workspace
 SAMPLE_RATE = 24000  # edge-tts 출력과 같은 값 (다시 샘플링하지 않게)
 SENTENCE_GAP_SEC = 0.15  # 문장 사이 무음 (기획서: 120~200ms)
 RETRIES = 3
-SYLLABLES_PER_SEC = (6, 7)  # 한국어 TTS 기준 분량 (기획서 Module 2)
+# 분량 계산 (기획서 Module 2 '초당 6~7음절'은 말하는 동안의 속도다. 문장마다 쉬는 시간이 더해진다)
+SPEECH_SYLLABLES_PER_SEC = 6.3  # edge-tts SunHi·rate +10% 실측 — 말하는 동안 초당 음절
+SENTENCE_OVERHEAD_SEC = 1.0  # 실측 — 문장 앞뒤 무음 + 문장 사이 간격
+MEASURED_RATE = 1.10  # 위 값을 잰 rate(+10%)
+SECONDS_PER_SENTENCE = 3.5  # 분량 안내용 평균 문장 길이
 
 
 class TTSError(Exception):
@@ -82,6 +87,25 @@ def syllables(text: str) -> int:
     return sum("가" <= ch <= "힣" or ch.isalnum() for ch in text)
 
 
+def speech_rate(rate: str) -> float:
+    """tts.rate("+10%" 등)에서 말하는 동안 초당 음절."""
+    m = re.fullmatch(r"\s*([+-]?\d+)\s*%\s*", rate or "")
+    factor = (1 + int(m.group(1)) / 100) / MEASURED_RATE if m else 1.0
+    return SPEECH_SYLLABLES_PER_SEC * max(factor, 0.3)
+
+
+def estimate_seconds(texts: list[str], rate: str = "+10%") -> float:
+    """대본 문장들을 읽었을 때 예상 음성 길이 (초)."""
+    return sum(syllables(t) for t in texts) / speech_rate(rate) + len(texts) * SENTENCE_OVERHEAD_SEC
+
+
+def syllable_budget(duration_sec: int, rate: str = "+10%") -> tuple[int, int, int]:
+    """목표 길이에 맞는 (최소 음절, 최대 음절, 문장 수 기준)."""
+    sentences = max(3, round(duration_sec / SECONDS_PER_SENTENCE))
+    hi = int((duration_sec - sentences * SENTENCE_OVERHEAD_SEC) * speech_rate(rate))
+    return int(hi * 0.85), hi, sentences
+
+
 def _synthesize_with_retry(provider: TTSProvider, text: str, voice: str, rate: str, out: Path,
                            sleep: Callable[[float], None]) -> list[Word]:
     last: Exception | None = None
@@ -107,10 +131,9 @@ def run_tts(ws: Workspace, cfg: AppConfig | None = None, provider: TTSProvider |
     media = Media(cfg)
     voice, rate = cfg.tts.voice, cfg.tts.rate
 
-    limit = script.target_duration_sec * SYLLABLES_PER_SEC[1]
-    count = sum(syllables(s.text) for s in script.sentences)
-    if count > limit:
-        log(f"[주의] 대본이 {count}음절로 목표 {script.target_duration_sec}초 분량(약 {limit}음절)보다 깁니다.")
+    expected = estimate_seconds([s.text for s in script.sentences], cfg.tts.rate)
+    if expected > script.target_duration_sec * 1.1:
+        log(f"[주의] 대본 예상 길이 약 {expected:.0f}초로 목표 {script.target_duration_sec}초보다 깁니다.")
 
     cache = ws.path / "tts_cache"
     cache.mkdir(exist_ok=True)
