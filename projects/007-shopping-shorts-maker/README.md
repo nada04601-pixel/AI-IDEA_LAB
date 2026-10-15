@@ -43,6 +43,9 @@ ssm.bat run                         # 남은 단계 실행 (현재 analyze·tts�
 ssm.bat edit --preview              # 540x960 미리보기
 ```
 
+> **링크에 `&`가 있으면** (샤오홍슈·rednote 공유 링크는 항상 있음) PowerShell에서 `ssm.bat`은 `&` 뒤를 잘라 버린다.
+> PowerShell에서는 `.venv\Scripts\ssm.exe new "링크"`처럼 `ssm.exe`를 쓰고, cmd 창에서는 `ssm.bat new "링크"`(따옴표 필수).
+
 Claude Code에서는 이 폴더를 열고 "이 링크로 쇼츠 만들어줘"처럼 말하면 Claude가 위 명령을 실행한다.
 
 ## 설정

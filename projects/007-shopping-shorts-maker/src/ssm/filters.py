@@ -22,6 +22,8 @@ from ssm.config import AppConfig
 OCR_FRAMES = 8
 OCR_WIDTH = 480  # CPU에서 720px의 절반 시간, 자막 크기 한글은 그대로 읽힌다 (360px부터는 놓침 — 실측)
 HANGUL_RATIO = 0.10
+HANGUL_MIN_CHARS = 6  # 비율 규칙은 한글이 이만큼 이상, 
+HANGUL_MIN_FRAMES = 2  # 이만큼의 프레임에서 보일 때만 (한국어 OCR이 한자를 한글 한두 자로 잘못 읽는 경우 — 실측)
 HANGUL_RUN = re.compile(r"[가-힣]{4,}")
 OCR_MIN_CONFIDENCE = 0.4  # 이보다 확신이 낮은 글자는 버린다 (중국어를 한글로 잘못 읽는 경우 줄이기)
 KO_SPEECH_PROB = 0.5
@@ -44,8 +46,9 @@ def korean_text_reason(frame_texts: list[list[str]]) -> str | None:
     run = next((m.group() for texts in frame_texts for t in texts if (m := HANGUL_RUN.search(t))), None)
     if run:
         return f"한글 자막/텍스트 검출 ('{run}')"
-    if chars and hangul / len(chars) >= HANGUL_RATIO:
-        return f"한글 텍스트 비율 {hangul / len(chars):.0%}"
+    frames = sum(any(is_hangul(ch) for t in texts for ch in t) for texts in frame_texts)
+    if hangul >= HANGUL_MIN_CHARS and frames >= HANGUL_MIN_FRAMES and hangul / len(chars) >= HANGUL_RATIO:
+        return f"한글 텍스트 비율 {hangul / len(chars):.0%} ({frames}프레임)"
     return None
 
 

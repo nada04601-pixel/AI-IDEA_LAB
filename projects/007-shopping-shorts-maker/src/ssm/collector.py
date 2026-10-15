@@ -37,7 +37,8 @@ class CollectError(Exception):
 
 def title_keyword(title: str, limit: int = 20) -> str | None:
     """기준 영상 제목에서 검색어를 뽑는다 (해시태그·이모지·기호 제거)."""
-    text = re.sub(r"#[^#\s]*(?:\[话题\])?#?", " ", title or "")
+    text = re.sub(r"\s*[-|｜]\s*(rednote|xiaohongshu|小红书|抖音|douyin|tiktok)\s*$", "", title or "", flags=re.I)
+    text = re.sub(r"#[^#\s]*(?:\[话题\])?#?", " ", text)
     text = re.sub(r"[^\w\s]", " ", text)
     text = " ".join(text.split())[:limit].strip()
     return text or None

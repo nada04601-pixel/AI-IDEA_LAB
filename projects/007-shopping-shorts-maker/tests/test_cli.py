@@ -84,3 +84,18 @@ def test_no_project_message(home):
     r = invoke("status")
     assert r.exit_code == 1
     assert "ssm new" in r.output
+
+
+def test_new_interactive_prompts(home, monkeypatch):
+    monkeypatch.setattr("ssm.main._is_terminal", lambda: True)
+    r = invoke("new", "전기포트", input="45\n60\ncoupang\n")
+    assert r.exit_code == 0, r.output
+    cfg = Workspace.open(None).config()
+    assert (cfg.project.duration_sec, cfg.video.fps, cfg.ad_disclosure.profile) == (45, 60, "coupang")
+
+
+def test_new_warns_on_cut_share_link(home):
+    r = invoke("new", "https://www.rednote.com/discovery/item/6a2fbe2c00000000210235d0?source=webshare", "-y")
+    assert r.exit_code == 0 and "xsec_token" in r.output and "ssm.exe" in r.output
+    r = invoke("new", "https://www.rednote.com/explore/6a2fbe2c00000000210235d0?xsec_token=abc&xsec_source=pc", "-y")
+    assert "xsec_token" not in r.output
