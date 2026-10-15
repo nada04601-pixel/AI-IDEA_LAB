@@ -12,12 +12,13 @@
 - 설치가 안 되어 있으면 사용자에게 `setup.bat`(Windows) 또는 `./setup.sh` 실행을 안내한다.
 - 문제가 생기면 먼저 `ssm doctor`로 점검한다.
 
-## 현재 구현 상태 (M5 완료)
+## 현재 구현 상태 (M6 완료 — v1 전 단계)
 
 | 명령 | 상태 |
 |---|---|
-| `doctor`, `fonts`, `new`, `list`, `status`, `set`, `versions`, `rollback` | 동작 |
-| `collect`, `add`, `analyze`, `presets`, `script [--preset --reference --check]`, `tts`, `edit [--preview]`, `meta [--style]`, `run` | 동작 (M1~M5) |
+| `doctor`, `fonts`, `new`, `list`, `status`, `set` | 동작 |
+| `collect`, `add`, `analyze`, `presets`, `script [--preset --reference --check]`, `tts`, `edit [--preview]`, `meta [--style]`, `run` | 동작 |
+| `cuts [번호]`, `cut 번호 [--shot ID --reset]`, `versions`, `rollback 번호` | 동작 (M6 수정 루프) |
 
 아직 안 되는 것: 원본 자막 인페인팅(inpaint는 지금 blur), 장면 설명으로 대본-장면 매칭, Ken Burns 줌, TikTok 검색, 플랫폼 자동 업로드(범위 밖).
 
@@ -68,7 +69,8 @@ AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·�
 | "썸네일 문구 바꿔줘" / "제목·해시태그 바꿔줘" | `meta.json`의 `thumbnail_texts` / `titles` / `hashtags` | `ssm run` (meta만) |
 | "썸네일 글씨 크게·색 바꿔" | `ssm set thumbnail.top_size 170` / `ssm set thumbnail.top_color "#FF4D4D"` | `ssm run` (meta만) |
 | "이 썸네일 스타일처럼" | `ssm meta --style 이미지` (색·위치를 뽑아 `thumbnail_style.json`, 이미지를 보고 값 보정 가능) | (자동 실행) |
-| "이전 버전으로" | — | `ssm versions` → `ssm rollback <n>` |
+| "세 번째 컷 다른 장면으로" / "이 장면 별로야" | `ssm cuts`로 번호 확인 → `ssm cut 3` (자동으로 다른 좋은 장면) 또는 `ssm cut 3 --shot 02-004` (`ssm cuts 3`이 후보를 보여줌). 취소는 `ssm cut 3 --reset` | `ssm run` (edit만) |
+| "이전 버전으로" | — | `ssm versions`(보관 시각·메모) → `ssm rollback <n>` |
 | "영상 더 넣어줘" / 소스 부족 경고 | `ssm add 파일...` | `ssm run` (analyze → edit) |
 | "이 영상은 다른 상품이야" | `selected.json`에서 그 영상 `grade`를 `mood`로 (hook·problem 구간에만 쓰임) | `ssm run` (analyze → edit) |
 | "이 영상은 빼줘" | `selected.json`에서 그 항목 삭제 + `raw_videos/`의 그 파일 삭제 | `ssm run` (analyze → edit) |
@@ -77,6 +79,12 @@ AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·�
 | "BGM 빼줘" / "BGM 바꿔줘" | `ssm set audio.bgm none` / `ssm set audio.bgm assets/bgm/파일.mp3` | `ssm run` (edit) |
 
 설정은 `ssm set`으로만 바꾼다 (값을 검증하고, 영향받는 단계만 '다시 실행 필요'로 표시한다). 무엇이 다시 실행될지는 `ssm status`로 확인한다.
+`script.json`·`meta.json`은 Claude가 직접 고쳐도 된다 — `ssm run`이 바뀐 것을 알아채고 (대본이면 검사부터) 필요한 단계만 다시 돌린다.
+
+버전: `ssm run`(또는 tts·edit·meta)이 **성공할 때마다** 그 결과를 `versions/v{n}`에 보관한다 (같은 내용이면 새로 만들지 않음).
+수정 요청을 처리한 뒤 보고할 때 몇 번 버전인지 알려 두면 "아까 걸로 돌려줘"에 바로 `ssm rollback`할 수 있다.
+컷 배치는 같은 대본·영상이면 매번 똑같이 나온다 — 그래서 자막·설정만 바꿔도 컷이 그대로이고, `ssm cut`으로 바꾼 컷도 유지된다.
+대본이 바뀌어 컷 위치가 달라지면 바꿨던 컷 설정은 적용되지 않고 [주의]로 알려준다 (그때 `ssm cuts`로 다시 확인).
 
 ## 반드시 지킬 것
 
@@ -88,7 +96,7 @@ AI 검사(한글 OCR·한국어 음성·CLIP 유사도·원본 자막 영역·�
 
 ## 개발할 때
 
-- 마일스톤 순서: M0~M5(완료) → M6 수정 루프. 각 완료 기준은 기획서 9장.
+- 마일스톤 M0~M6 모두 완료 (기획서 9장). 이후 작업은 '아직 안 되는 것' 목록과 실제 사용에서 나온 문제를 우선한다.
 - 테스트: `.venv/Scripts/python -m pytest` (Windows) / `.venv/bin/pytest`. 커밋 전에 전부 통과시킨다.
 - 사용자에게 보이는 메시지는 한국어로, "무엇이 실패했고 → 무엇을 하면 되는지" 형태로 쓴다.
 - 새 단계를 구현하면 `Workspace.mark_done(stage)`로 완료를 기록하고, 이 문서의 "현재 구현 상태" 표를 갱신한다.

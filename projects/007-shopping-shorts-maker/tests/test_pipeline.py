@@ -158,11 +158,11 @@ def test_edit_multi_cut_render(project, home):
     assert "BGM: calm.mp3" in text and "boom" in text and "원본 자막 블러" in text
     assert project.pending_stages() == ["collect", "script", "meta"]
 
-    # 자막 크기만 바꾸면 edit만 다시 (이전 결과는 versions/에 보관)
+    # 자막 크기만 바꾸면 edit만 다시 (버전 보관은 CLI가 실행 단위로 한다 — test_revisions 참고)
     project.set_override("subtitle.size", 90)
     assert project.pending_stages() == ["collect", "script", "edit", "meta"]
     run_edit(project, log=quiet)
-    assert project.versions() == [1] and (project.path / "versions/v1/final_output.mp4").is_file()
+    assert project.status("edit") == "done"
 
 
 def test_edit_preview_and_crop_mode(project):

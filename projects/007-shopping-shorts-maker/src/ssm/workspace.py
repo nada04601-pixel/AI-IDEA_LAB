@@ -38,12 +38,13 @@ STAGES: dict[str, Stage] = {
         Stage("collect", "원본 수집·필터", (), ("collector",), ("raw_videos", "candidates.json", "selected.json"), "M3"),
         # 자막 가리는 방식(foreign_sub_removal)은 edit에서 적용하므로 분석 결과와 무관하다
         Stage("analyze", "영상 분석", ("collect",), (), ("analysis.json",), "M2", inputs=("raw_videos",)),
-        Stage("script", "대본", ("analyze",), ("project", "script"), ("script.json",), "M4"),
+        # Claude가 script.json을 고치면 다시 검사해야 하므로 script.json 자체도 입력으로 본다
+        Stage("script", "대본", ("analyze",), ("project", "script"), ("script.json",), "M4", inputs=("script.json",)),
         Stage("tts", "음성·자막 타이밍", ("script",), ("tts", "audio"), ("tts.mp3", "word_timings.json"), "M1"),
         # 자막 화면 나누기는 자막 설정(한 줄 글자 수)에 따라 달라지므로 subtitles.srt는 edit에서 만든다
         Stage("edit", "편집·렌더링", ("tts", "analyze"),
               ("project", "video", "subtitle", "foreign_sub_removal", "ad_disclosure", "audio"),
-              ("timeline.json", "subtitles.srt", "final_output.mp4"), "M1"),
+              ("timeline.json", "subtitles.srt", "final_output.mp4"), "M1", inputs=("overrides.json",)),
         # meta.json(제목·문구·해시태그, Claude 작성)과 thumbnail_style.json(레퍼런스 스타일)은 있으면 입력으로 본다
         Stage("meta", "썸네일·캡션", ("script", "analyze"), ("thumbnail", "ad_disclosure"),
               ("thumbnail*.png", "caption.txt"), "M5", inputs=("meta.json", "thumbnail_style.json")),
@@ -52,8 +53,10 @@ STAGES: dict[str, Stage] = {
 ORDER = list(STAGES)
 
 # 버전으로 보관할 결과물 (원본 영상·분석 결과처럼 크고 다시 만들 필요 없는 것은 제외)
-VERSIONED = ("project.yaml", "state.json", "script.json", "tts.mp3", "word_timings.json", "subtitles.srt",
-             "timeline.json", "final_output.mp4", "thumbnail*.png", "caption.txt")
+VERSIONED = ("project.yaml", "state.json", "script.json", "meta.json", "overrides.json", "thumbnail_style.json",
+             "tts.mp3", "word_timings.json", "subtitles.srt", "timeline.json", "final_output.mp4", "thumbnail*.png",
+             "thumbnails_preview.jpg", "caption.txt")
+VERSION_INFO = "version.json"
 
 BIG_FILE = 16 * 1024 * 1024  # 이보다 큰 파일은 내용 대신 크기·수정 시각으로 변화를 판단한다 (속도)
 
@@ -253,29 +256,48 @@ class Workspace:
         found = [int(p.name[1:]) for p in (self.path / "versions").glob("v*") if p.name[1:].isdigit()]
         return sorted(found)
 
-    def snapshot(self) -> int:
-        """현재 결과물을 versions/v{n}/에 보관하고 n을 돌려준다."""
-        n = (self.versions() or [0])[-1] + 1
+    def _versioned_files(self) -> list[Path]:
+        return sorted({f for pattern in VERSIONED for f in self.path.glob(pattern) if f.is_file()})
+
+    def version_info(self, n: int) -> dict:
+        path = self.path / "versions" / f"v{n}" / VERSION_INFO
+        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+
+    def snapshot(self, note: str = "") -> int | None:
+        """현재 결과물을 versions/v{n}/에 보관하고 n을 돌려준다.
+
+        보관할 결과물이 없으면 None, 마지막 버전과 내용이 같으면 새로 만들지 않고 그 번호를 돌려준다.
+        """
+        files = self._versioned_files()
+        if not any(f.name not in ("project.yaml", "state.json") for f in files):  # 설정만 있고 결과물이 없으면
+            return None
+        digest = self._files_hash(files)
+        versions = self.versions()
+        if versions and self.version_info(versions[-1]).get("hash") == digest:
+            return versions[-1]
+        n = (versions or [0])[-1] + 1
         dest = self.path / "versions" / f"v{n}"
         dest.mkdir(parents=True)
-        for pattern in VERSIONED:
-            for f in self.path.glob(pattern):
-                if f.is_file():
-                    shutil.copy2(f, dest / f.name)
+        for f in files:
+            shutil.copy2(f, dest / f.name)
+        info = {"hash": digest, "created_at": datetime.now().isoformat(timespec="seconds"), "note": note,
+                "files": [f.name for f in files]}
+        (dest / VERSION_INFO).write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
         return n
 
-    def rollback(self, n: int) -> None:
-        """v{n} 결과물로 되돌린다. 되돌리기 전 상태도 새 버전으로 남긴다."""
+    def rollback(self, n: int) -> int | None:
+        """v{n} 결과물로 되돌린다. 되돌리기 전 상태도 버전으로 남기고 그 번호를 돌려준다."""
         src = self.path / "versions" / f"v{n}"
         if not src.is_dir():
             raise WorkspaceError(f"버전 v{n}이 없습니다. 있는 버전: {self.versions() or '없음'}")
-        self.snapshot()
-        for pattern in VERSIONED:  # v{n} 이후에 새로 생긴 결과물은 지운다
-            for f in self.path.glob(pattern):
-                if f.is_file() and not (src / f.name).exists():
-                    f.unlink()
+        kept = self.snapshot(f"v{n}으로 되돌리기 전")
+        for f in self._versioned_files():  # v{n} 이후에 새로 생긴 결과물은 지운다
+            if not (src / f.name).exists():
+                f.unlink()
         for f in src.iterdir():
-            shutil.copy2(f, self.path / f.name)
+            if f.name != VERSION_INFO:
+                shutil.copy2(f, self.path / f.name)
+        return kept
 
 
 def list_projects(root: Path | None = None) -> list[Workspace]:

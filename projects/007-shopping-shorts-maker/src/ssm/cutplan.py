@@ -9,13 +9,14 @@
 import math
 from dataclasses import dataclass, field
 
-from ssm.schemas import Analysis, Cut, Shot, Timeline, VideoAnalysis, WordTimings
+from ssm.schemas import Analysis, Cut, Overrides, Shot, Timeline, VideoAnalysis, WordTimings
 
 MAX_CUT_SEC = 3.0
 MIN_CUT_SEC = 1.0
 MIN_SPEED = 0.9
 MOOD_SECTIONS = {"hook", "problem"}  # 분위기만 비슷한 영상(mood)을 쓸 수 있는 구간
 MAX_SAME_SOURCE_IN_ROW = 2
+POSITION_TOLERANCE = 0.05  # 컷 교체 설정을 찾을 때 시각 허용 오차 (초)
 
 
 class PlanError(Exception):
@@ -137,12 +138,7 @@ def plan_timeline(timings: WordTimings, analysis: Analysis, total: float) -> tup
                 piece = Piece(piece.start, cut_at, piece.sections)
             # 나눌 여유도 없으면 느리게 재생해 채운다 (아주 드문 경우)
 
-        speed = max(0.5, min(1.0, shot.duration / piece.length))
-        src_len = min(piece.length * speed, shot.duration)
-        src_start = shot.start + (shot.duration - src_len) / 2  # 샷 가운데 부분을 쓴다
-        cuts.append(Cut(source=video.file, start=round(src_start, 3), end=round(src_start + src_len, 3),
-                        position=round(piece.start, 3), speed=round(speed, 4), shot_id=shot.id,
-                        section=_main_section(piece.sections)))
+        cuts.append(shot_cut(video, shot, piece.start, piece.length, _main_section(piece.sections)))
         used[shot.id] = used.get(shot.id, 0) + 1
         history.append(video.file)
         i += 1
@@ -152,3 +148,64 @@ def plan_timeline(timings: WordTimings, analysis: Analysis, total: float) -> tup
 def _main_section(sections: set[str]) -> str:
     order = ["hook", "problem", "demo", "benefit", "cta"]
     return next(s for s in order if s in sections)
+
+
+def shot_cut(video: VideoAnalysis, shot: Shot, position: float, length: float, section: str | None) -> Cut:
+    """장면 하나로 position부터 length초를 채우는 컷 (샷 가운데 부분, 짧으면 느리게)."""
+    speed = max(0.5, min(1.0, shot.duration / length))
+    src_len = min(length * speed, shot.duration)
+    src_start = shot.start + (shot.duration - src_len) / 2
+    return Cut(source=video.file, start=round(src_start, 3), end=round(src_start + src_len, 3),
+               position=round(position, 3), speed=round(speed, 4), shot_id=shot.id, section=section)
+
+
+# ---- 컷 교체 (기획서 Module 6 "세 번째 컷 다른 장면으로 바꿔줘") --------------------------------
+
+
+def find_shot(analysis: Analysis, shot_id: str) -> tuple[VideoAnalysis, Shot] | None:
+    return next(((v, s) for v in analysis.videos for s in v.shots if s.id == shot_id), None)
+
+
+def _allowed(video: VideoAnalysis, section: str | None) -> bool:
+    return video.grade == "same_product" or section in MOOD_SECTIONS
+
+
+def replacement_candidates(timeline: Timeline, analysis: Analysis, index: int) -> list[tuple[VideoAnalysis, Shot]]:
+    """index번 컷 대신 쓸 수 있는 장면 (점수 높은 순): 구간 규칙(mood)·길이를 지키고, 지금 안 쓰는 장면."""
+    cut = timeline.cuts[index]
+    used = {c.shot_id for c in timeline.cuts}
+    found = [(v, s) for v in analysis.videos for s in v.shots
+             if s.id not in used and _allowed(v, cut.section) and s.duration >= cut.length * MIN_SPEED]
+    return sorted(found, key=lambda vs: -vs[1].score)
+
+
+def check_replacement(timeline: Timeline, analysis: Analysis, index: int, shot_id: str) -> tuple[VideoAnalysis, Shot]:
+    cut = timeline.cuts[index]
+    found = find_shot(analysis, shot_id)
+    if found is None:
+        raise PlanError(f"장면 '{shot_id}'이 없습니다 → `ssm cuts {index + 1}`로 쓸 수 있는 장면을 보세요.")
+    video, shot = found
+    if not _allowed(video, cut.section):
+        raise PlanError(f"'{shot_id}'은 분위기 영상(mood)이라 {cut.section} 구간에 쓸 수 없습니다 "
+                        "(상품이 보이는 구간은 같은 상품 영상만).")
+    if shot.duration < cut.length * MIN_SPEED:
+        raise PlanError(f"'{shot_id}'은 {shot.duration:.1f}초라 {cut.length:.1f}초 컷을 채우기에 짧습니다.")
+    if shot_id == cut.shot_id:
+        raise PlanError(f"{index + 1}번 컷은 이미 '{shot_id}'입니다.")
+    return video, shot
+
+
+def apply_overrides(timeline: Timeline, analysis: Analysis, overrides: Overrides) -> tuple[Timeline, int, list]:
+    """컷 교체 설정을 적용한다. (새 타임라인, 적용한 수, 적용하지 못한 설정들)."""
+    cuts = list(timeline.cuts)
+    applied, dropped = 0, []
+    for o in overrides.cuts:
+        i = next((k for k, c in enumerate(cuts)
+                  if abs(c.position - o.position) <= POSITION_TOLERANCE and c.shot_id == o.was), None)
+        found = find_shot(analysis, o.shot)
+        if i is None or found is None or not _allowed(found[0], cuts[i].section):
+            dropped.append(o)
+            continue
+        cuts[i] = shot_cut(found[0], found[1], cuts[i].position, cuts[i].length, cuts[i].section)
+        applied += 1
+    return timeline.model_copy(update={"cuts": cuts}), applied, dropped

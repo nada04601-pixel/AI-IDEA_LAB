@@ -135,6 +135,20 @@ class Selected(_Model):
     videos: list[SelectedVideo]
 
 
+# ---- overrides.json (사용자 수정: 컷 교체) -----------------------------------------
+
+
+class CutOverride(_Model):
+    position: float  # 바꿀 컷이 시작하는 시각 (초)
+    was: str  # 원래 배치된 장면 (shot id) — 대본·영상이 바뀌어 컷 배치가 달라지면 적용하지 않는다
+    shot: str  # 대신 쓸 장면
+
+
+class Overrides(_Model):
+    version: Literal[1] = 1
+    cuts: list[CutOverride] = Field(default_factory=list)
+
+
 # ---- analysis.json (analyze 단계 결과) ------------------------------------------
 # 좌표는 원본 영상 화면(회전 반영) 기준 픽셀, 시간은 원본 영상 기준 초.
 
