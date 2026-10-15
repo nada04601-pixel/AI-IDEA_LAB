@@ -76,8 +76,9 @@ def test_tts_and_run_without_script(home, tmp_path):
     invoke("new", "--local", str(make_video(tmp_path / "a.mp4")), "-y")
     r = invoke("tts")
     assert r.exit_code == 1 and "script.json이 없습니다" in r.output
-    r = invoke("run")  # 수집(로컬)·분석까지 하고, 대본은 건너뛰고, tts에서 대본이 없다고 알린다
-    assert r.exit_code == 1 and "▶ 영상 분석" in r.output and "건너뜁니다" in r.output and "script.json" in r.output
+    r = invoke("run")  # 수집(로컬)·분석까지 하고, 대본 단계에서 요청서를 만들라고 알린다
+    assert r.exit_code == 1 and "▶ 영상 분석" in r.output and "script.json이 없습니다" in r.output
+    assert "ssm script --preset" in r.output
 
 
 def test_no_project_message(home):

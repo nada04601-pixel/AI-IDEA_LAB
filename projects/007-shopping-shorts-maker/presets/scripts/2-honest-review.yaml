@@ -1,0 +1,44 @@
+# 대본 프리셋 ② — `ssm script --preset 2` (또는 honest_review)
+id: honest_review
+number: 2
+name: 내돈내산 찐리뷰형
+description: 직접 사서 써본 사람처럼 솔직하게 말한다. 장점만 늘어놓지 않고 아쉬운 점도 한 줄 넣어 신뢰를 준다.
+fits: 써봐야 아는 상품 (뷰티 도구·주방 가전·생활 소품), 비교 대상이 많은 상품
+tone: 1인칭 경험담, 반말 섞지 않은 편한 존댓말. '솔직히', '생각보다'로 기대를 깨는 말투.
+hook_patterns:
+  - "솔직히 이거 반신반의하면서 샀거든요."
+  - "○○ 한 달 써본 후기 말씀드릴게요."
+  - "광고 보고 혹해서 샀는데, 결과부터 말하면…"
+  - "이거 왜 이제 샀나 싶었어요."
+sentence_syllables: [6, 22]
+endings: ["-거든요", "-더라고요", "-었어요", "-네요"]
+structure:
+  hook: 구매 계기나 반신반의했던 마음으로 시작.
+  problem: 원래 쓰던 방식의 불편을 경험담으로.
+  demo: 직접 써본 장면을 순서대로 (영상에서 보이는 동작).
+  benefit: 좋았던 점 1~2개 + 아쉬운 점 1개를 솔직하게. 아쉬운 점은 사용 팁으로 마무리.
+  cta: 댓글 유도. '저처럼 고민하셨던 분' 같은 공감형.
+cta_examples:
+  - "저처럼 고민하셨던 분은 댓글에 '후기'라고 남겨주세요."
+  - "어디서 샀는지 궁금하시면 댓글에 '링크' 남겨주세요!"
+avoid:
+  - 실제로 써보지 않은 효과를 단정하기 ("완전히 해결돼요" 등)
+  - 아쉬운 점 없이 칭찬만 하기 (광고처럼 들림)
+  - 사용 기간·횟수를 지어내기 — 모르면 '써보니까' 정도로만
+examples:
+  - product: 무선 미니 핸디 청소기
+    sentences:
+      - {section: hook, text: "솔직히 이거 반신반의하면서 샀거든요.", emphasis: ["반신반의"], sfx: whoosh}
+      - {section: problem, text: "큰 청소기 꺼내기 귀찮아서 책상 먼지를 그냥 두곤 했어요.", emphasis: ["귀찮아서"]}
+      - {section: demo, text: "손바닥만 한데, 버튼 하나 누르니까 과자 부스러기가 바로 빨려 들어가요.", emphasis: ["손바닥만"], sfx: pop}
+      - {section: benefit, text: "충전식이라 선이 없어서 차 안에서도 쓰기 편하더라고요.", emphasis: ["선이 없어서"]}
+      - {section: benefit, text: "다만 먼지통이 작아서 자주 비워 주는 게 좋아요.", emphasis: ["자주 비워"]}
+      - {section: cta, text: "어디서 샀는지 궁금하시면 댓글에 '링크' 남겨주세요!", emphasis: ["링크"]}
+  - product: 실리콘 접이식 수납 바구니
+    sentences:
+      - {section: hook, text: "이거 왜 이제 샀나 싶었어요.", emphasis: ["왜 이제"], sfx: whoosh}
+      - {section: problem, text: "수납 바구니가 쓸 때는 좋은데, 안 쓸 땐 자리만 차지하잖아요.", emphasis: ["자리만"]}
+      - {section: demo, text: "이건 위에서 꾹 누르면 납작하게 접혀요.", emphasis: ["납작하게"], sfx: pop}
+      - {section: benefit, text: "펼치면 꽤 많이 들어가서 장바구니로도 쓰고 있어요.", emphasis: ["장바구니"]}
+      - {section: benefit, text: "아쉬운 건 색이 밝아서 때가 좀 보인다는 점이에요.", emphasis: ["때가"]}
+      - {section: cta, text: "저처럼 수납 고민하셨던 분은 댓글에 '후기'라고 남겨주세요.", emphasis: ["후기"]}

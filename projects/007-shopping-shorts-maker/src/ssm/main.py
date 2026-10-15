@@ -152,9 +152,9 @@ def new_cmd(
     console.print(f"  길이 {cfg.project.duration_sec}초 · {cfg.video.fps}fps · 광고 표시: "
                   f"{cfg.ad_disclosure.profile or '아직 선택 안 함 (렌더링 전에 필요)'}")
     if local:
-        console.print(f"  다음 단계: 대본을 {ws.path / 'script.json'}에 저장한 뒤 `ssm run` (analyze → tts → edit)")
+        console.print("  다음 단계: `ssm run`으로 수집·분석 → `ssm script --preset N`으로 대본 요청서 → 대본 작성 → `ssm run`")
     else:
-        console.print("  다음 단계: `ssm collect` (같은 상품 영상 수집·필터) → 대본 작성 → `ssm run`")
+        console.print("  다음 단계: `ssm collect` (같은 상품 영상 수집·필터) → `ssm analyze` → `ssm script --preset N`")
 
 
 @app.command("list")
@@ -243,6 +243,7 @@ def _run_stage(stage: str, ws: Workspace, **options) -> None:
     from ssm.analyzer import AnalyzeError, run_analyze
     from ssm.collector import CollectError, run_collect
     from ssm.media import MediaError
+    from ssm.scripter import ScriptError, run_script_check
     from ssm.tts_engine import TTSError, run_tts
     from ssm.video_editor import EditError, run_edit
 
@@ -256,16 +257,18 @@ def _run_stage(stage: str, ws: Workspace, **options) -> None:
             run_collect(ws, log=log)
         elif stage == "analyze":
             run_analyze(ws, log=log)
+        elif stage == "script":
+            run_script_check(ws, log=log)
         elif stage == "tts":
             run_tts(ws, log=log)
         elif stage == "edit":
             out = run_edit(ws, preview=options.get("preview", False), log=log)
             console.print(f"[green]완성:[/] {out}")
-    except (CollectError, AnalyzeError, TTSError, EditError, MediaError, WorkspaceError) as e:
+    except (CollectError, AnalyzeError, ScriptError, TTSError, EditError, MediaError, WorkspaceError) as e:
         fail(str(e))
 
 
-IMPLEMENTED = ("collect", "analyze", "tts", "edit")
+IMPLEMENTED = ("collect", "analyze", "script", "tts", "edit")
 
 
 def _not_ready(stage: str) -> None:
@@ -304,6 +307,55 @@ def collect_cmd(project_id: Optional[str] = ProjectArg,
     except ValidationError as e:
         fail("설정 값이 올바르지 않습니다 — " + validation_message(e))
     _run_stage("collect", ws)
+
+
+@app.command("presets")
+def presets_cmd() -> None:
+    """대본 프리셋 목록 (사용자에게 보여주고 고르게 한다)."""
+    from ssm.config import load_config
+    from ssm.scripter import ScriptError, load_presets
+
+    try:
+        presets = load_presets(load_config())
+    except ScriptError as e:
+        fail(str(e))
+    table = Table()
+    for col in ("번호", "프리셋", "설명", "훅 예시"):
+        table.add_column(col)
+    for p in presets:
+        table.add_row(str(p.number), f"{p.name}\n({p.id})", f"{p.description}\n어울리는 상품: {p.fits}",
+                      p.hook_patterns[0] if p.hook_patterns else "")
+    console.print(table)
+
+
+@app.command("script")
+def script_cmd(project_id: Optional[str] = ProjectArg,
+               preset: Optional[str] = typer.Option(None, "--preset", help="프리셋 번호(1~4) 또는 이름 — `ssm presets`"),
+               reference: Optional[str] = typer.Option(None, "--reference",
+                                                       help="화법을 따라 할 영상 링크·파일 또는 대본 .txt ('none'이면 해제)"),
+               check: bool = typer.Option(False, "--check", help="Claude가 쓴 script.json을 검사하고 통과하면 완료로 기록")) -> None:
+    """(A안) 대본 작성 요청서(script_prompt.md)를 만든다. 대본은 Claude가 그 요청서대로 script.json에 쓴다."""
+    from ssm.media import MediaError
+    from ssm.scripter import ScriptError, find_preset, load_presets, prepare_request
+
+    ws = open_ws(project_id)
+    if check:
+        _run_stage("script", ws)
+        return
+    try:
+        if preset is not None:
+            found = find_preset(load_presets(ws.config()), preset)
+            if found is None:
+                fail(f"프리셋 '{preset}'이 없습니다 → `ssm presets`로 목록을 보세요.")
+            ws.set_override("script.preset", found.id)
+        if reference is not None:
+            ws.set_override("script.reference", None if reference.lower() == "none" else reference)
+        prepare_request(ws, log=lambda m: console.print(m, markup=False))
+    except (ScriptError, MediaError, WorkspaceError) as e:
+        fail(str(e))
+    except ValidationError as e:
+        fail("설정 값이 올바르지 않습니다 — " + validation_message(e))
+    console.print("다음: Claude가 요청서대로 script.json을 쓰고 → `ssm script --check` → `ssm run`")
 
 
 @app.command("analyze")

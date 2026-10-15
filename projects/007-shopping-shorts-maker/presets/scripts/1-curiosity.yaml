@@ -1,0 +1,43 @@
+# 대본 프리셋 ① — `ssm script --preset 1` (또는 curiosity)
+id: curiosity
+number: 1
+name: 호기심 유발·문제 해결형
+description: 누구나 겪는 불편을 먼저 꺼내고, 상품이 그걸 어떻게 해결하는지 보여준다. 가장 무난하고 조회수가 잘 나오는 기본형.
+fits: 생활 불편을 해결하는 아이디어 상품 (주방·욕실·수납·여행·자취템)
+tone: 친근한 존댓말, 말하듯 짧게 끊어서. 질문으로 시작하고 '이거 하나면'으로 반전.
+hook_patterns:
+  - "아직도 ○○ 하세요?"
+  - "○○ 할 때마다 짜증 나셨죠?"
+  - "이거 모르면 계속 ○○ 하게 돼요."
+  - "○○, 이렇게 하면 끝나요."
+sentence_syllables: [6, 22]  # 문장 하나의 권장 음절 수 (짧을수록 자막이 잘 읽힌다)
+endings: ["-요", "-죠", "-거든요", "-더라고요"]
+structure:
+  hook: 0~3초. 시청자가 겪는 불편을 질문으로. 상품 이름은 아직 말하지 않는다.
+  problem: 그 불편이 왜 귀찮은지 1~2문장으로 공감.
+  demo: 상품이 해결하는 장면을 그대로 설명 (영상에서 보이는 동작 위주).
+  benefit: 사용 후 달라지는 점 1~2개. 숫자·크기 등 확인 가능한 사실만.
+  cta: 댓글 유도로 끝낸다.
+cta_examples:
+  - "궁금하시면 댓글에 '링크' 남겨주세요!"
+  - "필요하신 분은 댓글에 '정보'라고 남겨주세요."
+avoid:
+  - 처음부터 상품명·가격으로 시작하기 (훅이 약해짐)
+  - 한 문장에 정보 두 개 이상 넣기
+examples:
+  - product: 접이식 실리콘 전기포트
+    sentences:
+      - {section: hook, text: "아직도 여행 갈 때 무거운 포트 들고 다니세요?", emphasis: ["무거운 포트"], sfx: whoosh}
+      - {section: problem, text: "호텔 포트는 찝찝하고, 챙기자니 캐리어 자리가 아깝잖아요.", emphasis: ["찝찝"]}
+      - {section: demo, text: "이건 접으면 두께가 5센티밖에 안 돼요.", emphasis: ["5센티"], sfx: pop}
+      - {section: demo, text: "물 붓고 버튼만 누르면 금방 보글보글 끓어요.", emphasis: ["버튼만"]}
+      - {section: benefit, text: "실리콘이라 가볍고, 프리볼트라 해외에서도 쓸 수 있어요.", emphasis: ["프리볼트"]}
+      - {section: cta, text: "궁금하시면 댓글에 '링크' 남겨주세요!", emphasis: ["링크"]}
+  - product: 싱크대 거름망 자동 배수 트레이
+    sentences:
+      - {section: hook, text: "설거지 끝나고 거름망 비울 때마다 손 대기 싫으셨죠?", emphasis: ["거름망"], sfx: whoosh}
+      - {section: problem, text: "음식물이 끼면 냄새 나고, 매번 털어내기도 번거롭잖아요.", emphasis: ["냄새"]}
+      - {section: demo, text: "이건 거름망을 위로 들기만 하면 물이 쫙 빠져요.", emphasis: ["들기만"], sfx: pop}
+      - {section: demo, text: "그대로 뒤집으면 찌꺼기가 한 번에 떨어지고요.", emphasis: ["한 번에"]}
+      - {section: benefit, text: "손에 묻을 일이 없어서 설거지 마무리가 훨씬 편해졌어요.", emphasis: ["손에 묻을 일"]}
+      - {section: cta, text: "필요하신 분은 댓글에 '정보'라고 남겨주세요.", emphasis: ["정보"]}

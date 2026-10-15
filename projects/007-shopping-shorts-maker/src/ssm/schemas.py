@@ -207,6 +207,22 @@ class Timeline(_Model):
     cuts: list[Cut] = Field(min_length=1)
 
 
+# ---- reference_style.json (레퍼런스 화법 분석) -------------------------------------
+
+
+class StyleProfile(_Model):
+    version: Literal[1] = 1
+    source: str  # 링크·파일 경로
+    transcript: str
+    sentence_count: int
+    avg_syllables: float  # 문장 하나의 평균 음절 수
+    max_syllables: int
+    syllables_per_sec: float | None = None  # 말 속도 (영상에서 받아 적었을 때만)
+    question_ratio: float  # 물음표로 끝나는 문장 비율
+    endings: list[tuple[str, int]] = Field(default_factory=list)  # 자주 쓰는 어미 (끝 두 글자)와 횟수
+    hook: str = ""  # 첫 문장
+
+
 # ---- workspace/{id}/project.yaml --------------------------------------------
 
 

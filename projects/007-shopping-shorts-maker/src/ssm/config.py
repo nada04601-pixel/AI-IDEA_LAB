@@ -106,6 +106,11 @@ class CollectorCfg(_Section):
         return self
 
 
+class ScriptCfg(_Section):
+    preset: str | None = None  # curiosity | honest_review | value_deal | info_curation (번호 1~4도 가능)
+    reference: str | None = None  # 화법을 따라 할 벤치마킹 영상 링크·파일 또는 대본 텍스트 파일
+
+
 class LLMCfg(_Section):
     provider: Literal["claude_code"] = "claude_code"
 
@@ -120,6 +125,7 @@ class AppConfig(_Section):
     tts: TTSCfg = TTSCfg()
     audio: AudioCfg = AudioCfg()
     collector: CollectorCfg = CollectorCfg()
+    script: ScriptCfg = ScriptCfg()
     device: Literal["auto", "cuda", "cpu"] = "auto"
     ffmpeg_path: str | None = None
     workspace_dir: str = "workspace"

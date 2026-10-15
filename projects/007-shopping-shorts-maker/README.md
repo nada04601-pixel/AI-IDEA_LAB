@@ -5,8 +5,9 @@ Claude Code 안에서 대화하며 쓰도록 설계했다 (대본은 Claude가 �
 
 - 요구사항: [ideas/007-shopping-shorts-maker/idea.md](../../ideas/007-shopping-shorts-maker/idea.md) (v1.0)
 - Claude Code 작업 지침: [CLAUDE.md](CLAUDE.md)
-- 현재 단계: **M3 완료** — 샤오홍슈·도우인 링크 → 같은 상품 영상 수집(yt-dlp → 브라우저 대체)·국내 콘텐츠 필터·CLIP 유사도 등급 (`ssm collect`)
-  → 영상 분석 → TTS · 문장 경계 다중 컷 편집 · 원본 자막 블러 · 한국어 자막 · 광고 표시 · 효과음·BGM · -14 LUFS (`ssm run`)
+- 현재 단계: **M4 완료** — 샤오홍슈·도우인 링크 → 같은 상품 영상 수집·국내 콘텐츠 필터 (`ssm collect`) → 영상 분석 →
+  대본 프리셋 4종·레퍼런스 화법·금지 표현 검사 (`ssm script`, 대본은 Claude가 작성) → TTS · 다중 컷 편집 · 자막 · 광고 표시 · 오디오 (`ssm run`).
+  썸네일·캡션(M5)은 개발 전
 
 ## 설치
 
@@ -32,6 +33,9 @@ ssm.bat set subtitle.size 90        # 이 프로젝트의 설정 변경 → 영�
 ssm.bat versions / rollback 2       # 결과물 버전 보관·되돌리기
 ssm.bat collect [--keyword 검색어] [--url 링크]   # 같은 상품 영상 수집·필터 → raw_videos/ (candidates.json에 후보별 사유)
 ssm.bat add 영상.mp4 ...             # 같은 상품 영상 추가 (analyze부터 다시)
+ssm.bat presets                     # 대본 프리셋 4종
+ssm.bat script --preset 2 [--reference 링크|파일|대본.txt]   # 대본 작성 요청서(script_prompt.md) 만들기
+ssm.bat script --check              # Claude가 쓴 script.json 검사 (분량·금지 표현·형식)
 ssm.bat run                         # 남은 단계 실행 (현재 analyze·tts·edit, 개발 전 단계는 건너뜀)
 ssm.bat edit --preview              # 540x960 미리보기
 ```

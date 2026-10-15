@@ -79,7 +79,8 @@ def project(home, tmp_path):
     videos = [make_video(tmp_path / "원본 1.mp4", "720x1280", 6, shots=2, box=True),
               make_video(tmp_path / "원본 2.mp4", "640x360", 4, shots=2),
               make_video(tmp_path / "원본 3.mp4", "1080x1920", 3)]
-    ws = Workspace.create(Source(type="local", files=[str(v) for v in videos]), {"ad_disclosure": {"profile": "coupang"}})
+    ws = Workspace.create(Source(type="local", files=[str(v) for v in videos]),
+                          {"ad_disclosure": {"profile": "coupang"}, "project": {"duration_sec": 15}})
     import_local_videos(ws, videos)
     (ws.path / "script.json").write_text(json.dumps(SCRIPT, ensure_ascii=False), encoding="utf-8")
     return ws
