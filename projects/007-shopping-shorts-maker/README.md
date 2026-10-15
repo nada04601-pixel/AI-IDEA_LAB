@@ -5,7 +5,7 @@ Claude Code 안에서 대화하며 쓰도록 설계했다 (대본은 Claude가 �
 
 - 요구사항: [ideas/007-shopping-shorts-maker/idea.md](../../ideas/007-shopping-shorts-maker/idea.md) (v1.0)
 - Claude Code 작업 지침: [CLAUDE.md](CLAUDE.md)
-- 현재 단계: **M0 완료** — 설치 스크립트, 설정, 작업 폴더·단계 상태 관리, `ssm doctor`. 실제 제작 단계는 M1부터 구현
+- 현재 단계: **M1 완료** — 로컬 영상 1개 + 대본(script.json) → TTS(edge-tts) · 한국어 자막 · 광고 표시가 들어간 1080x1920 MP4 (`ssm tts`, `ssm edit`)
 
 ## 설치
 
@@ -29,7 +29,7 @@ ssm.bat list                        # 프로젝트 목록
 ssm.bat status [ID]                 # 단계별 진행 상황 (ID 생략 시 최근 프로젝트)
 ssm.bat set subtitle.size 90        # 이 프로젝트의 설정 변경 → 영향받는 단계만 다시 실행 대상
 ssm.bat versions / rollback 2       # 결과물 버전 보관·되돌리기
-ssm.bat run                         # 남은 단계 실행 (M1부터 동작)
+ssm.bat run                         # 남은 단계 실행 (현재 tts·edit, 개발 전 단계는 건너뜀)
 ```
 
 Claude Code에서는 이 폴더를 열고 "이 링크로 쇼츠 만들어줘"처럼 말하면 Claude가 위 명령을 실행한다.

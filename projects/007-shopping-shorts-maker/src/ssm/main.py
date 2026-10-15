@@ -151,7 +151,11 @@ def new_cmd(
     console.print(f"  폴더: {ws.path}")
     console.print(f"  길이 {cfg.project.duration_sec}초 · {cfg.video.fps}fps · 광고 표시: "
                   f"{cfg.ad_disclosure.profile or '아직 선택 안 함 (렌더링 전에 필요)'}")
-    console.print("  다음 단계: 수집·분석 기능은 아직 개발 중입니다 (M2~M3). `ssm status`로 진행 상황을 볼 수 있습니다.")
+    if local:
+        console.print(f"  다음 단계: 대본을 {ws.path / 'script.json'}에 저장한 뒤 `ssm tts` → `ssm edit`")
+    else:
+        console.print("  다음 단계: 수집·분석 기능은 아직 개발 중입니다 (M2~M3). "
+                      "직접 받은 영상이 있으면 `ssm new --local 영상.mp4`로 만들 수 있습니다.")
 
 
 @app.command("list")
@@ -185,7 +189,8 @@ def status_cmd(project_id: Optional[str] = ProjectArg) -> None:
     statuses = ws.statuses()
     for name in ORDER:
         stage = STAGES[name]
-        table.add_row(name, stage.title, STATUS_LABEL[statuses[name]], f"{stage.milestone} 예정")
+        table.add_row(name, stage.title, STATUS_LABEL[statuses[name]],
+                      "구현됨" if name in IMPLEMENTED else f"{stage.milestone} 예정")
     console.print(table)
     versions = ws.versions()
     if versions:
@@ -231,7 +236,27 @@ def rollback_cmd(version: int = typer.Argument(..., help="되돌릴 버전 번�
     console.print(f"v{version}으로 되돌렸습니다. 되돌리기 전 상태는 v{ws.versions()[-1]}에 있습니다.")
 
 
-# ---- 제작 단계 (M1부터 구현) -------------------------------------------------------------
+# ---- 제작 단계 ---------------------------------------------------------------------
+
+
+def _run_stage(stage: str, ws: Workspace, **options) -> None:
+    """구현된 단계를 실행한다. 사용자에게 보여줄 오류는 한국어 메시지로 바꿔 종료한다."""
+    from ssm.media import MediaError
+    from ssm.tts_engine import TTSError, run_tts
+    from ssm.video_editor import EditError, run_edit
+
+    console.print(f"[bold]▶ {STAGES[stage].title}[/] ({stage})")
+    try:
+        if stage == "tts":
+            run_tts(ws, log=console.print)
+        elif stage == "edit":
+            out = run_edit(ws, preview=options.get("preview", False), log=console.print)
+            console.print(f"[green]완성:[/] {out}")
+    except (TTSError, EditError, MediaError, WorkspaceError) as e:
+        fail(str(e))
+
+
+IMPLEMENTED = ("tts", "edit")
 
 
 def _not_ready(stage: str) -> None:
@@ -249,19 +274,41 @@ def _stage_command(stage: str) -> None:
 
 
 for _stage in ORDER:
-    _stage_command(_stage)
+    if _stage not in IMPLEMENTED:
+        _stage_command(_stage)
+
+
+@app.command("tts")
+def tts_cmd(project_id: Optional[str] = ProjectArg) -> None:
+    """script.json을 읽어 음성(tts.mp3)과 단어별 시간(word_timings.json)을 만든다."""
+    _run_stage("tts", open_ws(project_id))
+
+
+@app.command("edit")
+def edit_cmd(project_id: Optional[str] = ProjectArg,
+             preview: bool = typer.Option(False, "--preview", help="540x960으로 빠르게 미리보기 (preview.mp4)")) -> None:
+    """원본 영상에 음성·한국어 자막·광고 표시를 얹어 final_output.mp4를 만든다."""
+    _run_stage("edit", open_ws(project_id), preview=preview)
 
 
 @app.command("run")
 def run_cmd(project_id: Optional[str] = ProjectArg) -> None:
-    """남은 단계를 순서대로 실행한다 (state.json 기준)."""
+    """남은 단계를 순서대로 실행한다 (state.json 기준). 아직 개발 전인 단계는 건너뛴다."""
     ws = open_ws(project_id)
     todo = ws.pending_stages()
     if not todo:
         console.print("모든 단계가 완료되어 있습니다.")
         return
+    if not any(s in IMPLEMENTED for s in todo):
+        console.print(f"구현된 단계({', '.join(IMPLEMENTED)})는 모두 최신입니다. "
+                      f"남은 단계 {', '.join(todo)}는 아직 개발 전입니다.")
+        return
     console.print(f"실행할 단계: {' → '.join(todo)}")
-    _not_ready(todo[0])
+    for stage in todo:
+        if stage in IMPLEMENTED:
+            _run_stage(stage, ws)
+        else:
+            console.print(f"[dim]- {stage}: 아직 개발 전 단계라 건너뜁니다 ({STAGES[stage].milestone} 예정)[/]")
 
 
 @app.callback(invoke_without_command=True)

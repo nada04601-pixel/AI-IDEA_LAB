@@ -12,12 +12,16 @@
 - 설치가 안 되어 있으면 사용자에게 `setup.bat`(Windows) 또는 `./setup.sh` 실행을 안내한다.
 - 문제가 생기면 먼저 `ssm doctor`로 점검한다.
 
-## 현재 구현 상태 (M0 완료)
+## 현재 구현 상태 (M1 완료)
 
 | 명령 | 상태 |
 |---|---|
 | `doctor`, `fonts`, `new`, `list`, `status`, `set`, `versions`, `rollback` | 동작 |
-| `collect`(M3), `analyze`(M2), `script`(M4), `tts`(M1), `edit`(M1), `meta`(M5), `run` | **아직 구현 전** — 종료 코드 2와 함께 예정 마일스톤을 알려준다 |
+| `tts`, `edit [--preview]`, `run` | 동작 (M1) — 로컬 영상 1개 기준. `run`은 개발 전 단계를 건너뛴다 |
+| `collect`(M3), `analyze`(M2), `script`(M4), `meta`(M5) | **아직 구현 전** — 종료 코드 2와 함께 예정 마일스톤을 알려준다 |
+
+M1에서 아직 안 되는 것: 여러 영상 컷 편집·외국어 자막 가리기·BGM/효과음·라우드니스(-14 LUFS)는 M2. 영상이 여러 개여도 첫 번째만 쓴다.
+지금 쇼츠를 만들려면: `ssm new --local 영상.mp4 --ad coupang` → Claude가 `script.json` 작성 → `ssm tts` → `ssm edit`.
 
 구현되지 않은 단계를 사용자가 요청하면, 결과를 꾸며내지 말고 "아직 개발 전 단계"라고 그대로 알린다.
 
@@ -31,6 +35,8 @@
 4. Claude가 대본을 써서 `script.json`으로 저장한다. 형식은 `src/ssm/schemas.py`의 `Script` (첫 문장 hook, 마지막 cta, 강조어는 문장에 포함).
    - 분량: 목표 길이 × 초당 6~7음절. 과장 표현("100% 효과", "최저가 보장", 의학적 효능) 금지.
 5. `ssm tts` → `ssm edit` → `ssm meta` (또는 `ssm run`으로 남은 단계 일괄)
+   - `ssm tts`가 음성 길이를 알려준다. 목표보다 길면 대본을 줄이거나 `ssm set tts.rate "+20%"`.
+   - 빠르게 확인만 하려면 `ssm edit --preview` (540x960 `preview.mp4`).
 6. 결과(`final_output.mp4`, 썸네일 후보, `caption.txt`)를 알려주고 수정 요청을 기다린다.
 
 ## 수정 요청 → 바꿀 것 → 다시 실행할 것

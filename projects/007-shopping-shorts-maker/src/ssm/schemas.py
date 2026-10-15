@@ -62,6 +62,53 @@ class Script(_Model):
         return self
 
 
+# ---- word_timings.json (tts 단계 결과) -----------------------------------------
+# 시간은 모두 tts.mp3 처음부터의 초 단위.
+
+
+class Word(_Model):
+    text: str
+    start: float
+    end: float
+
+
+class SentenceTiming(_Model):
+    id: str
+    text: str
+    emphasis: list[str] = Field(default_factory=list)
+    start: float  # 이 문장 음성 구간 (앞뒤 무음 포함)
+    end: float
+    words: list[Word] = Field(default_factory=list)  # TTS 엔진이 알려준 단어 경계 (문장부호 제외)
+
+
+class WordTimings(_Model):
+    version: Literal[1] = 1
+    provider: str
+    voice: str
+    rate: str
+    duration: float
+    sentences: list[SentenceTiming]
+
+
+# ---- timeline.json (edit 단계 결과) ---------------------------------------------
+
+
+class Cut(_Model):
+    source: str  # 프로젝트 폴더 기준 원본 영상 경로 (예: raw_videos/01.mp4)
+    start: float  # 원본 영상 안에서의 구간 (초)
+    end: float
+
+    @property
+    def duration(self) -> float:
+        return self.end - self.start
+
+
+class Timeline(_Model):
+    version: Literal[1] = 1
+    duration: float  # 최종 영상 길이 (초)
+    cuts: list[Cut] = Field(min_length=1)
+
+
 # ---- workspace/{id}/project.yaml --------------------------------------------
 
 
