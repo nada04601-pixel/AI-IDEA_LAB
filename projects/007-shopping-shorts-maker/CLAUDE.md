@@ -12,16 +12,19 @@
 - 설치가 안 되어 있으면 사용자에게 `setup.bat`(Windows) 또는 `./setup.sh` 실행을 안내한다.
 - 문제가 생기면 먼저 `ssm doctor`로 점검한다.
 
-## 현재 구현 상태 (M1 완료)
+## 현재 구현 상태 (M2 완료)
 
 | 명령 | 상태 |
 |---|---|
 | `doctor`, `fonts`, `new`, `list`, `status`, `set`, `versions`, `rollback` | 동작 |
-| `tts`, `edit [--preview]`, `run` | 동작 (M1) — 로컬 영상 1개 기준. `run`은 개발 전 단계를 건너뛴다 |
-| `collect`(M3), `analyze`(M2), `script`(M4), `meta`(M5) | **아직 구현 전** — 종료 코드 2와 함께 예정 마일스톤을 알려준다 |
+| `add`, `analyze`, `tts`, `edit [--preview]`, `run` | 동작 (M1·M2). `run`은 개발 전 단계를 건너뛴다 |
+| `collect`(M3), `script`(M4), `meta`(M5) | **아직 구현 전** — 종료 코드 2와 함께 예정 마일스톤을 알려준다 |
 
-M1에서 아직 안 되는 것: 여러 영상 컷 편집·외국어 자막 가리기·BGM/효과음·라우드니스(-14 LUFS)는 M2. 영상이 여러 개여도 첫 번째만 쓴다.
-지금 쇼츠를 만들려면: `ssm new --local 영상.mp4 --ad coupang` → Claude가 `script.json` 작성 → `ssm tts` → `ssm edit`.
+지금 쇼츠를 만들려면: `ssm new --local 영상1.mp4 --local 영상2.mp4 --ad coupang` → Claude가 `script.json` 작성 → `ssm run`
+(analyze → tts → edit). 영상이 부족하다는 [주의]가 나오면 사용자에게 같은 상품 영상을 더 받아 `ssm add`.
+
+아직 안 되는 것: 원본 자막 인페인팅(inpaint 설정은 지금 blur로 처리), 장면 설명으로 대본-장면 매칭, Ken Burns 줌.
+OCR(EasyOCR)은 PyTorch가 필요하다 — `ssm analyze`가 "OCR을 쓸 수 없어"라고 하면 원본 자막이 그대로 보이니 사용자에게 알리고 `ssm doctor` 안내를 따른다.
 
 구현되지 않은 단계를 사용자가 요청하면, 결과를 꾸며내지 말고 "아직 개발 전 단계"라고 그대로 알린다.
 
@@ -37,6 +40,7 @@ M1에서 아직 안 되는 것: 여러 영상 컷 편집·외국어 자막 가�
 5. `ssm tts` → `ssm edit` → `ssm meta` (또는 `ssm run`으로 남은 단계 일괄)
    - `ssm tts`가 음성 길이를 알려준다. 목표보다 길면 대본을 줄이거나 `ssm set tts.rate "+20%"`.
    - 빠르게 확인만 하려면 `ssm edit --preview` (540x960 `preview.mp4`).
+   - 문장마다 `sfx`(whoosh·swish·pop·ding)를 달 수 있다. 훅=whoosh, 강조=pop/ding, 전환=swish. 남발하지 말 것 (2~3개면 충분).
 6. 결과(`final_output.mp4`, 썸네일 후보, `caption.txt`)를 알려주고 수정 요청을 기다린다.
 
 ## 수정 요청 → 바꿀 것 → 다시 실행할 것
@@ -48,6 +52,10 @@ M1에서 아직 안 되는 것: 여러 영상 컷 편집·외국어 자막 가�
 | "자막 크게, 조금 위로" | `ssm set subtitle.size 90` / `ssm set subtitle.position_y_ratio 0.6` | `ssm run` (edit만) |
 | "썸네일 문구 바꿔줘" | `script.json`의 `thumbnail_text` 또는 `ssm set thumbnail.*` | `ssm run` (meta) |
 | "이전 버전으로" | — | `ssm versions` → `ssm rollback <n>` |
+| "영상 더 넣어줘" / 소스 부족 경고 | `ssm add 파일...` | `ssm run` (analyze → edit) |
+| "이 영상은 다른 상품이야" | `analysis.json`에서 그 영상 `grade`를 `mood`로 (hook·problem 구간에만 쓰임) | `ssm run` (edit) |
+| "원본 자막이 덜 가려져" / "엉뚱한 곳이 흐려져" | `analysis.json`의 `text_boxes` 좌표 수정·삭제 | `ssm run` (edit) |
+| "BGM 빼줘" / "BGM 바꿔줘" | `ssm set audio.bgm none` / `ssm set audio.bgm assets/bgm/파일.mp3` | `ssm run` (edit) |
 
 설정은 `ssm set`으로만 바꾼다 (값을 검증하고, 영향받는 단계만 '다시 실행 필요'로 표시한다). 무엇이 다시 실행될지는 `ssm status`로 확인한다.
 
@@ -61,7 +69,7 @@ M1에서 아직 안 되는 것: 여러 영상 컷 편집·외국어 자막 가�
 
 ## 개발할 때
 
-- 마일스톤 순서: M0(완료) → M1 TTS·자막·단일 영상 렌더 → M2 다중 컷·자막 가리기·오디오 → M3 수집·필터 → M4 대본 → M5 썸네일·캡션 → M6 수정 루프. 각 완료 기준은 기획서 9장.
+- 마일스톤 순서: M0·M1·M2(완료) → M3 수집·필터 → M4 대본 → M5 썸네일·캡션 → M6 수정 루프. 각 완료 기준은 기획서 9장.
 - 테스트: `.venv/Scripts/python -m pytest` (Windows) / `.venv/bin/pytest`. 커밋 전에 전부 통과시킨다.
 - 사용자에게 보이는 메시지는 한국어로, "무엇이 실패했고 → 무엇을 하면 되는지" 형태로 쓴다.
 - 새 단계를 구현하면 `Workspace.mark_done(stage)`로 완료를 기록하고, 이 문서의 "현재 구현 상태" 표를 갱신한다.

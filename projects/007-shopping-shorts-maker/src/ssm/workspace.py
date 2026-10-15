@@ -29,13 +29,15 @@ class Stage:
     config_keys: tuple[str, ...]
     outputs: tuple[str, ...]  # 프로젝트 폴더 기준 파일·폴더 이름 (glob 패턴 가능)
     milestone: str
+    inputs: tuple[str, ...] = ()  # 앞 단계 산출물 외에 직접 읽는 파일 (예: 로컬로 넣은 raw_videos)
 
 
 STAGES: dict[str, Stage] = {
     s.name: s
     for s in [
         Stage("collect", "원본 수집·필터", (), ("collector",), ("raw_videos", "candidates.json", "selected.json"), "M3"),
-        Stage("analyze", "영상 분석", ("collect",), ("foreign_sub_removal", "device"), ("analysis.json",), "M2"),
+        # 자막 가리는 방식(foreign_sub_removal)은 edit에서 적용하므로 분석 결과와 무관하다
+        Stage("analyze", "영상 분석", ("collect",), (), ("analysis.json",), "M2", inputs=("raw_videos",)),
         Stage("script", "대본", ("analyze",), ("project",), ("script.json",), "M4"),
         Stage("tts", "음성·자막 타이밍", ("script",), ("tts", "audio"), ("tts.mp3", "word_timings.json"), "M1"),
         # 자막 화면 나누기는 자막 설정(한 줄 글자 수)에 따라 달라지므로 subtitles.srt는 edit에서 만든다
@@ -168,10 +170,9 @@ class Workspace:
         tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(self.state_file)
 
-    def output_paths(self, stage: str) -> list[Path] | None:
-        """단계 산출물 파일 목록. 하나라도 없으면 None."""
+    def _paths(self, patterns: tuple[str, ...]) -> list[Path] | None:
         files: list[Path] = []
-        for pattern in STAGES[stage].outputs:
+        for pattern in patterns:
             matches = sorted(self.path.glob(pattern))
             if not matches:
                 return None
@@ -179,8 +180,14 @@ class Workspace:
                 files.extend(sorted(p for p in m.rglob("*") if p.is_file()) if m.is_dir() else [m])
         return files
 
+    def output_paths(self, stage: str) -> list[Path] | None:
+        """단계 산출물 파일 목록. 하나라도 없으면 None."""
+        return self._paths(STAGES[stage].outputs)
+
     def output_hash(self, stage: str) -> str | None:
-        files = self.output_paths(stage)
+        return self._files_hash(self.output_paths(stage))
+
+    def _files_hash(self, files: list[Path] | None) -> str | None:
         if files is None:
             return None
         h = hashlib.sha256()
@@ -196,6 +203,8 @@ class Workspace:
             "config": {k: dumped[k] for k in STAGES[stage].config_keys},
             "upstream": {u: self.output_hash(u) for u in STAGES[stage].upstream},
         }
+        if STAGES[stage].inputs:
+            payload["inputs"] = self._files_hash(self._paths(STAGES[stage].inputs))
         return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
     def status(self, stage: str, cfg: AppConfig | None = None) -> str:

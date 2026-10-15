@@ -45,8 +45,8 @@ tts:
 
 audio:
   original: mute               # 원본 영상 소리는 항상 음소거 (기획서 10장 결정 3)
-  bgm: auto
-  bgm_duck_db: -18
+  bgm: auto                    # auto(assets/bgm/에서 하나 고름, 비어 있으면 BGM 없음) | none | 파일 경로
+  bgm_duck_db: -18             # 말하는 동안 BGM을 음성보다 이만큼 낮춘다 (dB)
   target_lufs: -14
 
 collector:

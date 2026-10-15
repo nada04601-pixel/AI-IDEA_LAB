@@ -152,7 +152,7 @@ def new_cmd(
     console.print(f"  길이 {cfg.project.duration_sec}초 · {cfg.video.fps}fps · 광고 표시: "
                   f"{cfg.ad_disclosure.profile or '아직 선택 안 함 (렌더링 전에 필요)'}")
     if local:
-        console.print(f"  다음 단계: 대본을 {ws.path / 'script.json'}에 저장한 뒤 `ssm tts` → `ssm edit`")
+        console.print(f"  다음 단계: 대본을 {ws.path / 'script.json'}에 저장한 뒤 `ssm run` (analyze → tts → edit)")
     else:
         console.print("  다음 단계: 수집·분석 기능은 아직 개발 중입니다 (M2~M3). "
                       "직접 받은 영상이 있으면 `ssm new --local 영상.mp4`로 만들 수 있습니다.")
@@ -241,22 +241,25 @@ def rollback_cmd(version: int = typer.Argument(..., help="되돌릴 버전 번�
 
 def _run_stage(stage: str, ws: Workspace, **options) -> None:
     """구현된 단계를 실행한다. 사용자에게 보여줄 오류는 한국어 메시지로 바꿔 종료한다."""
+    from ssm.analyzer import AnalyzeError, run_analyze
     from ssm.media import MediaError
     from ssm.tts_engine import TTSError, run_tts
     from ssm.video_editor import EditError, run_edit
 
     console.print(f"[bold]▶ {STAGES[stage].title}[/] ({stage})")
     try:
-        if stage == "tts":
+        if stage == "analyze":
+            run_analyze(ws, log=console.print)
+        elif stage == "tts":
             run_tts(ws, log=console.print)
         elif stage == "edit":
             out = run_edit(ws, preview=options.get("preview", False), log=console.print)
             console.print(f"[green]완성:[/] {out}")
-    except (TTSError, EditError, MediaError, WorkspaceError) as e:
+    except (AnalyzeError, TTSError, EditError, MediaError, WorkspaceError) as e:
         fail(str(e))
 
 
-IMPLEMENTED = ("tts", "edit")
+IMPLEMENTED = ("analyze", "tts", "edit")
 
 
 def _not_ready(stage: str) -> None:
@@ -276,6 +279,24 @@ def _stage_command(stage: str) -> None:
 for _stage in ORDER:
     if _stage not in IMPLEMENTED:
         _stage_command(_stage)
+
+
+@app.command("analyze")
+def analyze_cmd(project_id: Optional[str] = ProjectArg) -> None:
+    """원본 영상의 샷·하이라이트 점수·고정 글자(자막) 영역을 분석해 analysis.json을 만든다."""
+    _run_stage("analyze", open_ws(project_id))
+
+
+@app.command("add")
+def add_cmd(files: list[Path] = typer.Argument(..., help="추가할 영상 파일들"),
+            project_id: Optional[str] = typer.Option(None, "--project", "-p", help="프로젝트 ID (생략하면 최근 프로젝트)")) -> None:
+    """같은 상품 영상을 프로젝트에 추가한다 (raw_videos/). 추가하면 analyze부터 다시 실행된다."""
+    ws = open_ws(project_id)
+    try:
+        copied = import_local_videos(ws, files)
+    except WorkspaceError as e:
+        fail(str(e))
+    console.print(f"영상 {len(copied)}개를 추가했습니다: {', '.join(p.name for p in copied)}. 다음: `ssm run`")
 
 
 @app.command("tts")
@@ -304,11 +325,12 @@ def run_cmd(project_id: Optional[str] = ProjectArg) -> None:
                       f"남은 단계 {', '.join(todo)}는 아직 개발 전입니다.")
         return
     console.print(f"실행할 단계: {' → '.join(todo)}")
-    for stage in todo:
-        if stage in IMPLEMENTED:
+    for stage in ORDER:  # 앞 단계를 돌린 뒤 상태를 다시 보므로, 결과가 바뀐 단계만 이어서 실행된다
+        if stage not in IMPLEMENTED:
+            if stage in todo:
+                console.print(f"[dim]- {stage}: 아직 개발 전 단계라 건너뜁니다 ({STAGES[stage].milestone} 예정)[/]")
+        elif ws.status(stage) != "done":
             _run_stage(stage, ws)
-        else:
-            console.print(f"[dim]- {stage}: 아직 개발 전 단계라 건너뜁니다 ({STAGES[stage].milestone} 예정)[/]")
 
 
 @app.callback(invoke_without_command=True)

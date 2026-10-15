@@ -64,6 +64,23 @@ if (-not (Test-Path $venvPython)) {
 } else { Ok "이미 있음" }
 & $venvPython -m pip install --disable-pip-version-check -q --upgrade pip | Out-Null
 
+# Visual C++ 런타임: 오래되면(14.40 미만) PyTorch·onnxruntime이 DLL 오류(WinError 1114)로 불러와지지 않는다
+$vcDll = Join-Path $env:SystemRoot "System32\msvcp140.dll"
+$vcOld = $true
+if (Test-Path $vcDll) {
+    $vi = (Get-Item $vcDll).VersionInfo
+    $vcOld = ($vi.FileMajorPart -lt 14) -or ($vi.FileMajorPart -eq 14 -and $vi.FileMinorPart -lt 40)
+}
+if ($vcOld -and (Get-Command winget -ErrorAction SilentlyContinue)) {
+    $answer = Read-Host "  Visual C++ 런타임이 오래되었습니다 (PyTorch에 필요). winget으로 최신 버전을 설치할까요? (Y/n)"
+    if ($answer -eq "" -or $answer -match "^[Yy]") {
+        & winget install --id Microsoft.VCRedist.2015+.x64 -e --accept-source-agreements --accept-package-agreements
+        Ok "Visual C++ 런타임 설치 (적용되지 않으면 PC를 다시 시작하세요)"
+    } else { Warn "Visual C++ 런타임이 오래되면 OCR(PyTorch)이 동작하지 않습니다" }
+} elseif ($vcOld) {
+    Warn "Visual C++ 런타임이 오래되었습니다. https://aka.ms/vs/17/release/vc_redist.x64.exe 를 설치하세요."
+}
+
 # 3) GPU · PyTorch ------------------------------------------------------------------
 Info "[3/7] GPU 확인 및 PyTorch 설치"
 $hasGpu = $false

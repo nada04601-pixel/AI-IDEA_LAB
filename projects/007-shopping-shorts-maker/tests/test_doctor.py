@@ -43,6 +43,9 @@ class FakeProbe(Probe):
     def free_gb(self, path):
         return 100.0
 
+    def vc_runtime(self):
+        return getattr(self, "vc", (14, 44))
+
 
 @pytest.fixture
 def with_fonts(home, monkeypatch):
@@ -124,6 +127,14 @@ class BrokenTorchProbe(FakeProbe):
     def torch_info(self):
         return {"version": None, "error": "[WinError 1114] DLL 초기화 실패", "cuda": False,
                 "cuda_version": None, "device": None}
+
+
+def test_old_vc_runtime_warns(with_fonts):
+    probe = FakeProbe()
+    probe.vc = (14, 28)
+    check = by_name(doctor.run_checks(probe))["Visual C++ 런타임"]
+    assert check.status == "warn" and "VCRedist" in check.fix
+    assert by_name(doctor.run_checks(FakeProbe()))["Visual C++ 런타임"].status == "ok"
 
 
 def test_broken_torch_is_not_reported_as_ok(with_fonts):

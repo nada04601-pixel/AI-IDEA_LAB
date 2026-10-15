@@ -136,7 +136,7 @@ def run_tts(ws: Workspace, cfg: AppConfig | None = None, provider: TTSProvider |
         pcm += audio
         end = len(pcm) / 2 / SAMPLE_RATE
         sentences.append(SentenceTiming(
-            id=s.id, text=s.text, emphasis=s.emphasis, start=start, end=end,
+            id=s.id, section=s.section, text=s.text, emphasis=s.emphasis, sfx=s.sfx, start=start, end=end,
             words=[Word(text=w.text, start=round(start + w.start, 3), end=round(min(start + w.end, end), 3))
                    for w in words]))
 

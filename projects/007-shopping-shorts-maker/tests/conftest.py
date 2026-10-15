@@ -1,3 +1,4 @@
+import subprocess
 import shutil
 from pathlib import Path
 
@@ -14,3 +15,26 @@ def home(tmp_path, monkeypatch) -> Path:
     shutil.copy(PROJECT / "config.yaml", root / "config.yaml")
     monkeypatch.setenv("SSM_HOME", str(root))
     return root
+
+
+FFMPEG = shutil.which("ffmpeg")
+needs_ffmpeg = pytest.mark.skipif(not FFMPEG or not shutil.which("ffprobe"), reason="FFmpeg가 없음")
+
+
+def make_video(path: Path, size: str = "320x240", seconds: float = 2, shots: int = 1, box: bool = False) -> Path:
+    """테스트용 영상. shots개 장면이 이어지고(장면마다 전혀 다른 그림), box면 아래쪽에 흰 '자막' 띠가 계속 보인다."""
+    sources = ["testsrc2", "mandelbrot", "rgbtestsrc", "smptebars", "cellauto"]
+    w, h = (int(v) for v in size.split("x"))
+    each = seconds / shots
+    args = [FFMPEG, "-v", "error", "-y"]
+    for k in range(shots):
+        args += ["-f", "lavfi", "-i", f"{sources[k % len(sources)]}=s={size}:r=30"]
+    args += ["-f", "lavfi", "-i", f"sine=f=880:d={seconds}"]
+    chains = [f"[{k}:v]trim=duration={each},setpts=PTS-STARTPTS,format=yuv420p[s{k}]" for k in range(shots)]
+    graph = ";".join(chains) + ";" + "".join(f"[s{k}]" for k in range(shots)) + f"concat=n={shots}:v=1[cat]"
+    graph += (f";[cat]drawbox=x={w // 5}:y={int(h * 0.8)}:w={w * 3 // 5}:h={h // 12}:color=white:t=fill[v]" if box
+              else ";[cat]null[v]")
+    args += ["-filter_complex", graph, "-map", "[v]", "-map", f"{shots}:a", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+             "-c:a", "aac", "-shortest", str(path)]
+    subprocess.run(args, check=True)
+    return path

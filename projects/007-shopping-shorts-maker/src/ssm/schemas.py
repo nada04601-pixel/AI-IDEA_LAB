@@ -74,8 +74,10 @@ class Word(_Model):
 
 class SentenceTiming(_Model):
     id: str
+    section: Section = "demo"
     text: str
     emphasis: list[str] = Field(default_factory=list)
+    sfx: str | None = None
     start: float  # 이 문장 음성 구간 (앞뒤 무음 포함)
     end: float
     words: list[Word] = Field(default_factory=list)  # TTS 엔진이 알려준 단어 경계 (문장부호 제외)
@@ -90,6 +92,51 @@ class WordTimings(_Model):
     sentences: list[SentenceTiming]
 
 
+# ---- analysis.json (analyze 단계 결과) ------------------------------------------
+# 좌표는 원본 영상 화면(회전 반영) 기준 픽셀, 시간은 원본 영상 기준 초.
+
+Grade = Literal["same_product", "mood"]
+
+
+class Shot(_Model):
+    id: str  # 예: 01-003 (영상 01의 세 번째 샷)
+    start: float
+    end: float
+    score: float = Field(ge=0.0, le=1.0)  # 하이라이트 점수 (모든 영상의 샷끼리 비교한 상대값)
+    sharpness: float = 0.0
+    motion: float = 0.0
+    brightness: float = 0.0
+
+    @property
+    def duration(self) -> float:
+        return self.end - self.start
+
+
+class TextBox(_Model):
+    """여러 프레임에 반복해서 나온 글자 영역 (자막·워터마크). 이 영역을 가린다."""
+    x: int
+    y: int
+    w: int
+    h: int
+    coverage: float = Field(ge=0.0, le=1.0)  # 검사한 프레임 중 글자가 보인 비율
+
+
+class VideoAnalysis(_Model):
+    file: str  # 프로젝트 폴더 기준 경로 (예: raw_videos/01.mp4)
+    width: int
+    height: int
+    duration: float
+    grade: Grade = "same_product"  # mood면 hook·problem 구간에만 쓴다
+    shots: list[Shot]
+    text_boxes: list[TextBox] = Field(default_factory=list)
+    ocr: Literal["ok", "unavailable"] = "ok"
+
+
+class Analysis(_Model):
+    version: Literal[1] = 1
+    videos: list[VideoAnalysis] = Field(min_length=1)
+
+
 # ---- timeline.json (edit 단계 결과) ---------------------------------------------
 
 
@@ -97,10 +144,20 @@ class Cut(_Model):
     source: str  # 프로젝트 폴더 기준 원본 영상 경로 (예: raw_videos/01.mp4)
     start: float  # 원본 영상 안에서의 구간 (초)
     end: float
+    position: float = 0.0  # 최종 영상에서 이 컷이 시작하는 시각 (초)
+    speed: float = Field(1.0, ge=0.5, le=2.0)  # 1보다 작으면 느리게 재생해 길이를 채운다
+    shot_id: str | None = None
+    section: Section | None = None
 
     @property
     def duration(self) -> float:
+        """원본에서 가져오는 길이."""
         return self.end - self.start
+
+    @property
+    def length(self) -> float:
+        """최종 영상에서 차지하는 길이."""
+        return self.duration / self.speed
 
 
 class Timeline(_Model):
