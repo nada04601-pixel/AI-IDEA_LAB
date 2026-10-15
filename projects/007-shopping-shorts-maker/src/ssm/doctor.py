@@ -25,6 +25,8 @@ CORE_PACKAGES = {  # import 이름: pip 패키지 이름
 }
 ML_PACKAGES = {"easyocr": "easyocr", "faster_whisper": "faster-whisper", "open_clip": "open-clip-torch"}
 MIN_FREE_GB = 15
+MIN_VC_RUNTIME = (14, 40)  # PyTorch·onnxruntime 최신 휠이 요구하는 Visual C++ 런타임 (2022, 17.10 이후)
+VC_FIX = "winget install Microsoft.VCRedist.2015+.x64 로 Visual C++ 재배포 패키지를 최신으로 설치하세요 (관리자 권한)."
 SETUP_HINT = "setup.bat(Windows) 또는 ./setup.sh를 다시 실행하세요."
 
 
@@ -75,6 +77,21 @@ class Probe:
 
     def free_gb(self, path: Path) -> float:
         return shutil.disk_usage(path).free / 1024**3
+
+    def vc_runtime(self) -> tuple[int, int] | None:
+        """Windows의 Visual C++ 런타임(msvcp140.dll) 버전. Windows가 아니면 None, 없으면 (0, 0)."""
+        if sys.platform != "win32":
+            return None
+        dll = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "msvcp140.dll"
+        if not dll.is_file():
+            return (0, 0)
+        code, out = self.run(["powershell", "-NoProfile", "-Command",
+                              f"$v=(Get-Item '{dll}').VersionInfo; '{{0}}.{{1}}' -f $v.FileMajorPart,$v.FileMinorPart"])
+        try:
+            major, minor = out.strip().split(".")[:2]
+            return int(major), int(minor)
+        except ValueError:
+            return None
 
 
 def ffmpeg_binary(cfg: AppConfig, probe: Probe) -> str | None:
@@ -142,8 +159,7 @@ def _check_gpu(cfg: AppConfig, probe: Probe, gpu: str | None) -> list[Check]:
     elif torch.get("error"):  # 설치는 됐지만 import가 안 됨 (DLL 오류 등) — M3의 OCR·음성 인식이 동작하지 않는다
         status = "fail" if has_nvidia else "warn"
         checks.append(Check("GPU", "PyTorch", status, f"불러오기 실패: {torch['error'][:120]}",
-                            "Microsoft Visual C++ 재배포 패키지(최신)를 설치한 뒤, setup.bat -ReinstallTorch 로 "
-                            "PyTorch를 다시 설치하세요."))
+                            "먼저 " + VC_FIX + " 그래도 안 되면 setup.bat -ReinstallTorch 로 PyTorch를 다시 설치하세요."))
     elif torch["cuda"]:
         checks.append(Check("GPU", "PyTorch CUDA", "ok",
                             f"torch {torch['version']} / CUDA {torch['cuda_version']} / {torch['device']}"))
@@ -157,6 +173,17 @@ def _check_gpu(cfg: AppConfig, probe: Probe, gpu: str | None) -> list[Check]:
         checks.append(Check("GPU", "설정 device", "fail", "device: cuda인데 GPU를 쓸 수 없음",
                             "config의 device를 auto로 바꾸거나 GPU용 PyTorch를 설치하세요."))
     return checks
+
+
+def _check_vc_runtime(probe: Probe) -> list[Check]:
+    version = probe.vc_runtime()
+    if version is None:
+        return []
+    text = ".".join(map(str, version))
+    if version < MIN_VC_RUNTIME:
+        return [Check("기본", "Visual C++ 런타임", "warn",
+                      f"{text} (14.40 이상 필요 — 낮으면 PyTorch·OCR이 DLL 오류로 멈춤)", VC_FIX)]
+    return [Check("기본", "Visual C++ 런타임", "ok", text)]
 
 
 def _check_ffmpeg(cfg: AppConfig, probe: Probe, has_nvidia: bool) -> list[Check]:
@@ -240,6 +267,7 @@ def run_checks(probe: Probe | None = None) -> list[Check]:
     config_check, cfg = _check_config()
     checks.append(config_check)
     checks += _check_packages(probe)
+    checks += _check_vc_runtime(probe)
     if cfg is None:  # 설정이 깨지면 나머지는 기본값으로라도 점검한다
         cfg = AppConfig()
     gpu = nvidia_gpu(probe)

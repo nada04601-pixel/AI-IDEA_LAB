@@ -73,8 +73,8 @@ def test_tts_and_run_without_script(home):
     invoke("new", "전기포트", "-y")
     r = invoke("tts")
     assert r.exit_code == 1 and "script.json이 없습니다" in r.output
-    r = invoke("run")  # 수집·분석·대본은 건너뛰고 tts에서 대본이 없다고 알린다
-    assert r.exit_code == 1 and "건너뜁니다" in r.output and "script.json" in r.output
+    r = invoke("run")  # 수집은 건너뛰고, 분석에서 영상이 없으니 추가하라고 알린다
+    assert r.exit_code == 1 and "건너뜁니다" in r.output and "ssm add" in r.output
 
 
 def test_no_project_message(home):

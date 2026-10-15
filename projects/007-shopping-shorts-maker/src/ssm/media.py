@@ -31,6 +31,7 @@ class Media:
         self.ffmpeg = ff
         self.ffprobe = str(Path(ff).with_name(Path(ff).name.replace("ffmpeg", "ffprobe")))
         self._encoder: str | None = None
+        self.last_stderr = ""  # 마지막 run()의 로그 (showinfo·loudnorm 결과를 읽을 때 쓴다)
 
     def run(self, args: list[str], *, stdin: bytes | None = None, log: Path | None = None,
             what: str = "FFmpeg 작업") -> bytes:
@@ -41,6 +42,7 @@ class Media:
         except OSError as e:
             raise MediaError(f"{what}을(를) 시작하지 못했습니다 ({e}). " + FFMPEG_HINT) from e
         err = p.stderr.decode("utf-8", errors="replace")
+        self.last_stderr = err
         if log:
             log.parent.mkdir(parents=True, exist_ok=True)
             log.write_text(subprocess.list2cmdline(cmd) + "\n\n" + err, encoding="utf-8")
