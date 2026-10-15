@@ -154,8 +154,7 @@ def new_cmd(
     if local:
         console.print(f"  다음 단계: 대본을 {ws.path / 'script.json'}에 저장한 뒤 `ssm run` (analyze → tts → edit)")
     else:
-        console.print("  다음 단계: 수집·분석 기능은 아직 개발 중입니다 (M2~M3). "
-                      "직접 받은 영상이 있으면 `ssm new --local 영상.mp4`로 만들 수 있습니다.")
+        console.print("  다음 단계: `ssm collect` (같은 상품 영상 수집·필터) → 대본 작성 → `ssm run`")
 
 
 @app.command("list")
@@ -242,24 +241,31 @@ def rollback_cmd(version: int = typer.Argument(..., help="되돌릴 버전 번�
 def _run_stage(stage: str, ws: Workspace, **options) -> None:
     """구현된 단계를 실행한다. 사용자에게 보여줄 오류는 한국어 메시지로 바꿔 종료한다."""
     from ssm.analyzer import AnalyzeError, run_analyze
+    from ssm.collector import CollectError, run_collect
     from ssm.media import MediaError
     from ssm.tts_engine import TTSError, run_tts
     from ssm.video_editor import EditError, run_edit
 
     console.print(f"[bold]▶ {STAGES[stage].title}[/] ({stage})")
+
+    def log(message: str) -> None:  # 단계 로그는 그대로 찍는다 (영상 제목의 [话题] 같은 대괄호를 서식으로 읽지 않게)
+        console.print(message, markup=False)
+
     try:
-        if stage == "analyze":
-            run_analyze(ws, log=console.print)
+        if stage == "collect":
+            run_collect(ws, log=log)
+        elif stage == "analyze":
+            run_analyze(ws, log=log)
         elif stage == "tts":
-            run_tts(ws, log=console.print)
+            run_tts(ws, log=log)
         elif stage == "edit":
-            out = run_edit(ws, preview=options.get("preview", False), log=console.print)
+            out = run_edit(ws, preview=options.get("preview", False), log=log)
             console.print(f"[green]완성:[/] {out}")
-    except (AnalyzeError, TTSError, EditError, MediaError, WorkspaceError) as e:
+    except (CollectError, AnalyzeError, TTSError, EditError, MediaError, WorkspaceError) as e:
         fail(str(e))
 
 
-IMPLEMENTED = ("analyze", "tts", "edit")
+IMPLEMENTED = ("collect", "analyze", "tts", "edit")
 
 
 def _not_ready(stage: str) -> None:
@@ -279,6 +285,25 @@ def _stage_command(stage: str) -> None:
 for _stage in ORDER:
     if _stage not in IMPLEMENTED:
         _stage_command(_stage)
+
+
+@app.command("collect")
+def collect_cmd(project_id: Optional[str] = ProjectArg,
+                keyword: Optional[str] = typer.Option(None, "--keyword", "-k", help="같은 상품 검색어 (중국어 권장)"),
+                url: list[str] = typer.Option([], "--url", help="직접 지정할 후보 링크 (여러 번 지정 가능, 기존 목록에 추가)"),
+                max_videos: Optional[int] = typer.Option(None, "--max", help="채택할 영상 수 (기본 5)")) -> None:
+    """기준 영상과 같은 상품 영상을 모으고 국내 콘텐츠를 걸러 raw_videos/에 넣는다. 옵션은 프로젝트 설정으로 저장된다."""
+    ws = open_ws(project_id)
+    try:
+        if keyword is not None:
+            ws.set_override("collector.keyword", keyword)
+        if url:
+            ws.set_override("collector.urls", [*ws.config().collector.urls, *url])
+        if max_videos is not None:
+            ws.set_override("collector.max_videos", max_videos)
+    except ValidationError as e:
+        fail("설정 값이 올바르지 않습니다 — " + validation_message(e))
+    _run_stage("collect", ws)
 
 
 @app.command("analyze")

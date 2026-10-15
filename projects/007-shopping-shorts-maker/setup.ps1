@@ -117,6 +117,8 @@ Info "[4/7] 필수·AI 패키지 설치"
 Pip -q -r (Join-Path $root "requirements.txt") -r (Join-Path $root "requirements-ml.txt")
 Pip -q --upgrade yt-dlp
 Pip -q -e $root --no-deps
+& $venvPython -m playwright install chromium
+if ($LASTEXITCODE -ne 0) { Warn "브라우저(Chromium)를 받지 못했습니다. 나중에 .venv\Scripts\python -m playwright install chromium 을 실행하세요." }
 Ok "패키지 설치"
 
 # 5) FFmpeg ------------------------------------------------------------------------

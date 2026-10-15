@@ -60,6 +60,7 @@ fi
 info "[4/7] 필수·AI 패키지 설치"
 pip_install -q -r requirements.txt -r requirements-ml.txt
 pip_install -q --upgrade yt-dlp
+"$VENV_PY" -m playwright install chromium || warn "브라우저(Chromium)를 받지 못했습니다. 나중에 .venv/bin/python -m playwright install chromium"
 pip_install -q -e . --no-deps
 ok "패키지 설치"
 

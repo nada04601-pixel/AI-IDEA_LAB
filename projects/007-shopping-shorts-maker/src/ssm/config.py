@@ -90,6 +90,10 @@ class AudioCfg(_Section):
 
 
 class CollectorCfg(_Section):
+    keyword: str | None = None  # 같은 상품 영상 검색어 (중국어 권장). 비우면 기준 영상 제목으로 검색
+    urls: list[str] = Field(default_factory=list)  # 직접 지정한 추가 후보 링크
+    max_candidates: int = Field(10, ge=1, le=20)  # 검사할 후보 수 (기준 영상 제외)
+    delay_sec: tuple[float, float] = (2.0, 5.0)  # 요청 사이 무작위 대기 (차단 방지)
     max_videos: int = Field(5, ge=1, le=10)
     same_product_threshold: float = Field(0.80, ge=0.0, le=1.0)
     mood_threshold: float = Field(0.60, ge=0.0, le=1.0)
