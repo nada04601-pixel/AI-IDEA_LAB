@@ -15,7 +15,8 @@ from typer.testing import CliRunner
 from ssm import collector
 from ssm.analyzer import run_analyze
 from ssm.collector import CollectError, run_collect, title_keyword
-from ssm.downloader import DownloadError, Fetched, load_netscape_cookies, platform_of
+from ssm.downloader import (SEARCH, DownloadError, Fetched, collect_links, load_netscape_cookies, platform_of,
+                            xhs_host)
 from ssm.filters import Inspectors, grade_for, korean_meta_reason, korean_speech_reason, korean_text_reason
 from ssm.main import app
 from ssm.schemas import Candidates, Selected, Source
@@ -58,6 +59,14 @@ def test_helpers(tmp_path):
     assert title_keyword("折叠电热水壶🔥出差必备 #好物分享[话题]# #旅行#") == "折叠电热水壶 出差必备"
     assert collector._media_id(XHS.format(5) + "?xsec_token=a") == collector._media_id(XHS.format(5) + "?xsec_token=b")
 
+    assert platform_of("https://www.rednote.com/explore/abc") == "xiaohongshu"  # 샤오홍슈 국제판
+
+    found = {}
+    base = "https://www.rednote.com/search_result/" + "a" * 24
+    collect_links([base, base + "?xsec_token=T&xsec_source=", "https://www.rednote.com/user/profile/" + "b" * 24,
+                   base + "?other=1"], SEARCH["xiaohongshu"][1], found)
+    assert found == {"a" * 24: base + "?xsec_token=T&xsec_source="}  # 토큰 붙은 링크를 고른다
+
     cookies = tmp_path / "cookies.txt"
     cookies.write_text("# Netscape HTTP Cookie File\n.xiaohongshu.com\tTRUE\t/\tTRUE\t1893456000\tweb_session\tabc\n"
                        "#HttpOnly_.douyin.com\tTRUE\t/\tFALSE\t0\tsid\txyz\n", encoding="utf-8")
@@ -65,6 +74,10 @@ def test_helpers(tmp_path):
     assert parsed[0] == {"name": "web_session", "value": "abc", "domain": ".xiaohongshu.com", "path": "/",
                          "secure": True, "httpOnly": False, "expires": 1893456000}
     assert parsed[1]["httpOnly"] is True and "expires" not in parsed[1]
+    assert xhs_host(cookies) == "www.xiaohongshu.com" and xhs_host(None) == "www.xiaohongshu.com"
+    rednote = tmp_path / "rednote.txt"
+    rednote.write_text(".rednote.com\tTRUE\t/\tTRUE\t0\tweb_session\tabc\n", encoding="utf-8")
+    assert xhs_host(rednote) == "www.rednote.com"  # 국제판 쿠키뿐이면 국제판에서 검색
 
 
 # ---- 가짜 도구 -------------------------------------------------------------------

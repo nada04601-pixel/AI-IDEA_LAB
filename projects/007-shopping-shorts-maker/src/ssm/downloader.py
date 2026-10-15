@@ -14,12 +14,12 @@ USER_AGENT = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHT
               "Chrome/140.0.0.0 Safari/537.36")
 PAGE_TIMEOUT_MS = 45_000
 PLATFORMS = {
-    "xiaohongshu": ("xiaohongshu.com", "xhslink.com"),
+    "xiaohongshu": ("xiaohongshu.com", "xhslink.com", "rednote.com"),  # rednote.com = 샤오홍슈 국제판 (로그인 따로)
     "douyin": ("douyin.com", "iesdouyin.com"),
     "tiktok": ("tiktok.com",),
 }
 SEARCH = {  # 플랫폼: (검색 주소, 결과 링크에서 영상 글을 찾는 정규식)
-    "xiaohongshu": ("https://www.xiaohongshu.com/search_result?keyword={q}&source=web_search_result_notes",
+    "xiaohongshu": ("https://{host}/search_result?keyword={q}&source=web_search_result_notes",
                     re.compile(r"/(?:explore|search_result|discovery/item)/([0-9a-f]{24})")),
     "douyin": ("https://www.douyin.com/search/{q}?type=video", re.compile(r"/video/(\d{15,22})")),
 }
@@ -57,6 +57,14 @@ def platform_of(url: str) -> str:
         if any(host == d or host.endswith("." + d) for d in domains):
             return name
     return "other"
+
+
+def xhs_host(cookies: Path | None) -> str:
+    """샤오홍슈 검색에 쓸 사이트. 쿠키가 국제판(rednote.com) 것뿐이면 그쪽으로 (두 사이트는 로그인이 따로다)."""
+    domains = {c["domain"].lstrip(".") for c in load_netscape_cookies(cookies)} if cookies and cookies.is_file() else set()
+    if any(d.endswith("rednote.com") for d in domains) and not any(d.endswith("xiaohongshu.com") for d in domains):
+        return "www.rednote.com"
+    return "www.xiaohongshu.com"
 
 
 def load_netscape_cookies(path: Path) -> list[dict]:
@@ -183,6 +191,7 @@ class PlaywrightSearcher:
 
     def __init__(self, cookies: Path | None, scrolls: int = 4):
         self.cookies, self.scrolls = cookies, scrolls
+        self.hosts = {"xiaohongshu": xhs_host(cookies)}
 
     def search(self, platform: str, keyword: str, limit: int) -> list[str]:
         if platform not in SEARCH:
@@ -201,14 +210,13 @@ class PlaywrightSearcher:
                     if self.cookies:
                         ctx.add_cookies(load_netscape_cookies(self.cookies))
                     page = ctx.new_page()
-                    page.goto(page_url.format(q=quote(keyword)), wait_until="domcontentloaded",
+                    page.goto(page_url.format(q=quote(keyword), host=self.hosts.get(platform, "")),
+                              wait_until="domcontentloaded",
                               timeout=PAGE_TIMEOUT_MS)
                     page.wait_for_timeout(4000)
                     for _ in range(self.scrolls):
-                        for href in page.eval_on_selector_all("a[href]", "els => els.map(e => e.href)"):
-                            m = pattern.search(href)
-                            if m and m.group(1) not in found:
-                                found[m.group(1)] = href
+                        collect_links(page.eval_on_selector_all("a[href]", "els => els.map(e => e.href)"),
+                                      pattern, found)
                         if len(found) >= limit:
                             break
                         page.mouse.wheel(0, 2500)
@@ -218,6 +226,15 @@ class PlaywrightSearcher:
         except PWError as e:
             raise DownloadError(f"검색 실패: {str(e).splitlines()[0][:200]}") from e
         return list(found.values())[:limit]
+
+
+def collect_links(hrefs: list[str], pattern: re.Pattern, found: dict[str, str]) -> None:
+    """검색 결과 링크를 글 ID별로 모은다. 같은 글이면 접근 토큰(xsec_token)이 붙은 링크를 고른다
+    (샤오홍슈·rednote는 토큰 없이 열면 보안 오류 300031로 404)."""
+    for href in hrefs:
+        m = pattern.search(href or "")
+        if m and (m.group(1) not in found or ("xsec_token=" in href and "xsec_token=" not in found[m.group(1)])):
+            found[m.group(1)] = href
 
 
 def fetch_any(downloaders: list[Downloader], url: str, out_dir: Path, stem: str) -> tuple[Fetched, list[str]]:

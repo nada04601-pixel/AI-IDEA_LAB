@@ -24,6 +24,13 @@ collector:
   cookies_file: D:/secrets/cookies.txt
 ```
 
+## 샤오홍슈 국제판(rednote.com)과 중국판(xiaohongshu.com)
+
+해외에서 가입하면 국제판 **rednote.com**으로 로그인되는 경우가 많다. 두 사이트는 **로그인이 따로**라서 쿠키도 따로다.
+
+- rednote.com 쿠키만 있으면: 검색은 rednote에서 하고, rednote 링크를 받는다 (yt-dlp가 rednote 주소를 몰라 브라우저 방식으로 받음 — 조금 느림).
+- `xiaohongshu.com` 링크(중국 앱에서 공유한 링크)도 쓰려면 같은 프로필로 www.xiaohongshu.com에도 로그인해 쿠키를 한 번 더 내보내 `cookies.txt` 뒤에 이어 붙인다.
+
 ## 주의
 
 - 쿠키 파일은 **비밀번호와 같다.** 다른 사람에게 보내거나 Git에 올리지 않는다 (`secrets/`는 Git 제외).
