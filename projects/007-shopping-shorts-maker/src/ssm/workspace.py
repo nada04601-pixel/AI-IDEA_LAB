@@ -37,11 +37,11 @@ STAGES: dict[str, Stage] = {
         Stage("collect", "원본 수집·필터", (), ("collector",), ("raw_videos", "candidates.json", "selected.json"), "M3"),
         Stage("analyze", "영상 분석", ("collect",), ("foreign_sub_removal", "device"), ("analysis.json",), "M2"),
         Stage("script", "대본", ("analyze",), ("project",), ("script.json",), "M4"),
-        Stage("tts", "음성·자막 타이밍", ("script",), ("tts", "audio"),
-              ("tts.mp3", "word_timings.json", "subtitles.srt"), "M1"),
+        Stage("tts", "음성·자막 타이밍", ("script",), ("tts", "audio"), ("tts.mp3", "word_timings.json"), "M1"),
+        # 자막 화면 나누기는 자막 설정(한 줄 글자 수)에 따라 달라지므로 subtitles.srt는 edit에서 만든다
         Stage("edit", "편집·렌더링", ("tts", "analyze"),
               ("project", "video", "subtitle", "foreign_sub_removal", "ad_disclosure", "audio"),
-              ("timeline.json", "final_output.mp4"), "M1"),
+              ("timeline.json", "subtitles.srt", "final_output.mp4"), "M1"),
         Stage("meta", "썸네일·캡션", ("script", "analyze"), ("thumbnail", "ad_disclosure"),
               ("thumbnail*.png", "caption.txt"), "M5"),
     ]
@@ -221,12 +221,19 @@ class Workspace:
         self._save_state(state)
 
     def pending_stages(self) -> list[str]:
-        """다시 실행해야 하는 단계 (실행 순서대로). 앞 단계가 다시 돌면 그 아래도 포함한다."""
-        statuses = self.statuses()
+        """다시 실행해야 하는 단계 (실행 순서대로). 앞 단계가 다시 돌면 그 아래도 포함한다.
+
+        한 번도 돌지 않은 앞 단계(예: 로컬 영상·직접 쓴 대본으로 건너뛴 수집·분석)는 아래 단계를 끌어들이지 않는다.
+        """
+        statuses, state = self.statuses(), self._state()
         todo: list[str] = []
+        rerun: set[str] = set()  # 이전 결과가 있는데 다시 돌아서 결과가 바뀔 단계
         for name in ORDER:
-            if statuses[name] != "done" or any(u in todo for u in STAGES[name].upstream):
+            cascaded = any(u in rerun for u in STAGES[name].upstream)
+            if statuses[name] != "done" or cascaded:
                 todo.append(name)
+            if cascaded or statuses[name] == "stale" or (statuses[name] == "pending" and name in state):
+                rerun.add(name)
         return todo
 
     # ---- 버전 ---------------------------------------------------------------

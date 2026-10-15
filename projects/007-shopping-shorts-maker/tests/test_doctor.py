@@ -118,3 +118,15 @@ def test_font_install_verifies_checksum(home, monkeypatch):
     assert failed == ["B.otf"]
     assert fonts.font_status(good) == "ok"
     assert fonts.font_status(bad) == "missing"
+
+
+class BrokenTorchProbe(FakeProbe):
+    def torch_info(self):
+        return {"version": None, "error": "[WinError 1114] DLL 초기화 실패", "cuda": False,
+                "cuda_version": None, "device": None}
+
+
+def test_broken_torch_is_not_reported_as_ok(with_fonts):
+    checks = by_name(doctor.run_checks(BrokenTorchProbe(gpu=False, nvenc_ok=False)))
+    assert checks["PyTorch"].status == "warn" and "DLL" in checks["PyTorch"].detail
+    assert "PyTorch" in failures(doctor.run_checks(BrokenTorchProbe(gpu=True)))

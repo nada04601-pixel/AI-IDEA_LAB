@@ -64,7 +64,7 @@ class Probe:
         try:
             import torch
         except Exception as e:  # noqa: BLE001 — 깨진 설치도 사용자에게 보여준다
-            return {"version": f"불러오기 실패: {e}", "cuda": False, "cuda_version": None, "device": None}
+            return {"version": None, "error": str(e), "cuda": False, "cuda_version": None, "device": None}
         cuda = bool(torch.cuda.is_available())
         return {
             "version": torch.__version__,
@@ -139,6 +139,11 @@ def _check_gpu(cfg: AppConfig, probe: Probe, gpu: str | None) -> list[Check]:
     if torch is None:
         status = "fail" if has_nvidia else "warn"
         checks.append(Check("GPU", "PyTorch", status, "설치되지 않음", SETUP_HINT))
+    elif torch.get("error"):  # 설치는 됐지만 import가 안 됨 (DLL 오류 등) — M3의 OCR·음성 인식이 동작하지 않는다
+        status = "fail" if has_nvidia else "warn"
+        checks.append(Check("GPU", "PyTorch", status, f"불러오기 실패: {torch['error'][:120]}",
+                            "Microsoft Visual C++ 재배포 패키지(최신)를 설치한 뒤, setup.bat -ReinstallTorch 로 "
+                            "PyTorch를 다시 설치하세요."))
     elif torch["cuda"]:
         checks.append(Check("GPU", "PyTorch CUDA", "ok",
                             f"torch {torch['version']} / CUDA {torch['cuda_version']} / {torch['device']}"))

@@ -20,8 +20,8 @@ def fake_outputs(ws: Workspace, *stages: str) -> None:
         "collect": ["raw_videos/01.mp4", "candidates.json", "selected.json"],
         "analyze": ["analysis.json"],
         "script": ["script.json"],
-        "tts": ["tts.mp3", "word_timings.json", "subtitles.srt"],
-        "edit": ["timeline.json", "final_output.mp4"],
+        "tts": ["tts.mp3", "word_timings.json"],
+        "edit": ["timeline.json", "subtitles.srt", "final_output.mp4"],
         "meta": ["thumbnail.png", "caption.txt"],
     }
     for stage in stages:
