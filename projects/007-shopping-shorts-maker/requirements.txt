@@ -1,0 +1,12 @@
+# 기본 패키지 (GPU 유무와 상관없이 필요). 버전은 고정한다.
+typer==0.27.3
+rich==15.0.0
+PyYAML==6.0.3
+pydantic==2.14.1
+pillow==12.3.0
+numpy==2.5.4
+opencv-python-headless==5.0.0.93
+scenedetect==0.7.2
+edge-tts==7.3.1
+# 사이트 변경에 맞춰 자주 업데이트되므로 하한만 둔다 (setup 때마다 최신으로 올린다)
+yt-dlp>=2026.8.19

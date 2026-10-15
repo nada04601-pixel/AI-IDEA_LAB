@@ -1,0 +1,63 @@
+# 쇼핑 쇼츠 메이커 기본 설정
+# - 개인 설정(쿠키 경로 등)은 이 파일 대신 config.local.yaml에 적는다 (Git 제외, 같은 키만 덮어씀)
+# - 길이·fps·광고 프로필은 `ssm new` 때 프로젝트별로 고르며 workspace/{id}/project.yaml에 저장된다
+# - 경로는 이 폴더 기준 상대 경로
+
+project:
+  duration_sec: 30             # 15 | 30 | 45 | 60
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30                      # 30 | 60
+  crf: 20
+  encoder: auto                # auto(NVENC 가능하면 사용) | libx264 | h264_nvenc
+
+subtitle:
+  font: assets/fonts/Pretendard-ExtraBold.otf
+  size: 78
+  max_chars_per_line: 14
+  position_y_ratio: 0.66       # 화면 높이 대비 자막 중심 위치
+  color: "#FFFFFF"
+  emphasis_color: "#FFE14D"
+  stroke_width: 7
+  box: false
+
+thumbnail:
+  font: assets/fonts/BlackHanSans-Regular.ttf
+  top_color: "#FFE14D"
+  bottom_color: "#FFFFFF"
+
+foreign_sub_removal: auto      # auto(GPU면 inpaint, 아니면 blur) | crop | blur | inpaint
+
+ad_disclosure:
+  profile: null                # coupang | aliexpress | custom — 비어 있으면 렌더링 전에 선택 요청
+  custom_text: ""
+  profiles:
+    coupang: "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
+    aliexpress: "이 영상은 알리익스프레스 어필리에이트 활동의 일환으로, 구매 시 일정액의 수수료를 받을 수 있습니다."
+  position: top_left
+
+tts:
+  provider: edge
+  voice: ko-KR-SunHiNeural
+  rate: "+10%"
+
+audio:
+  original: mute               # 원본 영상 소리는 항상 음소거 (기획서 10장 결정 3)
+  bgm: auto
+  bgm_duck_db: -18
+  target_lufs: -14
+
+collector:
+  max_videos: 5
+  same_product_threshold: 0.80 # 이상: 모든 구간에 사용
+  mood_threshold: 0.60         # 이상~same 미만: hook·problem 구간에만 사용
+  cookies_file: secrets/cookies.txt
+
+device: auto                   # auto | cuda | cpu
+ffmpeg_path: null              # 비우면 PATH에서 찾는다
+workspace_dir: workspace
+
+llm:
+  provider: claude_code        # v1은 claude_code만 지원
