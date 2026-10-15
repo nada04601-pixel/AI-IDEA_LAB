@@ -20,6 +20,7 @@ import numpy as np
 from ssm.config import AppConfig
 
 OCR_FRAMES = 8
+OCR_WIDTH = 480  # CPU에서 720px의 절반 시간, 자막 크기 한글은 그대로 읽힌다 (360px부터는 놓침 — 실측)
 HANGUL_RATIO = 0.10
 HANGUL_RUN = re.compile(r"[가-힣]{4,}")
 OCR_MIN_CONFIDENCE = 0.4  # 이보다 확신이 낮은 글자는 버린다 (중국어를 한글로 잘못 읽는 경우 줄이기)
