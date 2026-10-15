@@ -64,11 +64,10 @@ def test_set_and_list(home):
     assert "전기포트" in r.output
 
 
-def test_unimplemented_stage_exit_code(home):
-    invoke("new", "전기포트", "-y")
+def test_meta_without_script(home):
+    invoke("new", "전기포트", "--ad", "coupang", "-y")
     r = invoke("meta")
-    assert r.exit_code == 2
-    assert "M5" in r.output
+    assert r.exit_code == 1 and "script.json이 없습니다" in r.output
 
 
 @needs_ffmpeg

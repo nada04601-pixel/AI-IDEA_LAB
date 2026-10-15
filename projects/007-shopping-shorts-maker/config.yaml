@@ -25,8 +25,14 @@ subtitle:
 
 thumbnail:
   font: assets/fonts/BlackHanSans-Regular.ttf
-  top_color: "#FFE14D"
-  bottom_color: "#FFFFFF"
+  top_color: "#FFE14D"         # 위 줄(강조어) 색
+  bottom_color: "#FFFFFF"      # 아래 줄(요약) 색
+  stroke_color: "#000000"
+  top_size: 150                # 1080x1920 기준 글자 크기 — 넘치면 자동으로 줄인다
+  bottom_size: 96
+  stroke_width: 10
+  position_y_ratio: 0.16       # 글자 묶음 윗부분 위치 (화면 높이 비율)
+  gradient: true               # 글자 뒤를 어둡게
 
 foreign_sub_removal: auto      # auto(GPU면 inpaint, 아니면 blur) | crop | blur | inpaint
 

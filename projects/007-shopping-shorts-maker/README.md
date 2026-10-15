@@ -5,9 +5,9 @@ Claude Code 안에서 대화하며 쓰도록 설계했다 (대본은 Claude가 �
 
 - 요구사항: [ideas/007-shopping-shorts-maker/idea.md](../../ideas/007-shopping-shorts-maker/idea.md) (v1.0)
 - Claude Code 작업 지침: [CLAUDE.md](CLAUDE.md)
-- 현재 단계: **M4 완료** — 샤오홍슈·도우인 링크 → 같은 상품 영상 수집·국내 콘텐츠 필터 (`ssm collect`) → 영상 분석 →
-  대본 프리셋 4종·레퍼런스 화법·금지 표현 검사 (`ssm script`, 대본은 Claude가 작성) → TTS · 다중 컷 편집 · 자막 · 광고 표시 · 오디오 (`ssm run`).
-  썸네일·캡션(M5)은 개발 전
+- 현재 단계: **M5 완료** — 샤오홍슈·도우인 링크 → 같은 상품 영상 수집·국내 콘텐츠 필터 (`ssm collect`) → 영상 분석 →
+  대본 프리셋 4종·레퍼런스 화법·금지 표현 검사 (`ssm script`, 대본은 Claude가 작성) → TTS · 다중 컷 편집 · 자막 · 광고 표시 · 오디오 →
+  썸네일 3안 · 플랫폼별 캡션 (`ssm meta`). 전부 `ssm run`으로
 
 ## 설치
 
@@ -36,6 +36,7 @@ ssm.bat add 영상.mp4 ...             # 같은 상품 영상 추가 (analyze부
 ssm.bat presets                     # 대본 프리셋 4종
 ssm.bat script --preset 2 [--reference 링크|파일|대본.txt]   # 대본 작성 요청서(script_prompt.md) 만들기
 ssm.bat script --check              # Claude가 쓴 script.json 검사 (분량·금지 표현·형식)
+ssm.bat meta [--style 썸네일.png]   # 썸네일 3안(thumbnail_1~3.png) + caption.txt — 문구는 meta.json
 ssm.bat run                         # 남은 단계 실행 (현재 analyze·tts·edit, 개발 전 단계는 건너뜀)
 ssm.bat edit --preview              # 540x960 미리보기
 ```

@@ -195,7 +195,8 @@ def test_cli_run_and_add(project, tmp_path, monkeypatch):
     runner = CliRunner()
     r = runner.invoke(app, ["run"])
     assert r.exit_code == 0, r.output
-    assert "건너뜁니다" in r.output and (project.path / "final_output.mp4").is_file()
+    assert (project.path / "final_output.mp4").is_file() and (project.path / "thumbnail_1.png").is_file()
+    assert "caption.txt" in [p.name for p in project.path.iterdir()] and project.pending_stages() == []
     r = runner.invoke(app, ["run"])  # 바뀐 게 없으면 아무것도 다시 하지 않는다
     assert "▶" not in r.output
 

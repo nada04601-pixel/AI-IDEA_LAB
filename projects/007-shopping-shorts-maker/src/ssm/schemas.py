@@ -207,6 +207,38 @@ class Timeline(_Model):
     cuts: list[Cut] = Field(min_length=1)
 
 
+# ---- meta.json (Claude 작성: 제목·썸네일 문구·캡션 요약·해시태그) ---------------------------
+
+CATEGORIES = ("kitchen", "living", "travel", "beauty", "digital", "general")
+
+
+class MetaText(_Model):
+    version: Literal[1] = 1
+    category: Literal["kitchen", "living", "travel", "beauty", "digital", "general"] = "general"
+    titles: list[str] = Field(default_factory=list, max_length=3)  # 쇼츠 제목 후보 ([광고] 포함 100자 이내)
+    thumbnail_texts: list[ThumbnailText] = Field(default_factory=list, max_length=3)  # 썸네일 문구 3안
+    summary: list[str] = Field(default_factory=list, max_length=3)  # 캡션 상품 요약 2~3줄
+    hashtags: list[str] = Field(default_factory=list, max_length=10)  # 상품에 맞춘 해시태그 ('#' 없어도 됨)
+
+
+# ---- thumbnail_style.json (레퍼런스 썸네일 스타일) -----------------------------------
+
+
+class ThumbnailStyle(_Model):
+    version: Literal[1] = 1
+    source: str
+    palette: list[str] = Field(default_factory=list)  # 많이 쓰인 색 (#RRGGBB)
+    top_color: str | None = None
+    bottom_color: str | None = None
+    stroke_color: str | None = None
+    stroke_width: int | None = None
+    top_size: int | None = None
+    bottom_size: int | None = None
+    position_y_ratio: float | None = None
+    gradient: bool | None = None
+    notes: list[str] = Field(default_factory=list)
+
+
 # ---- reference_style.json (레퍼런스 화법 분석) -------------------------------------
 
 
