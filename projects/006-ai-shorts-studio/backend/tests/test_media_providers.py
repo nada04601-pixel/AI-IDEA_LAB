@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 
 import pytest
@@ -45,7 +46,8 @@ needs_ffmpeg = pytest.mark.skipif(config.ffmpeg_path() is None, reason="FFmpeg �
 
 
 def probe_duration(path) -> float:
-    ffprobe = config.ffmpeg_path().replace("ffmpeg", "ffprobe")
+    # 파일 이름만 바꾼다 (폴더 이름에 ffmpeg가 들어 있는 설치 경로도 있음)
+    ffprobe = re.sub(r"ffmpeg(\.exe)?$", r"ffprobe\1", config.ffmpeg_path(), flags=re.IGNORECASE)
     out = subprocess.run([ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "json", str(path)],
                          capture_output=True, text=True, check=True).stdout
     return float(json.loads(out)["format"]["duration"])

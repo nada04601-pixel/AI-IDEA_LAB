@@ -126,7 +126,7 @@ def render(
     on_progress(round((len(segments) + 1) / total_steps * 100))
 
     srt = work_dir / "subtitles.srt"
-    srt.write_text(srt_text, encoding="utf-8")
+    srt.write_text(srt_text, encoding="utf-8", newline="\n")  # Windows에서도 줄바꿈을 \r\n으로 바꾸지 않는다
     has_subs = bool(srt_text.strip())
     cmd = [ffmpeg, "-y", "-loglevel", "error", "-i", "joined.mp4"]
     if has_subs and settings.burn_subtitles:
@@ -152,7 +152,7 @@ def probe_duration(path: Path) -> float | None:
     ffmpeg = config.ffmpeg_path()
     if not ffmpeg:
         return None
-    ffprobe = shutil.which("ffprobe") or re.sub(r"ffmpeg(\.exe)?$", r"ffprobe\1", ffmpeg)
+    ffprobe = shutil.which("ffprobe") or re.sub(r"ffmpeg(\.exe)?$", r"ffprobe\1", ffmpeg, flags=re.IGNORECASE)
     try:
         out = subprocess.run([ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "json", str(path)],
                              capture_output=True, text=True, timeout=30).stdout
