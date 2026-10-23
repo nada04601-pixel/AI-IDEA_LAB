@@ -9,7 +9,8 @@
 ```
 
 - 설계 문서: [ideas/008-dropship-automation](../../ideas/008-dropship-automation/idea.md)
-- 상태: **구상 단계 + 프로토타입 CLI** (실제 API 키로는 아직 검증 전). 설치형/SaaS 중 제품 형태는 미정
+- 상태: **웹 SaaS로 결정, 웹 데모 공개** — 🌐 [웹 데모](https://nada04601-pixel.github.io/AI-IDEA_LAB/dropship/)에서 설치·키 없이 전체 흐름 확인 가능. 실제 API 키로는 아직 검증 전
+- 지금 구성: 핵심 로직 + CLI(서버에서 예약 실행할 부분) + 웹 데모. SaaS로 가려면 서버·회원·키 보관 등이 더 필요합니다([설계 문서 5장](../../ideas/008-dropship-automation/idea.md#5-제품-형태-웹-saas-2026-10-23-결정))
 
 ## 꼭 알아야 할 것
 
@@ -17,6 +18,50 @@
 - **도매매 주문은 사업자 회원 + Private API 승인이 필요합니다.** 도매매 상품은 사업자 회원만 주문할 수 있고, 주문서 생성 API(setOrder)는 도매꾹 OpenAPI 화면에서 Private API 권한을 신청해 승인받아야 합니다.
 - **도매매 주문은 이머니(현금성)로 바로 결제됩니다.** 잔액이 모자라면 주문이 실패하니 미리 충전해 두세요.
 - **기본은 미리 보기입니다.** `--live`를 붙여야 실제로 상품을 등록하고 발주합니다. 처음에는 꼭 미리 보기로 결과를 확인하세요.
+
+## 웹 데모
+
+🌐 **https://nada04601-pixel.github.io/AI-IDEA_LAB/dropship/**
+
+가짜 도매처·판매처로 상품 소싱 → 등록 → 고객 주문 → 자동 발주 → 보류·승인까지 브라우저에서 눌러 볼 수 있습니다.
+CLI와 같은 핵심 로직(`src/core`)을 그대로 쓰고, 데이터는 그 브라우저에만 저장됩니다(서버 없음, 실제 등록·주문·결제 없음).
+
+```bash
+npm run web          # 개발 서버 http://localhost:5173
+npm run build:web    # dist-web/ (main에 올라가면 .github/workflows/dropship-web.yml이 gh-pages의 dropship/에 배포)
+```
+
+## 샌드박스로 먼저 해 보기 (키 없이)
+
+아래는 같은 샌드박스를 CLI로 돌리는 방법입니다.
+
+가짜 판매처·도매처(`fake`)로 소싱부터 발주·발주 확인까지 로컬에서 그대로 돌려 볼 수 있습니다.
+설정은 `config.sandbox.json`, 데이터는 `data/sandbox/`에 따로 쌓여 실제 저장소와 섞이지 않습니다.
+
+```bash
+npm install
+npm run sandbox -- source --live          # 가짜 도매처 상품 8개 중 규칙에 맞는 5개 등록
+npm run sandbox -- fake                   # 판매처 상품·주문, 도매처 주문서 보기
+npm run sandbox -- fake order 9000001 --option 01 --qty 2   # 고객 대신 결제 완료 주문 넣기
+npm run sandbox -- orders                 # 미리 보기
+npm run sandbox -- orders --live          # 발주 → 발주 확인
+npm run sandbox -- status                 # 보류·실패·불명
+npm run sandbox -- fake reset             # 처음부터 다시
+```
+
+기본 상품으로 이런 상황을 만들어 볼 수 있습니다.
+
+| 도매처 상품 | 판매처에서 | 주문하면 |
+|---|---|---|
+| F1001 텀블러(색상 옵션, 민트는 재고 0) | 등록(민트 옵션 빠짐) | 발주 |
+| F1002 텀블러, F1008 바구니(크기 옵션, 추가금) | 등록 | 발주 |
+| F1003 공급가 2,500원 / F1004 "명품" / F1007 재고 10개 | 건너뜀(최소 공급가·제외 낱말·재고) | — |
+| F1005 `fail: "reject"` | 등록 | 도매처 거절 → `failed` |
+| F1006 `fail: "timeout"` | 등록 | 주문서는 생겼는데 응답 없음 → `unknown` |
+
+- `fake order … --paid 3000`처럼 결제 금액을 낮추면 역마진 보류, `fake cancel <줄번호>`는 취소 요청으로 건너뜀
+- `data/sandbox/fake/catalog.json`에서 공급가를 올리면(5% 넘게) 공급가 상승 보류, 재고를 줄이면 재고 부족 보류, `fail`을 넣고 빼며 실패를 만들 수 있습니다
+- `market.json`(판매처 상품·주문), `supplier-orders.json`(도매처 주문서)도 열어 볼 수 있습니다
 
 ## 준비
 
@@ -93,10 +138,17 @@ src/
     sourcing.ts         검색 → 등록
     fulfillment.ts      주문 → 발주 → 발주 확인, 안전장치
   suppliers/domeme/     도매매 어댑터(상품리스트 v4.1, 상품상세 v4.6, 로그인 v4.1, 주문서 생성 v4.3)
+  suppliers/fake/       샌드박스 도매처(catalog.json, 일부러 실패하기)
   markets/smartstore/   스마트스토어 어댑터(OAuth 전자서명, 이미지 업로드, 상품 등록 v2, 주문 조회·발주 확인)
-  store/store.ts        SQLite(node:sqlite): 등록 기록, 발주 기록, 조회 커서
+  markets/fake/         샌드박스 판매처(market.json)
+  sandbox/              샌드박스 기본 상품, JSON 저장(폴더·메모리), 가짜 주문 만들기
+  store/
+    types.ts            저장소 인터페이스(Repository)
+    store.ts            SQLite(node:sqlite): 등록 기록, 발주 기록, 조회 커서
+    memory.ts           메모리 저장소(웹 데모, 브라우저 저장소에 보관)
   registry.ts           어댑터 등록부(새 공급처·판매처는 여기에 한 줄)
   cli.ts
+web/                    웹 데모(Vite, 같은 src/core 로직을 브라우저에서 실행)
 ```
 
 ### 주문과 공급처 상품을 잇는 방법
@@ -120,7 +172,7 @@ src/
 
 ### 다른 도매처 붙이기
 
-`src/suppliers/<이름>/`에 `SupplierAdapter`(search, getProduct, purchase)를 구현하고 `registry.ts`의 `supplierFactories`에 더합니다.
+`src/suppliers/<이름>/`에 `SupplierAdapter`(search, getProduct, purchase)를 구현하고 `registry.ts`의 `supplierFactories`에 더한 뒤, `config.json`의 `suppliers`에 이름을 넣습니다(첫 번째가 `search`·`inspect`·`register`의 기본 공급처, 다른 공급처는 `--supplier`).
 판매자 관리 코드가 `<이름>:<상품번호>`가 되므로, 주문 처리는 주문마다 알맞은 도매처로 자동으로 나뉩니다.
 발주 결과가 확실하지 않은 오류(응답 없음, 일부만 주문 등)는 `SupplierError(code, message, orderMayExist = true)`로 던지면 자동 재발주를 막습니다.
 

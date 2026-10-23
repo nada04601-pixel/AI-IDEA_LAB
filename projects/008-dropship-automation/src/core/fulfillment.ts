@@ -1,7 +1,7 @@
 // 판매처 주문 → 공급처 발주(배송지 입력) → 판매처 발주 확인.
 // 판매처·공급처 종류와 상관없이 같은 흐름으로 돕니다.
 
-import type { PurchaseRow, Store } from "../store/store.ts";
+import type { PurchaseRow, Repository } from "../store/types.ts";
 import { SupplierError } from "./errors.ts";
 import { parseSourceKey, type MarketAdapter, type MarketOrderLine, type SupplierAdapter } from "./types.ts";
 
@@ -23,7 +23,7 @@ export interface FulfillmentPolicy {
 export interface FulfillmentDeps {
   market: MarketAdapter;
   suppliers: Map<string, SupplierAdapter>;
-  store: Store;
+  store: Repository;
   policy: FulfillmentPolicy;
   /** false면 아무것도 바꾸지 않고 무엇을 할지 보여 주기만 합니다 */
   live: boolean;

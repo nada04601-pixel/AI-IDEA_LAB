@@ -2,7 +2,7 @@
 
 # 요구사항 및 CLI 작업 지침
 
-- 상태: **MVP 완료 (1~5단계, mock provider)**
+- 상태: **MVP 완료 (1~5단계, 기본 mock provider · 이미지 Gemini·영상 Veo 실제 연결 가능)**
 - 프로젝트 코드: [projects/006-ai-shorts-studio](../../projects/006-ai-shorts-studio)
 - 문서 버전: 1.0
 - 작성일: 2026-10-08

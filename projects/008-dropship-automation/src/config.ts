@@ -6,8 +6,10 @@ import type { SourcingJob } from "./core/sourcing.ts";
 import type { SmartstoreProductDefaults } from "./markets/smartstore/product.ts";
 
 export interface AppConfig {
-  /** 판매처. 지금은 smartstore만 있고, 쿠팡 등은 registry.ts에 어댑터를 더하면 됩니다 */
+  /** 판매처. smartstore와 샌드박스용 fake가 있고, 쿠팡 등은 registry.ts에 어댑터를 더하면 됩니다 */
   market: string;
+  /** 주문 처리에 쓸 공급처. 첫 번째는 search·inspect·register의 기본 공급처. 기본 ["domeme"] */
+  suppliers: string[];
   dataDir: string;
   listing: ListingRules;
   fulfillment: FulfillmentPolicy;
@@ -23,6 +25,7 @@ export function loadConfig(path: string): AppConfig {
   if (existsSync(envFile)) process.loadEnvFile(envFile);
   const cfg = JSON.parse(readFileSync(file, "utf8")) as AppConfig;
   cfg.market ??= "smartstore";
+  cfg.suppliers ??= ["domeme"];
   cfg.dataDir = resolve(file, "..", cfg.dataDir ?? "data");
   cfg.jobs ??= [];
   return cfg;

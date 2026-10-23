@@ -1,6 +1,6 @@
 // 공급처 검색 → 규칙으로 고르기 → 판매처 등록.
 
-import type { Store } from "../store/store.ts";
+import type { Repository } from "../store/types.ts";
 import { buildListing, type ListingRules } from "./listing.ts";
 import { makeSourceKey, type MarketAdapter, type SupplierAdapter, type SupplierSearchQuery } from "./types.ts";
 
@@ -19,7 +19,7 @@ export interface SourcingJob {
 export interface SourcingDeps {
   supplier: SupplierAdapter;
   market: MarketAdapter;
-  store: Store;
+  store: Repository;
   rules: ListingRules;
   live: boolean;
   log: (msg: string) => void;

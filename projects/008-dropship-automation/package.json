@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "description": "도매처 상품을 판매처에 자동 등록하고, 주문이 들어오면 도매처에 발주하는 위탁판매 자동화",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "cli": "node --disable-warning=ExperimentalWarning src/cli.ts",
+    "sandbox": "node --disable-warning=ExperimentalWarning src/cli.ts --config config.sandbox.json",
+    "web": "vite --config web/vite.config.ts",
+    "build:web": "vite build --config web/vite.config.ts",
     "test": "vitest run",
-    "typecheck": "tsc"
+    "typecheck": "tsc && tsc -p web"
   },
   "dependencies": {
     "bcryptjs": "3.0.2"
@@ -16,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.9.0",
+    "vite": "^7.3.7",
     "vitest": "^3.2.4"
   }
 }

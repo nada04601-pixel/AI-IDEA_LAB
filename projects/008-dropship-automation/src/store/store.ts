@@ -1,46 +1,12 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import type { ListingRow, NewPurchase, PurchasePatch, PurchaseRow, PurchaseStatus, Repository } from "./types.ts";
 
-/**
- * 발주 상태
- * - ordering: 공급처에 발주를 보내기 직전에 기록. 이 상태로 남아 있으면 응답 전에 멈춘 것이라 unknown으로 봅니다
- * - ordered: 공급처 발주 완료, 판매처 발주 확인 전(다음 실행 때 발주 확인을 다시 시도)
- * - confirmed: 판매처 발주 확인까지 끝
- * - held: 안전장치에 걸려 발주하지 않음(공급가 상승, 역마진, 매핑 실패, 주소 문제 등)
- * - failed: 공급처가 거절해 발주되지 않음(재고 없음 등)
- * - unknown: 공급처에 주문서가 만들어졌는지 알 수 없음. 도매매 사이트에서 확인해야 함
- * - pending: 일시적인 이유(실행당 발주 한도, 공급처 조회 실패)로 미룸. 다음 실행 때 자동으로 다시 처리
- * - approved: 사람이 held/failed/unknown을 확인하고 다시 진행하라고 한 줄. 다음 실행 때 안전장치 없이 발주
- */
-export type PurchaseStatus = "ordering" | "ordered" | "confirmed" | "held" | "failed" | "unknown" | "pending" | "approved";
+export type { ListingRow, PurchaseRow, PurchaseStatus, Repository } from "./types.ts";
 
-export interface PurchaseRow {
-  market: string;
-  lineId: string;
-  orderId: string;
-  sourceKey: string;
-  optionCode: string;
-  quantity: number;
-  status: PurchaseStatus;
-  supplierOrderNo: string | null;
-  message: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ListingRow {
-  sourceKey: string;
-  market: string;
-  marketProductId: string;
-  channelProductId: string | null;
-  cost: number;
-  salePrice: number;
-  title: string;
-  createdAt: string;
-}
-
-export class Store {
+/** SQLite(node:sqlite) 저장소: <dataDir>/dropship.db */
+export class Store implements Repository {
   private db: DatabaseSync;
 
   constructor(path: string) {
@@ -116,7 +82,7 @@ export class Store {
   }
 
   /** 새 발주 줄을 만듭니다. 이미 있으면 false(다른 실행이 먼저 잡음) */
-  insertPurchase(p: Pick<PurchaseRow, "market" | "lineId" | "orderId" | "sourceKey" | "optionCode" | "quantity" | "status" | "message">): boolean {
+  insertPurchase(p: NewPurchase): boolean {
     const t = now();
     const res = this.db
       .prepare(
@@ -127,7 +93,7 @@ export class Store {
     return Number(res.changes) > 0;
   }
 
-  updatePurchase(market: string, lineId: string, patch: { status: PurchaseStatus; supplierOrderNo?: string; message?: string | null }): void {
+  updatePurchase(market: string, lineId: string, patch: PurchasePatch): void {
     this.db
       .prepare(
         `UPDATE purchases SET status = ?, supplier_order_no = COALESCE(?, supplier_order_no), message = ?, updated_at = ?

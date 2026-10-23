@@ -1,0 +1,51 @@
+{
+  "market": "fake",
+  "suppliers": ["fake"],
+  "dataDir": "data/sandbox",
+  "listing": {
+    "pricing": {
+      "marginRate": 0.25,
+      "feeRate": 0.06,
+      "fixedCost": 0,
+      "roundTo": 100,
+      "shippingMode": "include",
+      "minProfit": 1000
+    },
+    "filter": {
+      "minCost": 3000,
+      "maxCost": 50000,
+      "minStock": 30,
+      "excludeKeywords": ["정품", "명품", "레플", "해외직구", "건강기능식품"],
+      "maxOrderUnit": 1
+    },
+    "maxStock": 50,
+    "titlePrefix": "",
+    "maxTitleLength": 100
+  },
+  "fulfillment": {
+    "lookbackHours": 24,
+    "maxOrdersPerRun": 20,
+    "maxOrderAmount": 100000,
+    "costIncreaseTolerance": 0.05,
+    "holdOnLoss": true,
+    "storeName": "샌드박스스토어"
+  },
+  "jobs": [
+    {
+      "name": "텀블러",
+      "supplier": "fake",
+      "query": { "keyword": "텀블러", "size": 50 },
+      "marketCategoryId": "sandbox-tumbler",
+      "maxNew": 10,
+      "maxPages": 1
+    },
+    {
+      "name": "수납",
+      "supplier": "fake",
+      "query": { "keyword": "수납", "size": 50 },
+      "marketCategoryId": "sandbox-storage",
+      "maxNew": 10,
+      "maxPages": 1
+    }
+  ]
+}

@@ -36,8 +36,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png}'],
-        // 같은 사이트의 /shorts/ (005 떡상 쇼츠)는 이 앱이 가로채지 않는다
-        navigateFallbackDenylist: [/\/shorts\//],
+        // 같은 사이트의 /shorts/ (005 떡상 쇼츠)와 /dropship/ (008 위탁판매 데모)는 이 앱이 가로채지 않는다
+        navigateFallbackDenylist: [/\/shorts\//, /\/dropship(\/|$)/],
       },
     }),
   ],
