@@ -1,0 +1,50 @@
+{
+  "market": "smartstore",
+  "dataDir": "data",
+  "listing": {
+    "pricing": {
+      "marginRate": 0.25,
+      "feeRate": 0.06,
+      "fixedCost": 0,
+      "roundTo": 100,
+      "shippingMode": "include",
+      "minProfit": 1000
+    },
+    "filter": {
+      "minCost": 3000,
+      "maxCost": 50000,
+      "minStock": 30,
+      "excludeKeywords": ["정품", "명품", "레플", "해외직구", "건강기능식품"],
+      "maxOrderUnit": 1
+    },
+    "maxStock": 50,
+    "titlePrefix": "",
+    "maxTitleLength": 100
+  },
+  "fulfillment": {
+    "lookbackHours": 24,
+    "maxOrdersPerRun": 20,
+    "maxOrderAmount": 100000,
+    "costIncreaseTolerance": 0.05,
+    "holdOnLoss": true,
+    "storeName": "내스토어"
+  },
+  "smartstore": {
+    "deliveryCompany": "CJGLS",
+    "returnDeliveryFee": 5000,
+    "exchangeDeliveryFee": 10000,
+    "afterServiceTelephoneNumber": "010-0000-0000",
+    "afterServiceGuideContent": "상품 문의는 스토어 톡톡으로 남겨 주세요.",
+    "naverShoppingRegistration": true
+  },
+  "jobs": [
+    {
+      "name": "텀블러",
+      "supplier": "domeme",
+      "query": { "keyword": "텀블러", "minPrice": 3000, "maxPrice": 30000, "sort": "ha", "size": 50 },
+      "marketCategoryId": "카테고리ID를_categories_명령으로_찾아_넣으세요",
+      "maxNew": 5,
+      "maxPages": 3
+    }
+  ]
+}
