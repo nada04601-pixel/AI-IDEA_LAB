@@ -1,6 +1,6 @@
 # 007. 쇼핑 쇼츠 메이커 (Shopping Shorts Maker)
 
-- 상태: **개발진행중 (M0 완료 — 설치·설정·작업 폴더·doctor)**
+- 상태: **개발진행중 (M6 완료, v1 전 단계)**
 - 프로젝트 코드: [projects/007-shopping-shorts-maker](../../projects/007-shopping-shorts-maker)
 - 문서 버전: 1.0
 - 작성일: 2026-10-15
