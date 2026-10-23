@@ -1,5 +1,6 @@
 {
   "market": "smartstore",
+  "suppliers": ["domeme"],
   "dataDir": "data",
   "listing": {
     "pricing": {
