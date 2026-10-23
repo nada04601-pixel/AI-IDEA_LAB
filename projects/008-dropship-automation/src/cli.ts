@@ -10,7 +10,7 @@ import { priceFor } from "./core/pricing.ts";
 import { registerOne, runSourcing, type SourcingReport } from "./core/sourcing.ts";
 import { SmartstoreMarket } from "./markets/smartstore/client.ts";
 import { makeAllSuppliers, makeMarket, makeSupplier } from "./registry.ts";
-import { SandboxFiles } from "./sandbox/files.ts";
+import { sandboxFilesIn } from "./sandbox/node-files.ts";
 import { cancelOrder, createOrder } from "./sandbox/orders.ts";
 import { Store, type PurchaseStatus } from "./store/store.ts";
 
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
 /** fake 명령: 샌드박스 판매처·도매처 조작. 실제 판매처 설정에서는 쓸 수 없습니다 */
 function sandbox(market: string, dataDir: string): void {
   if (market !== "fake") throw new Error('fake 명령은 market이 "fake"인 설정에서만 씁니다(npm run sandbox -- fake …)');
-  const files = new SandboxFiles(dataDir);
+  const files = sandboxFilesIn(dataDir);
   switch (arg) {
     case undefined: {
       const m = files.market();
@@ -171,7 +171,7 @@ function sandbox(market: string, dataDir: string): void {
       const ps = files.purchases();
       console.log(`[도매처 주문서 ${ps.length}장]`);
       for (const p of ps) console.log(`${p.supplierOrderNo}\t${p.productId} [${p.optionCode || "-"}] ×${p.quantity}\t${p.recipient.name} ${p.recipient.address1}\t${p.sellerNote}`);
-      console.log(`파일: ${files.dir}`);
+      console.log(`파일: ${files.location}`);
       break;
     }
     case "order": {

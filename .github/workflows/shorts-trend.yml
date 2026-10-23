@@ -16,7 +16,7 @@ on:
 permissions:
   contents: write
 
-# gh-pages에 쓰는 워크플로끼리 겹치지 않게 같은 그룹을 쓴다 (maeum-record-web.yml과 공유)
+# gh-pages에 쓰는 워크플로끼리 겹치지 않게 같은 그룹을 쓴다 (maeum-record-web.yml, dropship-web.yml과 공유)
 concurrency:
   group: gh-pages
   cancel-in-progress: false

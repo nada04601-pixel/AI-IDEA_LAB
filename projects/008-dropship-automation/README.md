@@ -9,7 +9,8 @@
 ```
 
 - 설계 문서: [ideas/008-dropship-automation](../../ideas/008-dropship-automation/idea.md)
-- 상태: **M1 샌드박스 완료** — 키 없이 [샌드박스](#샌드박스로-먼저-해-보기-키-없이)로 전체 흐름 확인 가능, 실제 API 키로는 아직 검증 전. 설치형/SaaS 중 제품 형태는 미정
+- 상태: **웹 SaaS로 결정, 웹 데모 공개** — 🌐 [웹 데모](https://nada04601-pixel.github.io/AI-IDEA_LAB/dropship/)에서 설치·키 없이 전체 흐름 확인 가능. 실제 API 키로는 아직 검증 전
+- 지금 구성: 핵심 로직 + CLI(서버에서 예약 실행할 부분) + 웹 데모. SaaS로 가려면 서버·회원·키 보관 등이 더 필요합니다([설계 문서 5장](../../ideas/008-dropship-automation/idea.md#5-제품-형태-웹-saas-2026-10-23-결정))
 
 ## 꼭 알아야 할 것
 
@@ -18,7 +19,21 @@
 - **도매매 주문은 이머니(현금성)로 바로 결제됩니다.** 잔액이 모자라면 주문이 실패하니 미리 충전해 두세요.
 - **기본은 미리 보기입니다.** `--live`를 붙여야 실제로 상품을 등록하고 발주합니다. 처음에는 꼭 미리 보기로 결과를 확인하세요.
 
+## 웹 데모
+
+🌐 **https://nada04601-pixel.github.io/AI-IDEA_LAB/dropship/**
+
+가짜 도매처·판매처로 상품 소싱 → 등록 → 고객 주문 → 자동 발주 → 보류·승인까지 브라우저에서 눌러 볼 수 있습니다.
+CLI와 같은 핵심 로직(`src/core`)을 그대로 쓰고, 데이터는 그 브라우저에만 저장됩니다(서버 없음, 실제 등록·주문·결제 없음).
+
+```bash
+npm run web          # 개발 서버 http://localhost:5173
+npm run build:web    # dist-web/ (main에 올라가면 .github/workflows/dropship-web.yml이 gh-pages의 dropship/에 배포)
+```
+
 ## 샌드박스로 먼저 해 보기 (키 없이)
+
+아래는 같은 샌드박스를 CLI로 돌리는 방법입니다.
 
 가짜 판매처·도매처(`fake`)로 소싱부터 발주·발주 확인까지 로컬에서 그대로 돌려 볼 수 있습니다.
 설정은 `config.sandbox.json`, 데이터는 `data/sandbox/`에 따로 쌓여 실제 저장소와 섞이지 않습니다.
@@ -126,10 +141,14 @@ src/
   suppliers/fake/       샌드박스 도매처(catalog.json, 일부러 실패하기)
   markets/smartstore/   스마트스토어 어댑터(OAuth 전자서명, 이미지 업로드, 상품 등록 v2, 주문 조회·발주 확인)
   markets/fake/         샌드박스 판매처(market.json)
-  sandbox/              샌드박스 기본 상품, JSON 파일 저장, 가짜 주문 만들기
-  store/store.ts        SQLite(node:sqlite): 등록 기록, 발주 기록, 조회 커서
+  sandbox/              샌드박스 기본 상품, JSON 저장(폴더·메모리), 가짜 주문 만들기
+  store/
+    types.ts            저장소 인터페이스(Repository)
+    store.ts            SQLite(node:sqlite): 등록 기록, 발주 기록, 조회 커서
+    memory.ts           메모리 저장소(웹 데모, 브라우저 저장소에 보관)
   registry.ts           어댑터 등록부(새 공급처·판매처는 여기에 한 줄)
   cli.ts
+web/                    웹 데모(Vite, 같은 src/core 로직을 브라우저에서 실행)
 ```
 
 ### 주문과 공급처 상품을 잇는 방법

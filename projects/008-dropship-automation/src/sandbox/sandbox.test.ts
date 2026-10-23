@@ -6,9 +6,11 @@ import { runFulfillment, type FulfillmentPolicy } from "../core/fulfillment.ts";
 import type { ListingRules } from "../core/listing.ts";
 import { runSourcing, type SourcingJob } from "../core/sourcing.ts";
 import { FakeMarket } from "../markets/fake/client.ts";
+import { MemoryStore } from "../store/memory.ts";
 import { Store } from "../store/store.ts";
 import { FakeSupplier } from "../suppliers/fake/client.ts";
-import { SandboxFiles } from "./files.ts";
+import { memoryBackend, SandboxFiles } from "./files.ts";
+import { sandboxFilesIn } from "./node-files.ts";
 import { cancelOrder, createOrder } from "./orders.ts";
 
 const rules: ListingRules = {
@@ -31,12 +33,22 @@ const policy: FulfillmentPolicy = {
 const job: SourcingJob = { name: "전체", supplier: "fake", query: {}, marketCategoryId: "c", maxNew: 10, maxPages: 1 };
 
 let dir = "";
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
+afterEach(() => {
+  if (dir) rmSync(dir, { recursive: true, force: true });
+  dir = "";
+});
 
-function setup() {
-  dir = mkdtempSync(join(tmpdir(), "dropship-sandbox-"));
-  const files = new SandboxFiles(dir);
-  const store = new Store(":memory:");
+// CLI(폴더 + SQLite)와 웹 데모(메모리 + MemoryStore)가 같은 결과를 내는지 둘 다 돌립니다
+const backends = {
+  cli: () => {
+    dir = mkdtempSync(join(tmpdir(), "dropship-sandbox-"));
+    return { files: sandboxFilesIn(dir), store: new Store(":memory:") };
+  },
+  web: () => ({ files: new SandboxFiles(memoryBackend()), store: new MemoryStore() }),
+};
+
+function setup(kind: keyof typeof backends) {
+  const { files, store } = backends[kind]();
   const supplier = new FakeSupplier(files);
   const market = new FakeMarket(files);
   const source = (live = true) => runSourcing(job, { supplier, market, store, rules, live, log: () => {} });
@@ -46,9 +58,9 @@ function setup() {
   return { files, store, source, orders, productOf };
 }
 
-describe("샌드박스 처음부터 끝까지", () => {
+describe.each(Object.keys(backends) as (keyof typeof backends)[])("샌드박스 처음부터 끝까지 (%s)", (kind) => {
   it("규칙에 맞는 상품만 등록하고, 다시 돌려도 중복 등록하지 않음", async () => {
-    const t = setup();
+    const t = setup(kind);
     const preview = await t.source(false);
     expect(preview.wouldRegister.map((x) => x.id)).toEqual(["F1001", "F1002", "F1005", "F1006", "F1008"]);
     expect(t.files.market().products).toHaveLength(0);
@@ -68,7 +80,7 @@ describe("샌드박스 처음부터 끝까지", () => {
   });
 
   it("주문 → 발주(고객 배송지) → 발주 확인, 재고 차감, 두 번 발주하지 않음", async () => {
-    const t = setup();
+    const t = setup(kind);
     await t.source();
     const o = createOrder(t.files, { productId: t.productOf("F1001"), optionCode: "01", quantity: 2 });
 
@@ -89,7 +101,7 @@ describe("샌드박스 처음부터 끝까지", () => {
   });
 
   it("거절은 failed, 응답 없음은 unknown(주문서는 생김), 역마진은 held, 취소 요청은 건너뜀", async () => {
-    const t = setup();
+    const t = setup(kind);
     await t.source();
     const reject = createOrder(t.files, { productId: t.productOf("F1005") });
     const timeout = createOrder(t.files, { productId: t.productOf("F1006") });
@@ -110,7 +122,7 @@ describe("샌드박스 처음부터 끝까지", () => {
   });
 
   it("등록 뒤 공급가가 오르면 보류, 승인하면 발주", async () => {
-    const t = setup();
+    const t = setup(kind);
     await t.source();
     const catalog = t.files.catalog();
     catalog.find((c) => c.id === "F1002")!.cost = 11000;

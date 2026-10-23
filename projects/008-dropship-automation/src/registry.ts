@@ -5,7 +5,7 @@ import { env, type AppConfig } from "./config.ts";
 import type { MarketAdapter, SupplierAdapter } from "./core/types.ts";
 import { FakeMarket } from "./markets/fake/client.ts";
 import { SmartstoreMarket } from "./markets/smartstore/client.ts";
-import { SandboxFiles } from "./sandbox/files.ts";
+import { sandboxFilesIn } from "./sandbox/node-files.ts";
 import type { Store } from "./store/store.ts";
 import { DomemeSupplier } from "./suppliers/domeme/client.ts";
 import { FakeSupplier } from "./suppliers/fake/client.ts";
@@ -24,7 +24,7 @@ const supplierFactories: Record<string, (cfg: AppConfig, store: Store) => Suppli
       store,
     ),
   // 샌드박스(키 없이 로컬에서 흐름 확인): config.sandbox.json
-  fake: (cfg) => new FakeSupplier(new SandboxFiles(cfg.dataDir)),
+  fake: (cfg) => new FakeSupplier(sandboxFilesIn(cfg.dataDir)),
 };
 
 const marketFactories: Record<string, (cfg: AppConfig) => MarketAdapter> = {
@@ -34,7 +34,7 @@ const marketFactories: Record<string, (cfg: AppConfig) => MarketAdapter> = {
       clientSecret: env("NAVER_COMMERCE_CLIENT_SECRET"),
       product: cfg.smartstore,
     }),
-  fake: (cfg) => new FakeMarket(new SandboxFiles(cfg.dataDir)),
+  fake: (cfg) => new FakeMarket(sandboxFilesIn(cfg.dataDir)),
 };
 
 export function makeSupplier(id: string, cfg: AppConfig, store: Store): SupplierAdapter {

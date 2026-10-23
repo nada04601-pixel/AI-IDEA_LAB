@@ -12,7 +12,7 @@
 | 005 | 오늘의 떡상 쇼츠 분석기 (급상승 쇼츠·키워드 순위) | **공개 페이지 (1시간마다 자동 수집)** | 🌐 [공개 페이지](https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/) · [직접 검색](https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/search.html) | [projects/005-shorts-trend](projects/005-shorts-trend) | [ideas/005-shorts-trend](ideas/005-shorts-trend/idea.md) |
 | 006 | AI Shorts Studio (주제 → 대본·장면 생성 → 장면별 승인 → MP4 렌더링) | **MVP 완료 (1~5단계, 기본 mock · 이미지 Gemini·영상 Veo 실제 연결 가능)** | 💻 로컬 `http://localhost:3000` ([방법](#006-ai-shorts-studio)) | [projects/006-ai-shorts-studio](projects/006-ai-shorts-studio) | [ideas/006-ai-shorts-studio](ideas/006-ai-shorts-studio/idea.md) |
 | 007 | 쇼핑 쇼츠 메이커 (해외 숏폼 링크 → 대본·TTS·자막 교체·컷 편집·썸네일 자동화) | **개발진행중 (M6 완료, v1 전 단계)** | 💻 로컬 CLI `ssm` ([방법](#007-쇼핑-쇼츠-메이커)) | [projects/007-shopping-shorts-maker](projects/007-shopping-shorts-maker) | [ideas/007-shopping-shorts-maker](ideas/007-shopping-shorts-maker/idea.md) |
-| 008 | 위탁판매 자동화 (도매매 → 스마트스토어 상품 등록·주문 자동 발주, 쿠팡 확장 예정) | **개발진행중 (M1 샌드박스 완료, 실제 키 검증 전)** | 💻 로컬 CLI `npm run sandbox` — 키 없이 가짜 판매처·도매처로 전체 흐름 ([방법](#008-위탁판매-자동화)) | [projects/008-dropship-automation](projects/008-dropship-automation) | [ideas/008-dropship-automation](ideas/008-dropship-automation/idea.md) |
+| 008 | 위탁판매 자동화 SaaS (도매매 → 스마트스토어 상품 등록·주문 자동 발주, 쿠팡 확장 예정) | **개발진행중 (SaaS로 결정, 웹 데모 공개 · 실제 키 검증 전)** | 🌐 [웹 데모](https://nada04601-pixel.github.io/AI-IDEA_LAB/dropship/) · 💻 CLI 샌드박스 ([방법](#008-위탁판매-자동화)) | [projects/008-dropship-automation](projects/008-dropship-automation) | [ideas/008-dropship-automation](ideas/008-dropship-automation/idea.md) |
 
 ## 🧪 바로 테스트해 보기
 
@@ -28,6 +28,7 @@
 | 004 | 📱 마음장부 테스트 APK | https://github.com/nada04601-pixel/AI-IDEA_LAB/releases/tag/maeum-jangbu-apk |
 | 005 | 🌐 오늘의 떡상 쇼츠 (공개 페이지, 1시간마다 갱신) | https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/ |
 | 005 | 🌐 떡상 쇼츠 직접 검색 (내 YouTube API 키 또는 샘플 데이터) | https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/search.html |
+| 008 | 🌐 위탁판매 자동화 웹 데모 (가짜 판매처·도매처, 키·가입 없이) | https://nada04601-pixel.github.io/AI-IDEA_LAB/dropship/ |
 
 > APK는 테스트용 디버그 빌드입니다. 휴대폰에서 Releases 페이지의 `.apk`를 내려받고 "출처를 알 수 없는 앱 설치"를 허용해야 설치됩니다. 설치된 버전은 앱 설정 화면 맨 아래에서 확인할 수 있습니다.
 
@@ -88,9 +89,17 @@
 - 자세한 사용법: [README](projects/007-shopping-shorts-maker/README.md)
 
 #### 008 위탁판매 자동화
-- 💻 `cd projects/008-dropship-automation && npm install` (Node.js 22.18 이상). 웹 주소는 없고 내 컴퓨터에서 명령으로 실행합니다.
+- 🌐 [웹 데모](https://nada04601-pixel.github.io/AI-IDEA_LAB/dropship/) — 설치·키·가입 없이 브라우저에서 바로. 데이터는 그 브라우저에만 저장되고 실제 등록·주문·결제는 없습니다.
+- [ ] ① 상품 소싱: **미리 보기** → 8개 중 5개 "등록 가능", 3개 "건너뜀"(최소 공급가·제외 낱말·재고) → **등록 실행**
+- [ ] ② 판매 상품: 옵션·수량 골라 **주문 넣기** (결제 금액을 3000처럼 낮게 넣으면 역마진)
+- [ ] ③ 주문 처리: **미리 보기** → **발주 실행** → 정상은 "발주 완료", 캠핑 텀블러는 "실패", 차량용은 "확인 필요", 역마진은 "보류"
+- [ ] 보류 줄 **승인** → 다시 발주 실행 → 발주됨 / **취소 요청** 줄은 건너뜀 / ④ 도매처 주문서에서 고객 배송지로 들어간 주문 확인
+- [ ] ① 상품 소싱에서 공급가·재고·"발주할 때"(거절·응답 없음)를 바꾸거나 설정에서 이익률·안전장치를 바꿔 판정이 달라지는지
+- [ ] 새로 고침해도 그대로인지, **처음부터 다시**로 초기화되는지, 휴대폰 화면
 
-**키 없이 — 샌드박스 (가짜 판매처·도매처, 데이터는 `data/sandbox/`에 따로)**
+💻 같은 흐름을 CLI로: `cd projects/008-dropship-automation && npm install` (Node.js 22.18 이상)
+
+**키 없이 — CLI 샌드박스 (가짜 판매처·도매처, 데이터는 `data/sandbox/`에 따로)**
 - [ ] `npm run sandbox -- source --live` → 상품 8개 중 5개 등록, 3개 건너뜀(최소 공급가·제외 낱말·재고)
 - [ ] `npm run sandbox -- fake` → 등록 상품번호(9000001~) 확인
 - [ ] `npm run sandbox -- fake order 9000001 --option 01 --qty 2` → `orders`(미리 보기) → `orders --live` → 발주·발주 확인, 다시 돌려도 중복 발주 없음
