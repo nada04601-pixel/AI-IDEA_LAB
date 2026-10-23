@@ -1,0 +1,21 @@
+{
+  "name": "dropship",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "도매처 상품을 판매처에 자동 등록하고, 주문이 들어오면 도매처에 발주하는 위탁판매 자동화",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "cli": "node --disable-warning=ExperimentalWarning src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "bcryptjs": "3.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.4"
+  }
+}

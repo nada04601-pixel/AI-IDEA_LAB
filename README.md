@@ -12,3 +12,4 @@
 | 005 | 오늘의 떡상 쇼츠 분석기 (급상승 쇼츠·키워드 순위) | **공개 페이지 (1시간마다 자동 수집, [링크](https://nada04601-pixel.github.io/AI-IDEA_LAB/shorts/))** | [projects/005-shorts-trend](projects/005-shorts-trend) | [ideas/005-shorts-trend](ideas/005-shorts-trend/idea.md) |
 | 006 | AI Shorts Studio (주제 → 대본·장면 생성 → 장면별 승인 → MP4 렌더링) | **MVP 완료 (1~5단계, mock 공급자 — 실제 AI 연결 전)** | [projects/006-ai-shorts-studio](projects/006-ai-shorts-studio) | [ideas/006-ai-shorts-studio](ideas/006-ai-shorts-studio/idea.md) |
 | 007 | 쇼핑 쇼츠 메이커 (해외 숏폼 링크 → 대본·TTS·자막 교체·컷 편집·썸네일 자동화) | **개발진행중 (M0 완료)** | [projects/007-shopping-shorts-maker](projects/007-shopping-shorts-maker) | [ideas/007-shopping-shorts-maker](ideas/007-shopping-shorts-maker/idea.md) |
+| 008 | 위탁판매 자동화 (도매매 → 스마트스토어 상품 등록·주문 자동 발주, 쿠팡 확장 예정) | **구상 단계 (프로토타입 CLI, 실제 키 검증 전)** | [projects/008-dropship-automation](projects/008-dropship-automation) | [ideas/008-dropship-automation](ideas/008-dropship-automation/idea.md) |
